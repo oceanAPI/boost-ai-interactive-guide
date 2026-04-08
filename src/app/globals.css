@@ -83,3 +83,125 @@ body {
 .progress-bar {
   animation: progressGrow 1s ease-out;
 }
+
+/* ─── Scroll Reveal ─── */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.scroll-reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger children — set --stagger-index on each child */
+.stagger-children > * {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+  transition-delay: calc(var(--stagger-index, 0) * 80ms);
+}
+.stagger-children.visible > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Directional reveals */
+.fade-slide-left {
+  opacity: 0;
+  transform: translateX(-32px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+.fade-slide-right {
+  opacity: 0;
+  transform: translateX(32px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+.fade-slide-left.visible,
+.fade-slide-right.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ─── Card Lift ─── */
+.card-lift {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.card-lift:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 32px rgba(89, 25, 93, 0.12), 0 4px 12px rgba(89, 25, 93, 0.06);
+}
+
+/* ─── Pulse Glow (interactive elements) ─── */
+.pulse-glow {
+  position: relative;
+}
+.pulse-glow::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(54, 181, 149, 0.3), rgba(89, 25, 93, 0.2));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+  filter: blur(8px);
+}
+.pulse-glow:hover::after {
+  opacity: 1;
+}
+
+/* ─── SVG Line Draw ─── */
+@keyframes drawLine {
+  from { stroke-dashoffset: var(--line-length, 200); }
+  to { stroke-dashoffset: 0; }
+}
+.draw-line {
+  stroke-dasharray: var(--line-length, 200);
+  stroke-dashoffset: var(--line-length, 200);
+}
+.draw-line.visible {
+  animation: drawLine 1.2s ease-out forwards;
+}
+
+/* ─── Data Flow Dot ─── */
+@keyframes flowDot {
+  0% { offset-distance: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+
+/* ─── Circular Progress Ring ─── */
+@keyframes progressRing {
+  from { stroke-dashoffset: var(--ring-circumference, 283); }
+}
+.progress-ring-circle {
+  stroke-dasharray: var(--ring-circumference, 283);
+  stroke-dashoffset: var(--ring-offset, 283);
+  transition: stroke-dashoffset 1s ease-out;
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+/* ─── Bouncing Scroll Indicator ─── */
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
+}
+.bounce {
+  animation: bounce 2s ease-in-out infinite;
+}
+
+/* ─── Print Styles ─── */
+@media print {
+  .guide-nav, .role-selector, .bounce { display: none !important; }
+  .scroll-reveal, .stagger-children > *, .fade-slide-left, .fade-slide-right {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  section { break-inside: avoid; page-break-inside: avoid; }
+  body { background: white !important; }
+}
