@@ -121,9 +121,9 @@ export default function ROISection({ guide }: { guide: GuideData }) {
               );
             })}
           </div>
-          {guide.cost_per_employee && (
+          {guide.conversation_cost && (
             <p className="text-xs text-boost-muted mt-4 pt-4 border-t border-boost-green-light/20">
-              Current cost: {guide.cost_per_employee} — with boost.ai, expect reduction to under $0.50 per automated contact.
+              Current cost per conversation: {guide.conversation_cost} — with boost.ai, expect reduction to under $0.50 per automated contact.
             </p>
           )}
         </div>

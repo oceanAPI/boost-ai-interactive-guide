@@ -119,11 +119,15 @@ export const SPECIALIST_AGENTS: SpecialistAgent[] = [
   },
 ];
 
-export const INDUSTRIES = [
-  { key: "insurance", label: "Insurance" },
-  { key: "banking", label: "Banking" },
-  { key: "wealth_management", label: "Wealth Management" },
-  { key: "credit_union", label: "Credit Union" },
-  { key: "fintech", label: "Fintech" },
-  { key: "pension", label: "Pension & Retirement" },
+export const SUPPORTING_DEPARTMENTS = [
+  "Customer Service",
+  "IT / Engineering",
+  "Product",
+  "Marketing",
+  "Legal / Compliance",
+  "Operations",
+  "HR / People",
+  "Finance",
+  "Data / Analytics",
+  "Security",
 ] as const;

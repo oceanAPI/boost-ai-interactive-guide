@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import BoostLogo from "@/components/BoostLogo";
 import { INTEGRATION_CATEGORIES } from "@/data/integrations";
-import { SPECIALIST_AGENTS, INDUSTRIES } from "@/data/agents";
+import { SPECIALIST_AGENTS, SUPPORTING_DEPARTMENTS } from "@/data/agents";
 import { encodeGuideData } from "@/lib/url-encoding";
-import type { GuideFormData, ChannelVolumes, IntegrationSelections } from "@/lib/types";
+import type { GuideFormData, ChannelVolumes, IntegrationSelections, PricingModel, ResourceAllocation } from "@/lib/types";
 
+/* ─── Collapsible Section ─── */
 function CollapsibleSection({
   number,
   title,
@@ -25,7 +26,6 @@ function CollapsibleSection({
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
 
-  // Auto-expand when content is added
   useEffect(() => {
     if (hasContent) setOpen(true);
   }, [hasContent]);
@@ -36,32 +36,46 @@ function CollapsibleSection({
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 p-5 text-left hover:bg-boost-surface/50 transition-colors"
       >
-        <span className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm flex-shrink-0 ${
-          hasContent ? "bg-boost-green-light text-white" : "bg-boost-surface text-boost-muted border border-boost-border"
-        }`}>
+        <span
+          className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm flex-shrink-0 ${
+            hasContent
+              ? "bg-boost-green-light text-white"
+              : "bg-boost-surface text-boost-muted border border-boost-border"
+          }`}
+        >
           {hasContent ? "✓" : number}
         </span>
         <div className="flex-1 min-w-0">
           <h2 className="text-base font-semibold text-boost-dark">{title}</h2>
-          {subtitle && !open && <p className="text-xs text-boost-muted truncate mt-0.5">{subtitle}</p>}
+          {subtitle && !open && (
+            <p className="text-xs text-boost-muted truncate mt-0.5">{subtitle}</p>
+          )}
         </div>
         <svg
-          width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
           className={`text-boost-muted transition-transform ${open ? "rotate-180" : ""}`}
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
-      {open && (
-        <div className="px-5 pb-5 pt-0">
-          {children}
-        </div>
-      )}
+      {open && <div className="px-5 pb-5 pt-0">{children}</div>}
     </section>
   );
 }
 
-function FieldLabel({ children, optional }: { children: React.ReactNode; optional?: boolean }) {
+/* ─── Helpers ─── */
+function FieldLabel({
+  children,
+  optional,
+}: {
+  children: React.ReactNode;
+  optional?: boolean;
+}) {
   return (
     <label className="block text-sm font-medium text-boost-text-secondary mb-1">
       {children}
@@ -73,6 +87,25 @@ function FieldLabel({ children, optional }: { children: React.ReactNode; optiona
 const inputClass =
   "w-full px-3 py-2 bg-white border border-boost-border rounded-lg text-boost-dark placeholder-boost-lavender focus:outline-none focus:ring-2 focus:ring-boost-green-light focus:border-transparent transition-colors";
 
+const PRICING_MODELS: { key: PricingModel; label: string; description: string }[] = [
+  {
+    key: "fixed",
+    label: "Fixed Price",
+    description: "Predictable monthly fee based on expected volume",
+  },
+  {
+    key: "usage",
+    label: "Pay by Usage",
+    description: "Per-conversation pricing that scales with demand",
+  },
+  {
+    key: "outcome",
+    label: "Pay by Outcome",
+    description: "Only pay for successfully resolved conversations",
+  },
+];
+
+/* ─── Main Page ─── */
 export default function AdminPage() {
   const router = useRouter();
   const [form, setForm] = useState<GuideFormData>({
@@ -80,11 +113,19 @@ export default function AdminPage() {
     company_url: "",
     contact_name: "",
     contact_role: "",
-    industry: "insurance",
     areas_of_interest: [],
     specific_requirements: "",
     channel_volumes: {},
-    cost_per_employee: "",
+    conversation_cost: "",
+    pricing_model: "fixed",
+    deployment_markets: 1,
+    resources: {
+      stakeholder_owners: undefined,
+      ai_trainers: undefined,
+      technical_resources: undefined,
+      supporting_departments: [],
+      knowledge_management: false,
+    },
     integrations: {},
     custom_notes: "",
   });
@@ -93,12 +134,32 @@ export default function AdminPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const updateResource = <K extends keyof ResourceAllocation>(key: K, value: ResourceAllocation[K]) => {
+    setForm((prev) => ({
+      ...prev,
+      resources: { ...prev.resources, [key]: value },
+    }));
+  };
+
   const toggleArea = (key: string) => {
     setForm((prev) => {
       const areas = prev.areas_of_interest.includes(key)
         ? prev.areas_of_interest.filter((a) => a !== key)
         : [...prev.areas_of_interest, key];
       return { ...prev, areas_of_interest: areas };
+    });
+  };
+
+  const toggleDepartment = (dept: string) => {
+    setForm((prev) => {
+      const current = prev.resources.supporting_departments || [];
+      const updated = current.includes(dept)
+        ? current.filter((d) => d !== dept)
+        : [...current, dept];
+      return {
+        ...prev,
+        resources: { ...prev.resources, supporting_departments: updated },
+      };
     });
   };
 
@@ -133,12 +194,29 @@ export default function AdminPage() {
 
   const totalIntegrations = Object.values(form.integrations).reduce(
     (sum, arr) => sum + (arr?.length || 0),
-    0
+    0,
   );
 
-  const hasCompanyInfo = !!(form.company_name || form.company_url || form.contact_name || form.contact_role);
+  /* ─── Content detection for accordion state ─── */
+  const hasCompanyInfo = !!(
+    form.company_name ||
+    form.company_url ||
+    form.contact_name ||
+    form.contact_role
+  );
   const hasAreas = form.areas_of_interest.length > 0;
-  const hasRequirements = !!(form.specific_requirements || Object.values(form.channel_volumes).some(v => v) || form.cost_per_employee);
+  const hasPricing = !!(form.conversation_cost);
+  const hasDeployment =
+    form.deployment_markets > 1 ||
+    !!form.resources.stakeholder_owners ||
+    !!form.resources.ai_trainers ||
+    !!form.resources.technical_resources ||
+    (form.resources.supporting_departments?.length ?? 0) > 0 ||
+    form.resources.knowledge_management;
+  const hasRequirements = !!(
+    form.specific_requirements ||
+    Object.values(form.channel_volumes).some((v) => v)
+  );
   const hasIntegrations = totalIntegrations > 0;
   const hasNotes = !!form.custom_notes;
 
@@ -162,8 +240,13 @@ export default function AdminPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-4">
-        {/* Section 1: Company Info — always open by default */}
-        <CollapsibleSection number={1} title="Company Information" hasContent={hasCompanyInfo} defaultOpen={true}>
+        {/* 1 — Company Info */}
+        <CollapsibleSection
+          number={1}
+          title="Company Information"
+          hasContent={hasCompanyInfo}
+          defaultOpen={true}
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <FieldLabel>Company Name *</FieldLabel>
@@ -205,36 +288,23 @@ export default function AdminPage() {
                 className={inputClass}
               />
             </div>
-            <div className="md:col-span-2">
-              <FieldLabel>Industry</FieldLabel>
-              <div className="flex flex-wrap gap-2">
-                {INDUSTRIES.map((ind) => (
-                  <button
-                    key={ind.key}
-                    onClick={() => updateField("industry", ind.key)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      form.industry === ind.key
-                        ? "bg-boost-green-light text-white"
-                        : "bg-boost-surface text-boost-text-secondary border border-boost-border hover:border-boost-green-light"
-                    }`}
-                  >
-                    {ind.label}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </CollapsibleSection>
 
-        {/* Section 2: Areas of Interest */}
+        {/* 2 — Areas of Interest */}
         <CollapsibleSection
           number={2}
           title="Areas of Interest"
-          subtitle={hasAreas ? `${form.areas_of_interest.length} selected` : "If none selected, all will be shown"}
+          subtitle={
+            hasAreas
+              ? `${form.areas_of_interest.length} area${form.areas_of_interest.length > 1 ? "s" : ""} selected`
+              : "If none selected, all will be shown"
+          }
           hasContent={hasAreas}
         >
           <p className="text-boost-muted text-sm mb-4">
-            Select the agent areas this customer has expressed preference for. If none selected, all will be shown.
+            Select the areas this customer has expressed interest in. If none are
+            selected, all areas will be included in the guide.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {SPECIALIST_AGENTS.map((agent) => (
@@ -248,20 +318,238 @@ export default function AdminPage() {
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium text-boost-dark text-sm">{agent.name}</span>
-                  <span className="text-boost-green font-bold text-sm">{agent.automationRate}%</span>
+                  <span className="font-medium text-boost-dark text-sm">
+                    {agent.name}
+                  </span>
+                  <span className="text-boost-green font-bold text-sm">
+                    {agent.automationRate}%
+                  </span>
                 </div>
-                <p className="text-xs text-boost-muted line-clamp-2">{agent.description}</p>
+                <p className="text-xs text-boost-muted line-clamp-2">
+                  {agent.description}
+                </p>
               </button>
             ))}
           </div>
         </CollapsibleSection>
 
-        {/* Section 3: Requirements & Volumes */}
+        {/* 3 — Pricing & Costs */}
         <CollapsibleSection
           number={3}
+          title="Pricing Model & Costs"
+          subtitle={hasPricing ? `${PRICING_MODELS.find(p => p.key === form.pricing_model)?.label} · ${form.conversation_cost}` : "Choose pricing model and enter cost baseline"}
+          hasContent={hasPricing}
+        >
+          <div className="space-y-5">
+            <div>
+              <FieldLabel>Pricing Model</FieldLabel>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {PRICING_MODELS.map((pm) => (
+                  <button
+                    key={pm.key}
+                    onClick={() => updateField("pricing_model", pm.key)}
+                    className={`p-4 rounded-lg text-left transition-all ${
+                      form.pricing_model === pm.key
+                        ? "bg-boost-green-light/10 border-2 border-boost-green-light"
+                        : "bg-boost-surface border-2 border-transparent hover:border-boost-border"
+                    }`}
+                  >
+                    <span className="font-semibold text-boost-dark text-sm block mb-1">
+                      {pm.label}
+                    </span>
+                    <p className="text-xs text-boost-muted">{pm.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <FieldLabel>Cost per Conversation</FieldLabel>
+                <input
+                  type="text"
+                  value={form.conversation_cost}
+                  onChange={(e) => updateField("conversation_cost", e.target.value)}
+                  placeholder="e.g. $8.50"
+                  className={inputClass}
+                />
+                <p className="text-xs text-boost-muted mt-1">
+                  Current average cost to handle one customer conversation
+                </p>
+              </div>
+            </div>
+          </div>
+        </CollapsibleSection>
+
+        {/* 4 — Deployment & Resources */}
+        <CollapsibleSection
+          number={4}
+          title="Deployment & Resources"
+          subtitle={
+            hasDeployment
+              ? `${form.deployment_markets} market${form.deployment_markets > 1 ? "s" : ""} · ${
+                  (form.resources.stakeholder_owners || 0) +
+                  (form.resources.ai_trainers || 0) +
+                  (form.resources.technical_resources || 0)
+                } FTEs`
+              : "Markets, team capacity and stakeholders"
+          }
+          hasContent={hasDeployment}
+        >
+          <div className="space-y-5">
+            {/* Markets */}
+            <div>
+              <FieldLabel>Number of Markets / Countries</FieldLabel>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min={1}
+                  max={30}
+                  value={form.deployment_markets}
+                  onChange={(e) =>
+                    updateField("deployment_markets", parseInt(e.target.value))
+                  }
+                  className="flex-1 accent-boost-green-light"
+                />
+                <span className="text-boost-dark font-bold text-lg w-10 text-center">
+                  {form.deployment_markets}
+                </span>
+              </div>
+            </div>
+
+            {/* FTE breakdown */}
+            <div>
+              <FieldLabel>Available FTEs by Role</FieldLabel>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <span className="text-xs text-boost-muted block mb-1">
+                    Stakeholder Owners
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.resources.stakeholder_owners ?? ""}
+                    onChange={(e) =>
+                      updateResource(
+                        "stakeholder_owners",
+                        e.target.value ? parseInt(e.target.value) : undefined,
+                      )
+                    }
+                    placeholder="0"
+                    className={inputClass}
+                  />
+                  <p className="text-[11px] text-boost-muted mt-0.5">
+                    Executive sponsors & project owners
+                  </p>
+                </div>
+                <div>
+                  <span className="text-xs text-boost-muted block mb-1">
+                    AI Trainers
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.resources.ai_trainers ?? ""}
+                    onChange={(e) =>
+                      updateResource(
+                        "ai_trainers",
+                        e.target.value ? parseInt(e.target.value) : undefined,
+                      )
+                    }
+                    placeholder="0"
+                    className={inputClass}
+                  />
+                  <p className="text-[11px] text-boost-muted mt-0.5">
+                    Work in the boost.ai platform daily
+                  </p>
+                </div>
+                <div>
+                  <span className="text-xs text-boost-muted block mb-1">
+                    Technical Resources
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.resources.technical_resources ?? ""}
+                    onChange={(e) =>
+                      updateResource(
+                        "technical_resources",
+                        e.target.value ? parseInt(e.target.value) : undefined,
+                      )
+                    }
+                    placeholder="0"
+                    className={inputClass}
+                  />
+                  <p className="text-[11px] text-boost-muted mt-0.5">
+                    Developers & integration engineers
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Supporting departments */}
+            <div>
+              <FieldLabel optional>Supporting Departments Involved</FieldLabel>
+              <div className="flex flex-wrap gap-2">
+                {SUPPORTING_DEPARTMENTS.map((dept) => (
+                  <button
+                    key={dept}
+                    onClick={() => toggleDepartment(dept)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      form.resources.supporting_departments?.includes(dept)
+                        ? "bg-boost-green-light text-white"
+                        : "bg-boost-surface text-boost-muted hover:text-boost-dark border border-boost-border"
+                    }`}
+                  >
+                    {dept}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Knowledge management */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() =>
+                  updateResource(
+                    "knowledge_management",
+                    !form.resources.knowledge_management,
+                  )
+                }
+                className={`w-10 h-6 rounded-full transition-colors relative ${
+                  form.resources.knowledge_management
+                    ? "bg-boost-green-light"
+                    : "bg-boost-border"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                    form.resources.knowledge_management
+                      ? "translate-x-4"
+                      : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+              <div>
+                <span className="text-sm font-medium text-boost-dark">
+                  Knowledge Management Responsible
+                </span>
+                <p className="text-xs text-boost-muted">
+                  Dedicated person(s) managing knowledge base content
+                </p>
+              </div>
+            </div>
+          </div>
+        </CollapsibleSection>
+
+        {/* 5 — Requirements & Volumes */}
+        <CollapsibleSection
+          number={5}
           title="Requirements & Volumes"
-          subtitle={hasRequirements ? "Data added" : "Optional — volumes, costs, and specific needs"}
+          subtitle={
+            hasRequirements
+              ? "Data added"
+              : "Optional — channel volumes and specific needs"
+          }
           hasContent={hasRequirements}
         >
           <div className="space-y-4">
@@ -269,7 +557,9 @@ export default function AdminPage() {
               <FieldLabel optional>Specific Requirements</FieldLabel>
               <textarea
                 value={form.specific_requirements}
-                onChange={(e) => updateField("specific_requirements", e.target.value)}
+                onChange={(e) =>
+                  updateField("specific_requirements", e.target.value)
+                }
                 placeholder="Any specific requirements they've communicated..."
                 rows={3}
                 className={inputClass}
@@ -280,7 +570,9 @@ export default function AdminPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {(["chat", "voice", "email", "social"] as const).map((ch) => (
                   <div key={ch}>
-                    <span className="text-xs text-boost-muted capitalize mb-1 block">{ch}</span>
+                    <span className="text-xs text-boost-muted capitalize mb-1 block">
+                      {ch}
+                    </span>
                     <input
                       type="number"
                       value={form.channel_volumes[ch] || ""}
@@ -292,37 +584,33 @@ export default function AdminPage() {
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <FieldLabel optional>Cost per Employee / Contact</FieldLabel>
-                <input
-                  type="text"
-                  value={form.cost_per_employee}
-                  onChange={(e) => updateField("cost_per_employee", e.target.value)}
-                  placeholder="e.g. $12 per contact"
-                  className={inputClass}
-                />
-              </div>
-            </div>
           </div>
         </CollapsibleSection>
 
-        {/* Section 4: Integrations */}
+        {/* 6 — Integrations */}
         <CollapsibleSection
-          number={4}
+          number={6}
           title="Backend Systems & Integrations"
-          subtitle={hasIntegrations ? `${totalIntegrations} selected` : "Optional — select known integrations"}
+          subtitle={
+            hasIntegrations
+              ? `${totalIntegrations} selected`
+              : "Optional — select known integrations"
+          }
           hasContent={hasIntegrations}
         >
           <p className="text-boost-muted text-sm mb-4">
             Select integrations the customer uses or needs.{" "}
             {totalIntegrations > 0 && (
-              <span className="text-boost-green font-medium">{totalIntegrations} selected</span>
+              <span className="text-boost-green font-medium">
+                {totalIntegrations} selected
+              </span>
             )}
           </p>
           <div className="space-y-6">
             {INTEGRATION_CATEGORIES.map((cat) => {
-              const selected = (form.integrations[cat.key as keyof IntegrationSelections] || []) as string[];
+              const selected = (form.integrations[
+                cat.key as keyof IntegrationSelections
+              ] || []) as string[];
               return (
                 <div key={cat.key}>
                   <h3 className="text-sm font-semibold text-boost-dark mb-2 flex items-center gap-2">
@@ -358,9 +646,9 @@ export default function AdminPage() {
           </div>
         </CollapsibleSection>
 
-        {/* Section 5: Notes */}
+        {/* 7 — Notes */}
         <CollapsibleSection
-          number={5}
+          number={7}
           title="Additional Notes"
           subtitle={hasNotes ? "Notes added" : "Optional — extra context"}
           hasContent={hasNotes}
