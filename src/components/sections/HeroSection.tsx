@@ -6,11 +6,15 @@ import SparkleDecoration from "@/components/SparkleDecoration";
 
 export default function HeroSection({ guide }: { guide: GuideData }) {
   return (
-    <section className="relative overflow-hidden rounded-2xl">
-      {/* Purple top area */}
-      <div className="relative min-h-[55vh] flex items-center justify-center bg-gradient-to-br from-boost-purple via-boost-purple-dark to-boost-purple-deeper">
+    <section
+      className="relative overflow-hidden rounded-2xl"
+      style={{
+        background: "linear-gradient(to bottom, #59195d 0%, #59195d 40%, #3a2a5a 60%, #208269 85%, #36b595 100%)",
+      }}
+    >
+      <div className="relative">
         <SparkleDecoration />
-        <div className="relative z-10 text-center px-8 max-w-3xl pb-16">
+        <div className="relative z-10 text-center px-8 max-w-3xl mx-auto pt-16 pb-24">
           <div className="flex justify-center mb-8">
             <BoostLogo height={32} color="#ffffff" />
           </div>
@@ -30,21 +34,18 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
             Your AI-powered customer service transformation — from first contact to full resolution.
           </p>
         </div>
-      </div>
 
-      {/* Green band with stat boxes floating on top */}
-      <div className="relative bg-gradient-to-b from-boost-green to-boost-green-light py-10">
-        {/* Stat boxes */}
-        <div className="relative z-10 flex items-center justify-center gap-4 -mt-20">
-          <div className="px-6 py-4 bg-white rounded-xl shadow-lg border border-boost-border text-center min-w-[140px]">
+        {/* Stat boxes floating on the gradient transition */}
+        <div className="relative z-10 flex items-center justify-center gap-4 -mt-8 pb-10">
+          <div className="px-6 py-4 bg-white rounded-xl shadow-lg border border-white/20 text-center min-w-[140px]">
             <span className="text-boost-green font-bold text-3xl">80%+</span>
             <p className="text-xs text-boost-muted mt-1">Avg Automation</p>
           </div>
-          <div className="px-6 py-4 bg-white rounded-xl shadow-lg border border-boost-border text-center min-w-[140px]">
+          <div className="px-6 py-4 bg-white rounded-xl shadow-lg border border-white/20 text-center min-w-[140px]">
             <span className="text-boost-green font-bold text-3xl">6-8</span>
             <p className="text-xs text-boost-muted mt-1">Weeks to Live</p>
           </div>
-          <div className="px-6 py-4 bg-white rounded-xl shadow-lg border border-boost-border text-center min-w-[140px]">
+          <div className="px-6 py-4 bg-white rounded-xl shadow-lg border border-white/20 text-center min-w-[140px]">
             <span className="text-boost-green font-bold text-3xl">90%</span>
             <p className="text-xs text-boost-muted mt-1">Cost Reduction</p>
           </div>
