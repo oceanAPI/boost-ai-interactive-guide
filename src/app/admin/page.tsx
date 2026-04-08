@@ -212,7 +212,7 @@ export default function AdminPage() {
     !!form.resources.ai_trainers ||
     !!form.resources.technical_resources ||
     (form.resources.supporting_departments?.length ?? 0) > 0 ||
-    form.resources.knowledge_management;
+    !!form.resources.knowledge_management;
   const hasRequirements = !!(
     form.specific_requirements ||
     Object.values(form.channel_volumes).some((v) => v)
