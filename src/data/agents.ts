@@ -119,6 +119,15 @@ export const SPECIALIST_AGENTS: SpecialistAgent[] = [
   },
 ];
 
+export const INDUSTRIES = [
+  { key: "insurance", label: "Insurance", description: "Claims, underwriting, policy servicing, and customer retention" },
+  { key: "banking", label: "Banking", description: "Retail banking, commercial banking, digital banking services" },
+  { key: "wealth_management", label: "Wealth Management", description: "Investment advisory, portfolio management, financial planning" },
+  { key: "credit_union", label: "Credit Union", description: "Member services, lending, account management" },
+  { key: "fintech", label: "Fintech", description: "Digital payments, lending platforms, neobanking" },
+  { key: "pension", label: "Pension & Retirement", description: "Pension administration, retirement planning, fund management" },
+] as const;
+
 export const SUPPORTING_DEPARTMENTS = [
   "Customer Service",
   "IT / Engineering",

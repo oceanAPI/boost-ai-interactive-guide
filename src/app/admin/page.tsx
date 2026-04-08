@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import BoostLogo from "@/components/BoostLogo";
 import { INTEGRATION_CATEGORIES } from "@/data/integrations";
-import { SPECIALIST_AGENTS, SUPPORTING_DEPARTMENTS } from "@/data/agents";
+import { INDUSTRIES, SUPPORTING_DEPARTMENTS } from "@/data/agents";
 import { encodeGuideData } from "@/lib/url-encoding";
 import type { GuideFormData, ChannelVolumes, IntegrationSelections, PricingModel, ResourceAllocation } from "@/lib/types";
 
@@ -303,30 +303,25 @@ export default function AdminPage() {
           hasContent={hasAreas}
         >
           <p className="text-boost-muted text-sm mb-4">
-            Select the areas this customer has expressed interest in. If none are
-            selected, all areas will be included in the guide.
+            Select the industries / verticals this customer operates in. If none
+            are selected, a general financial services guide will be generated.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {SPECIALIST_AGENTS.map((agent) => (
+            {INDUSTRIES.map((ind) => (
               <button
-                key={agent.key}
-                onClick={() => toggleArea(agent.key)}
+                key={ind.key}
+                onClick={() => toggleArea(ind.key)}
                 className={`p-4 rounded-lg text-left transition-all ${
-                  form.areas_of_interest.includes(agent.key)
+                  form.areas_of_interest.includes(ind.key)
                     ? "bg-boost-green-light/10 border-2 border-boost-green-light"
                     : "bg-boost-surface border-2 border-transparent hover:border-boost-border"
                 }`}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium text-boost-dark text-sm">
-                    {agent.name}
-                  </span>
-                  <span className="text-boost-green font-bold text-sm">
-                    {agent.automationRate}%
-                  </span>
-                </div>
+                <span className="font-medium text-boost-dark text-sm block mb-1">
+                  {ind.label}
+                </span>
                 <p className="text-xs text-boost-muted line-clamp-2">
-                  {agent.description}
+                  {ind.description}
                 </p>
               </button>
             ))}
