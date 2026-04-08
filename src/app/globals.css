@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  /* Primary palette */
+  --color-boost-purple: #59195d;
+  --color-boost-purple-dark: #451149;
+  --color-boost-purple-deeper: #351039;
+  --color-boost-green: #208269;
+  --color-boost-green-light: #36b595;
+  --color-boost-lavender: #d1c7d2;
+  --color-boost-light: #ececec;
+  --color-boost-dark: #1e1e1e;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Supplementary */
+  --color-boost-orange: #ef8b00;
+  --color-boost-gold: #d5b000;
+  --color-boost-pink: #e383b7;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Semantic — light theme */
+  --color-boost-bg: #ffffff;
+  --color-boost-surface: #f7f5f8;
+  --color-boost-card: #ffffff;
+  --color-boost-card-hover: #f0edf2;
+  --color-boost-border: #e2dce5;
+  --color-boost-muted: #7a6b80;
+  --color-boost-text: #1e1e1e;
+  --color-boost-text-secondary: #5a4d60;
+
+  /* Keep these for backward compat in components */
+  --color-boost-navy: #59195d;
+  --color-boost-teal: #36b595;
+  --color-boost-teal-dark: #208269;
+  --color-boost-amber: #ef8b00;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--color-boost-bg);
+  color: var(--color-boost-text);
+}
+
+/* Custom scrollbar */
+.guide-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.guide-scrollbar::-webkit-scrollbar-track {
+  background: var(--color-boost-surface);
+}
+.guide-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-boost-lavender);
+  border-radius: 3px;
+}
+.guide-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-boost-purple);
+}
+
+/* Smooth section transitions */
+.section-enter {
+  animation: sectionFadeIn 0.4s ease-out;
+}
+@keyframes sectionFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Sparkle animation */
+@keyframes sparkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+.sparkle {
+  animation: sparkle 3s ease-in-out infinite;
+}
+.sparkle-delay-1 { animation-delay: 0.5s; }
+.sparkle-delay-2 { animation-delay: 1s; }
+.sparkle-delay-3 { animation-delay: 1.5s; }
+.sparkle-delay-4 { animation-delay: 2s; }
+
+/* Progress bar animation */
+@keyframes progressGrow {
+  from { width: 0%; }
+}
+.progress-bar {
+  animation: progressGrow 1s ease-out;
 }
