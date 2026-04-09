@@ -17,14 +17,17 @@ export default function BoostIcon({
   className = "",
   alt,
 }: BoostIconProps) {
+  // All SVG icon files use purple fill (#59195d).
+  // Always load from /icons/purple/ and use CSS filter to invert to white.
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={assetPath(`/icons/${variant}/${name}.svg`)}
+      src={assetPath(`/icons/purple/${name}.svg`)}
       alt={alt || name.replace(/-/g, " ")}
       width={size}
       height={size}
       className={className}
+      style={variant === "white" ? { filter: "brightness(0) invert(1)" } : undefined}
     />
   );
 }
