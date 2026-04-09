@@ -2,17 +2,14 @@
 
 import { useState } from "react";
 import type { GuideData } from "@/lib/types";
-import type { StakeholderRole } from "@/data/roles";
 import BoostLogo from "@/components/BoostLogo";
 import SparkleDecoration from "@/components/SparkleDecoration";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 export default function NextStepsSection({
   guide,
-  role = "general",
 }: {
   guide: GuideData;
-  role?: StakeholderRole;
 }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [copied, setCopied] = useState(false);

@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from "react";
 import type { GuideData } from "@/lib/types";
-import type { StakeholderRole } from "@/data/roles";
 import { SPECIALIST_AGENTS } from "@/data/agents";
-import { getRoleDefinition } from "@/data/roles";
-import { SectionHeader, TabGroup, ExpandableCard, Badge, CalloutBanner } from "@/components/ui";
+import { SectionHeader, TabGroup, ExpandableCard, Badge } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
 
@@ -45,12 +43,10 @@ function AgentStats({ automationRate, avgResolutionTime, topTopic }: {
 
 export default function AgentDetailSection({
   guide,
-  role = "general",
   focusedAgent,
   onBack,
 }: {
   guide: GuideData;
-  role?: StakeholderRole;
   focusedAgent: string | null;
   onBack: () => void;
 }) {
@@ -63,9 +59,6 @@ export default function AgentDetailSection({
   useEffect(() => {
     if (focusedAgent) setActiveTab(focusedAgent);
   }, [focusedAgent]);
-
-  const roleDef = getRoleDefinition(role);
-  const highlight = roleDef.highlights["agents"];
 
   const tabs = agents.map((a) => ({
     key: a.key,
@@ -96,10 +89,6 @@ export default function AgentDetailSection({
           subtitle="Deep dive into each agent's capabilities and automation coverage"
         />
       </div>
-
-      {highlight && (
-        <CalloutBanner title="For you" description={highlight} variant="green" />
-      )}
 
       {/* Tab navigation */}
       {agents.length > 1 && (

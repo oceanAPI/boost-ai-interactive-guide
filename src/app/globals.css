@@ -54,6 +54,10 @@ body {
   background: var(--color-boost-purple);
 }
 
+/* Hide scrollbar utility */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* Smooth section transitions */
 .section-enter {
   animation: sectionFadeIn 0.4s ease-out;

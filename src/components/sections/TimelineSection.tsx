@@ -1,23 +1,17 @@
 "use client";
 
 import type { GuideData } from "@/lib/types";
-import type { StakeholderRole } from "@/data/roles";
 import { getTimeline } from "@/data/guide-content";
-import { getRoleDefinition } from "@/data/roles";
-import { SectionHeader, CalloutBanner } from "@/components/ui";
+import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 export default function TimelineSection({
   guide,
-  role = "general",
 }: {
   guide: GuideData;
-  role?: StakeholderRole;
 }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
   const phases = getTimeline(guide.company_name);
-  const roleDef = getRoleDefinition(role);
-  const highlight = roleDef.highlights["timeline"];
 
   const totalFTEs = (guide.resources?.stakeholder_owners || 0) +
     (guide.resources?.ai_trainers || 0) +
@@ -26,14 +20,10 @@ export default function TimelineSection({
   return (
     <section>
       <SectionHeader
-        number="11"
+        number="07"
         title="Implementation Plan"
         subtitle={`From kickoff to production in 6-8 weeks for ${guide.company_name}`}
       />
-
-      {highlight && (
-        <CalloutBanner title="Your timeline" description={highlight} variant="green" />
-      )}
 
       {/* Resource callout */}
       {totalFTEs > 0 && (

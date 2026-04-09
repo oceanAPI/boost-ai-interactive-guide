@@ -1,20 +1,10 @@
 "use client";
 
 import type { GuideData } from "@/lib/types";
-import type { StakeholderRole } from "@/data/roles";
 import BoostLogo from "@/components/BoostLogo";
 import SparkleDecoration from "@/components/SparkleDecoration";
 import { StatCounter } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-
-const ROLE_SUBTITLES: Record<StakeholderRole, string> = {
-  general: "Your AI-powered customer service transformation — from first contact to full resolution.",
-  executive: "Strategic overview: projected ROI, proven results, and path to production.",
-  cto: "Technical architecture, security posture, and integration depth for your stack.",
-  vp_cx: "Customer experience impact — automation rates, CSAT improvements, and agent capabilities.",
-  ops_manager: "Deployment planning, resource requirements, and integration roadmap.",
-  ai_trainer: "Platform capabilities, agent building tools, and knowledge management workflows.",
-};
 
 function computeDynamicStats(guide: GuideData) {
   const totalVolume = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0);
@@ -39,14 +29,12 @@ function computeDynamicStats(guide: GuideData) {
 
 export default function HeroSection({
   guide,
-  role = "general",
 }: {
   guide: GuideData;
-  role?: StakeholderRole;
 }) {
   const { ref: statsRef, isVisible: statsVisible } = useScrollReveal({ once: true });
   const stats = computeDynamicStats(guide);
-  const subtitle = ROLE_SUBTITLES[role] || ROLE_SUBTITLES.general;
+  const subtitle = "Your AI-powered customer service transformation — from first contact to full resolution.";
 
   return (
     <section

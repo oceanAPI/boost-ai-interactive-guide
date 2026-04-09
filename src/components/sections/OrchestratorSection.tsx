@@ -2,10 +2,8 @@
 
 import { useState } from "react";
 import type { GuideData } from "@/lib/types";
-import type { StakeholderRole } from "@/data/roles";
 import { SPECIALIST_AGENTS } from "@/data/agents";
-import { getRoleDefinition } from "@/data/roles";
-import { SectionHeader, ProgressRing, CalloutBanner } from "@/components/ui";
+import { SectionHeader, ProgressRing } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 const SIMULATION_STEPS = [
@@ -17,19 +15,14 @@ const SIMULATION_STEPS = [
 
 export default function OrchestratorSection({
   guide,
-  role = "general",
   onDrillDown,
 }: {
   guide: GuideData;
-  role?: StakeholderRole;
   onDrillDown: (agentKey: string) => void;
 }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [simStep, setSimStep] = useState(-1);
   const [hoveredAgent, setHoveredAgent] = useState<string | null>(null);
-
-  const roleDef = getRoleDefinition(role);
-  const highlight = roleDef.highlights["orchestrator"];
 
   const agents = guide.areas_of_interest.length > 0
     ? SPECIALIST_AGENTS.filter((a) => guide.areas_of_interest.includes(a.key))
@@ -56,14 +49,6 @@ export default function OrchestratorSection({
         title="Boost Agent Orchestrator"
         subtitle={`How boost.ai routes and resolves every interaction for ${guide.company_name}`}
       />
-
-      {highlight && (
-        <CalloutBanner
-          title="Why this matters for you"
-          description={highlight}
-          variant="purple"
-        />
-      )}
 
       {/* Hub and spoke layout */}
       <div ref={ref} className="relative mt-8">

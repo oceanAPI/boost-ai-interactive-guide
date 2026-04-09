@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import type { GuideData } from "@/lib/types";
-import type { StakeholderRole } from "@/data/roles";
-import { getRoleDefinition } from "@/data/roles";
-import { SectionHeader, CalloutBanner, Badge } from "@/components/ui";
+import { SectionHeader, Badge } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 const PLATFORM_COMPONENTS = [
@@ -63,15 +61,11 @@ function ArchLayer({
 
 export default function ArchitectureSection({
   guide,
-  role = "general",
 }: {
   guide: GuideData;
-  role?: StakeholderRole;
 }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [showPlatformDetail, setShowPlatformDetail] = useState(false);
-  const roleDef = getRoleDefinition(role);
-  const highlight = roleDef.highlights["architecture"];
 
   // Build integration lists from form data or defaults
   const channels = guide.integrations?.channel?.length
@@ -96,14 +90,10 @@ export default function ArchitectureSection({
   return (
     <section>
       <SectionHeader
-        number="08"
+        number="05"
         title="System Architecture"
         subtitle={`How boost.ai integrates with ${guide.company_name}'s technology stack`}
       />
-
-      {highlight && (
-        <CalloutBanner title="Technical overview" description={highlight} variant="purple" />
-      )}
 
       <div ref={ref} className="space-y-3">
         {/* Layer 1: Channels */}

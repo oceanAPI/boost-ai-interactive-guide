@@ -2,11 +2,9 @@
 
 import { useState, useMemo } from "react";
 import type { GuideData } from "@/lib/types";
-import type { StakeholderRole } from "@/data/roles";
 import { SPECIALIST_AGENTS } from "@/data/agents";
-import { getRoleDefinition } from "@/data/roles";
 import { calculateROI } from "@/lib/roi-calculator";
-import { SectionHeader, CalloutBanner, StatCounter } from "@/components/ui";
+import { SectionHeader, StatCounter } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 function formatCurrency(n: number): string {
@@ -17,14 +15,10 @@ function formatCurrency(n: number): string {
 
 export default function ROISection({
   guide,
-  role = "general",
 }: {
   guide: GuideData;
-  role?: StakeholderRole;
 }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
-  const roleDef = getRoleDefinition(role);
-  const highlight = roleDef.highlights["roi"];
 
   // Default values from guide data
   const totalVolumeFromGuide = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0);
@@ -57,14 +51,10 @@ export default function ROISection({
   return (
     <section>
       <SectionHeader
-        number="05"
+        number="04"
         title="ROI Calculator"
         subtitle={`Projected return on investment for ${guide.company_name}`}
       />
-
-      {highlight && (
-        <CalloutBanner title="Key for your decision" description={highlight} variant="green" />
-      )}
 
       <div ref={ref} className={`transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
         {/* Interactive sliders */}
