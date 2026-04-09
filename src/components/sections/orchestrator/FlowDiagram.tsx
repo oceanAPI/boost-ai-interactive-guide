@@ -134,7 +134,7 @@ function InlineSection({
   onSelect: (node: FlowNode) => void;
   defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(defaultOpen ?? true);
+  const [open, setOpen] = useState(defaultOpen ?? false);
 
   if (nodes.length === 0) return null;
 
@@ -142,10 +142,10 @@ function InlineSection({
     <div className="border-t border-boost-border">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-boost-purple/90 text-white"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-boost-purple/90 text-white relative z-10"
       >
         <div className="flex items-center gap-2">
-          <BoostIcon name={icon} variant="white" size={12} />
+          <BoostIcon name={icon} variant="white" size={14} />
           <span className="text-[10px] font-semibold">{label}</span>
           <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full">{nodes.length}</span>
         </div>
