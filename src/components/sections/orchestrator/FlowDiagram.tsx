@@ -120,6 +120,105 @@ function NodeDetail({ node, onBack }: { node: FlowNode; onBack: () => void }) {
   );
 }
 
+/* ─── Inline collapsible section inside the agentic card ─── */
+function InlineSection({
+  label,
+  icon,
+  nodes,
+  onSelect,
+  defaultOpen,
+}: {
+  label: string;
+  icon: string;
+  nodes: FlowNode[];
+  onSelect: (node: FlowNode) => void;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen ?? true);
+
+  if (nodes.length === 0) return null;
+
+  return (
+    <div className="border-t border-boost-border">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-boost-purple/90 text-white"
+      >
+        <div className="flex items-center gap-2">
+          <BoostIcon name={icon} variant="white" size={12} />
+          <span className="text-[10px] font-semibold">{label}</span>
+          <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full">{nodes.length}</span>
+        </div>
+        <svg
+          width="10" height="10" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="2"
+          className={`transition-transform ${open ? "rotate-180" : ""}`}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {open && (
+        <div className="px-3 py-2 space-y-1.5 bg-boost-surface/50">
+          {nodes.map((node) => (
+            <button
+              key={node.id}
+              onClick={() => onSelect(node)}
+              className="w-full flex items-center gap-2 text-left hover:bg-white rounded p-1 transition-colors"
+            >
+              <svg width="12" height="12" viewBox="0 0 384 512" fill="#7a6b80" className="flex-shrink-0">
+                <path d="M192 32L64 32C46.3 32 32 46.3 32 64l0 384c0 17.7 14.3 32 32 32l256 0c17.7 0 32-14.3 32-32l0-256-96 0c-35.3 0-64-28.7-64-64l0-96zM338.7 160L224 45.3V128c0 17.7 14.3 32 32 32h82.7zM0 64C0 28.7 28.7 0 64 0L197.5 0c17 0 33.3 6.7 45.3 18.7L365.3 141.3c12 12 18.7 28.3 18.7 45.3L384 448c0 35.3-28.7 64-64 64L64 512c-35.3 0-64-28.7-64-64L0 64z"/>
+              </svg>
+              <span className="text-[11px] text-boost-dark truncate">{node.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── AGENTIC card with Knowledge + API Hook inside ─── */
+function AgenticCard({
+  agent,
+  knowledgeDocs,
+  apiHooks,
+  onSelectNode,
+}: {
+  agent: SpecialistAgent;
+  knowledgeDocs: FlowNode[];
+  apiHooks: FlowNode[];
+  onSelectNode: (node: FlowNode) => void;
+}) {
+  return (
+    <div className="bg-white rounded-lg border border-boost-green-light/25 border-t-[3px] border-t-boost-green-light shadow-sm overflow-hidden max-w-[340px] w-full">
+      {/* Header */}
+      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-boost-green-light/8">
+        <BoostIcon name="robot-brain" variant="purple" size={14} />
+        <span className="text-[10px] font-bold tracking-wider uppercase text-boost-green">AGENTIC</span>
+      </div>
+      {/* Body */}
+      <div className="px-3 py-2.5">
+        <p className="text-sm font-bold text-boost-dark leading-snug">{agent.name}</p>
+        <p className="text-[11px] text-boost-muted mt-1 leading-snug line-clamp-3">{agent.description}</p>
+      </div>
+      {/* Knowledge section */}
+      <InlineSection
+        label="Knowledge"
+        icon="books"
+        nodes={knowledgeDocs}
+        onSelect={onSelectNode}
+      />
+      {/* API Hook section */}
+      <InlineSection
+        label="API Hook"
+        icon="computer-api"
+        nodes={apiHooks}
+        onSelect={onSelectNode}
+      />
+    </div>
+  );
+}
+
 /* ─── Main Flow Diagram ─── */
 export default function FlowDiagram({ agent }: FlowDiagramProps) {
   const { flow } = agent;
@@ -130,9 +229,12 @@ export default function FlowDiagram({ agent }: FlowDiagramProps) {
     return <NodeDetail node={selectedNode} onBack={() => setSelectedNode(null)} />;
   }
 
-  // Build category columns
+  // Separate knowledge/API from the flow columns — they go inside the agentic card
+  const knowledgeDocs = flow.knowledgeSources.filter(n => n.type !== "api");
+  const apiHooks = flow.knowledgeSources.filter(n => n.type === "api");
+
+  // Build category columns (without knowledge — it's inside the agentic card now)
   const categories = [
-    { key: "knowledge" as const, label: "Knowledge", icon: "books", nodes: flow.knowledgeSources },
     { key: "guardrail" as const, label: "Guardrails", icon: "shield-medal", nodes: flow.guardrails },
     { key: "actionHook" as const, label: "Action Hooks", icon: "target-selection", nodes: flow.actionHooks },
     { key: "process" as const, label: "Processes", icon: "cogs", nodes: flow.processes },
@@ -141,13 +243,13 @@ export default function FlowDiagram({ agent }: FlowDiagramProps) {
 
   return (
     <div className="pb-2">
-      {/* Agentic node centered at top */}
+      {/* Agentic node with Knowledge + API Hook sections inside */}
       <div className="flex justify-center">
-        <FlowNodeCard
-          category="agentic"
-          name={agent.name}
-          description={agent.description}
-          className="max-w-[300px]"
+        <AgenticCard
+          agent={agent}
+          knowledgeDocs={knowledgeDocs}
+          apiHooks={apiHooks}
+          onSelectNode={setSelectedNode}
         />
       </div>
 
