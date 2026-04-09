@@ -2,12 +2,123 @@
 
 import { useState } from "react";
 import type { GuideData } from "@/lib/types";
-import { getAgentsForGuide } from "@/data/agents";
+import { getOrchestratorConfig } from "@/data/agents";
+import type { SpecialistAgent, TopicGroup } from "@/data/agents";
 import BoostIcon from "@/components/BoostIcon";
-import { SectionHeader, ProgressRing, Badge } from "@/components/ui";
+import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-import FlowDiagram from "./orchestrator/FlowDiagram";
+import FlowNodeCard from "./orchestrator/FlowNodeCard";
+import FlowConnector from "./orchestrator/FlowConnector";
 
+/* ─── Agent card (small, inside topic group) ─── */
+function AgentCard({
+  agent,
+  isExpanded,
+  onClick,
+}: {
+  agent: SpecialistAgent;
+  isExpanded: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <div>
+      <button onClick={onClick} className="w-full text-left">
+        <FlowNodeCard
+          category="agentic"
+          name={agent.name}
+          className={`w-full max-w-none cursor-pointer transition-shadow hover:shadow-md ${
+            isExpanded ? "ring-2 ring-boost-green-light shadow-md" : ""
+          }`}
+        />
+      </button>
+
+      {/* Expanded placeholder content */}
+      <div
+        className="grid transition-[grid-template-rows] duration-300 ease-out"
+        style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden">
+          {isExpanded && (
+            <div className="mt-2 p-4 bg-boost-surface rounded-lg border border-boost-border">
+              <p className="text-xs font-bold text-boost-muted uppercase tracking-wider mb-2">
+                Agent details coming soon
+              </p>
+              <p className="text-xs text-boost-muted">
+                {agent.description}
+              </p>
+              {agent.capabilities.length > 0 && (
+                <div className="mt-3 space-y-1.5">
+                  {agent.capabilities.slice(0, 4).map((cap) => (
+                    <div key={cap.title} className="flex items-start gap-2 p-2 rounded bg-white border border-boost-border">
+                      <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light mt-1.5 flex-shrink-0" />
+                      <span className="text-[11px] text-boost-dark">{cap.title}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Topic group column ─── */
+function TopicGroupColumn({
+  group,
+  expandedAgent,
+  onToggleAgent,
+}: {
+  group: TopicGroup;
+  expandedAgent: string | null;
+  onToggleAgent: (key: string) => void;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+
+  return (
+    <div className="flex flex-col min-w-[200px] max-w-[240px]">
+      {/* Column header */}
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="flex items-center justify-between gap-2 px-3 py-2 rounded-t-lg bg-boost-purple/90 text-white"
+      >
+        <div className="flex items-center gap-2">
+          <BoostIcon name={group.icon} variant="white" size={14} />
+          <span className="text-xs font-semibold truncate">{group.label}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full">
+            {group.agents.length}
+          </span>
+          <svg
+            width="12" height="12" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2"
+            className={`transition-transform ${collapsed ? "" : "rotate-180"}`}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      </button>
+
+      {/* Agent cards */}
+      {!collapsed && (
+        <div className="space-y-2 pt-2">
+          {group.agents.map((agent) => (
+            <AgentCard
+              key={agent.key}
+              agent={agent}
+              isExpanded={expandedAgent === agent.key}
+              onClick={() => onToggleAgent(agent.key)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Main Section ─── */
 export default function OrchestratorSection({
   guide,
 }: {
@@ -16,7 +127,7 @@ export default function OrchestratorSection({
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
 
-  const agents = getAgentsForGuide(guide.areas_of_interest);
+  const config = getOrchestratorConfig(guide.areas_of_interest);
 
   const toggleAgent = (key: string) => {
     setExpandedAgent((prev) => (prev === key ? null : key));
@@ -30,168 +141,72 @@ export default function OrchestratorSection({
         subtitle={`How boost.ai routes and resolves every interaction for ${guide.company_name}`}
       />
 
-      {/* Hub card */}
-      <div ref={ref} className="flex justify-center mb-8">
-        <div
-          className={`
-            relative inline-flex items-center gap-4 px-8 py-5 rounded-2xl
-            bg-gradient-to-br from-boost-purple to-boost-purple-dark
-            text-white shadow-lg transition-all duration-700
-            ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}
-          `}
-        >
-          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center">
-            <BoostIcon name="robot-brain" variant="white" size={28} />
-          </div>
-          <div>
-            <span className="text-xs font-medium text-white/50 uppercase tracking-wider">Central Hub</span>
-            <h3 className="text-lg font-bold">Agent Orchestrator</h3>
-            <p className="text-xs text-white/60 max-w-xs">
-              Analyzes every incoming message, determines intent, and routes to the right specialist agent.
-            </p>
-          </div>
-        </div>
+      {/* Orchestrator card (FlowNodeCard style, not purple hub) */}
+      <div ref={ref} className={`flex justify-center mb-6 transition-all duration-700 ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+      }`}>
+        <FlowNodeCard
+          category="agentic"
+          name="Agent Orchestrator"
+          description="The main orchestrator handles all incoming requests and traffic to pass on to agents."
+          className="min-w-[280px] max-w-[360px]"
+        />
       </div>
 
-      {/* SVG connector from hub to grid */}
-      <div className="flex justify-center mb-4" aria-hidden="true">
-        <svg width="200" height="32" viewBox="0 0 200 32" fill="none">
-          <line x1="100" y1="0" x2="40" y2="32" stroke="#36b595" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.3" />
-          <line x1="100" y1="0" x2="100" y2="32" stroke="#36b595" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.3" />
-          <line x1="100" y1="0" x2="160" y2="32" stroke="#36b595" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.3" />
+      {/* Connector lines from orchestrator to columns */}
+      <div className="flex justify-center" aria-hidden="true">
+        <svg
+          width="100%"
+          height="50"
+          viewBox="0 0 800 50"
+          preserveAspectRatio="xMidYMin meet"
+          className="max-w-3xl"
+        >
+          {/* Vertical line from orchestrator down */}
+          <line x1="400" y1="0" x2="400" y2="20" stroke="#b2dfdb" strokeWidth="1.5" strokeDasharray="6 4" />
+          {/* Horizontal line spanning columns */}
+          <line x1="60" y1="20" x2="740" y2="20" stroke="#b2dfdb" strokeWidth="1.5" strokeDasharray="6 4" />
+          {/* Vertical stubs down to each column (evenly spaced) */}
+          {[60, 180, 310, 440, 570, 700].map((x) => (
+            <line key={x} x1={x} y1="20" x2={x} y2="50" stroke="#b2dfdb" strokeWidth="1.5" strokeDasharray="6 4" />
+          ))}
+          {/* Count badges */}
+          {[
+            { x: 180, n: config.topicGroups[0]?.agents.length || 0 },
+            { x: 310, n: config.topicGroups[1]?.agents.length || 0 },
+            { x: 440, n: config.topicGroups[2]?.agents.length || 0 },
+            { x: 570, n: config.topicGroups[3]?.agents.length || 0 },
+            { x: 700, n: config.topicGroups[4]?.agents.length || 0 },
+          ].map(({ x, n }) => n > 0 ? (
+            <g key={x}>
+              <circle cx={x} cy="12" r="10" fill="white" stroke="#b2dfdb" strokeWidth="1" />
+              <text x={x} y="16" textAnchor="middle" fontSize="10" fill="#7a6b80" fontWeight="600">{n}</text>
+            </g>
+          ) : null)}
         </svg>
       </div>
 
-      {/* Agent cards grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {agents.map((agent, i) => {
-          const isExpanded = expandedAgent === agent.key;
-          const isDimmed = expandedAgent !== null && !isExpanded;
-
-          return (
-            <div
-              key={agent.key}
-              className={`transition-all duration-300 ${
-                isExpanded ? "sm:col-span-2 lg:col-span-3" : ""
-              }`}
-              style={{
-                opacity: isDimmed ? 0.5 : 1,
-                transitionDelay: `${i * 50}ms`,
-              }}
-            >
-              {/* Agent card header */}
-              <button
-                onClick={() => toggleAgent(agent.key)}
-                aria-expanded={isExpanded}
-                className={`
-                  w-full text-left rounded-xl p-4 transition-all
-                  border-l-4 border-boost-green-light
-                  ${isExpanded
-                    ? "bg-boost-surface border border-boost-border shadow-md rounded-b-none"
-                    : "bg-white border border-boost-border hover:shadow-md card-lift"
-                  }
-                `}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-boost-green-light/10 flex items-center justify-center">
-                    <BoostIcon name={agent.icon} variant="purple" size={24} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-bold text-boost-dark">{agent.name}</h4>
-                      <div className="flex items-center gap-2">
-                        <ProgressRing
-                          percentage={agent.automationRate}
-                          size={36}
-                          strokeWidth={3}
-                          showValue
-                        />
-                        <svg
-                          width="14" height="14" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" strokeWidth="2"
-                          className={`text-boost-muted transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                        >
-                          <polyline points="6 9 12 15 18 9" />
-                        </svg>
-                      </div>
-                    </div>
-                    <p className="text-xs text-boost-muted mt-0.5 line-clamp-1">{agent.description}</p>
-                  </div>
-                </div>
-
-                {/* Quick actions — only when collapsed */}
-                {!isExpanded && (
-                  <div className="flex flex-wrap gap-1 mt-3 ml-13">
-                    {agent.quickActions.slice(0, 4).map((action) => (
-                      <Badge key={action} variant="muted" size="sm">{action}</Badge>
-                    ))}
-                    {agent.quickActions.length > 4 && (
-                      <Badge variant="muted" size="sm">+{agent.quickActions.length - 4}</Badge>
-                    )}
-                  </div>
-                )}
-              </button>
-
-              {/* Expanded content */}
-              <div
-                className="grid transition-[grid-template-rows] duration-300 ease-out"
-                style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
-              >
-                <div className="overflow-hidden">
-                  {isExpanded && (
-                    <div className="px-4 pb-4 pt-3 bg-boost-surface border border-t-0 border-boost-border border-l-4 border-l-boost-green-light rounded-b-xl">
-                      {/* Capabilities */}
-                      <div className="mb-5">
-                        <h5 className="text-xs font-bold text-boost-muted uppercase tracking-wider mb-2">
-                          Capabilities ({agent.capabilities.length})
-                        </h5>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {agent.capabilities.map((cap) => (
-                            <div key={cap.title} className="flex items-start gap-2 p-2.5 rounded-lg bg-white border border-boost-border">
-                              <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light mt-1.5 flex-shrink-0" />
-                              <div>
-                                <span className="text-xs font-medium text-boost-dark">{cap.title}</span>
-                                <p className="text-[11px] text-boost-muted leading-snug">{cap.description}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Flow architecture */}
-                      <div>
-                        <h5 className="text-xs font-bold text-boost-muted uppercase tracking-wider mb-2">
-                          Agent Architecture
-                        </h5>
-                        <div className="bg-white rounded-xl border border-boost-border p-4">
-                          <FlowDiagram agent={agent} />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Bottom pillars */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-8">
-        {[
-          { icon: "shield-medal", title: "Built-in Guardrails", desc: "Hallucination detection, PII protection, and compliance checks on every response." },
-          { icon: "brain-integration", title: "Industry-Specific NLP", desc: "Pre-trained on financial services terminology, products, and workflows." },
-          { icon: "headset", title: "Seamless Escalation", desc: "Intelligent human handover with full context transfer when needed." },
-        ].map((pillar) => (
-          <div key={pillar.title} className="flex items-start gap-3 p-4 rounded-xl bg-white border border-boost-border">
-            <div className="w-9 h-9 rounded-lg bg-boost-purple/10 flex items-center justify-center flex-shrink-0">
-              <BoostIcon name={pillar.icon} variant="purple" size={20} />
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-boost-dark">{pillar.title}</h4>
-              <p className="text-xs text-boost-muted mt-0.5">{pillar.desc}</p>
-            </div>
+      {/* Columns: standalone agents + topic groups */}
+      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+        {/* Standalone agents (e.g. Customer relationship) */}
+        {config.standaloneAgents.map((agent) => (
+          <div key={agent.key} className="flex flex-col min-w-[200px] max-w-[240px]">
+            <AgentCard
+              agent={agent}
+              isExpanded={expandedAgent === agent.key}
+              onClick={() => toggleAgent(agent.key)}
+            />
           </div>
+        ))}
+
+        {/* Topic group columns */}
+        {config.topicGroups.map((group) => (
+          <TopicGroupColumn
+            key={group.key}
+            group={group}
+            expandedAgent={expandedAgent}
+            onToggleAgent={toggleAgent}
+          />
         ))}
       </div>
     </section>

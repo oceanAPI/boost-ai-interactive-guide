@@ -408,55 +408,147 @@ const INSURANCE_AGENTS: SpecialistAgent[] = [
   },
 ];
 
-// ─── Agent Registry by Industry ───
-// Add new industries here as needed
+// ─── Topic Groups & Orchestrator Config ───
 
-export const AGENTS_BY_INDUSTRY: Record<string, SpecialistAgent[]> = {
-  insurance: INSURANCE_AGENTS,
-  banking: BANKING_AGENTS,
-  // TODO: Add wealth_management, credit_union, fintech, pension agents
-  // wealth_management: WEALTH_MANAGEMENT_AGENTS,
-  // credit_union: CREDIT_UNION_AGENTS,
-  // fintech: FINTECH_AGENTS,
-  // pension: PENSION_AGENTS,
+export interface TopicGroup {
+  key: string;
+  label: string;
+  icon: string;
+  agents: SpecialistAgent[];
+}
+
+export interface OrchestratorConfig {
+  /** Standalone agents not in any topic group (e.g. "Customer relationship") */
+  standaloneAgents: SpecialistAgent[];
+  /** Topic groups containing agents */
+  topicGroups: TopicGroup[];
+}
+
+// ─── Banking Orchestrator (matches admin panel structure) ───
+
+const BANKING_STANDALONE: SpecialistAgent[] = [
+  // "Customer relationship" is a standalone agent outside topic groups
+  {
+    key: "bank_customer_relationship",
+    name: "Customer relationship",
+    icon: "users",
+    automationRate: 82,
+    description: "Customer relationship management, retention, and satisfaction.",
+    capabilities: [],
+    quickActions: [],
+    flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] },
+  },
+];
+
+const BANKING_TOPIC_GROUPS: TopicGroup[] = [
+  {
+    key: "everyday_banking",
+    label: "Everyday banking",
+    icon: "bank",
+    agents: [
+      BANKING_AGENTS.find(a => a.key === "bank_account_services")!,
+      BANKING_AGENTS.find(a => a.key === "bank_cards")!,
+      { key: "bank_credit_cards", name: "Credit cards", icon: "banknote", automationRate: 83, description: "Credit card applications, rewards, and management.", capabilities: [], quickActions: [], flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] } },
+      { key: "bank_mobile_app", name: "Mobile bank application", icon: "desktop-network", automationRate: 88, description: "Mobile banking app support and troubleshooting.", capabilities: [], quickActions: [], flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] } },
+      { key: "bank_payment", name: "Payment", icon: "banknote", automationRate: 85, description: "Payment processing, transfers, and payment issues.", capabilities: [], quickActions: [], flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] } },
+    ],
+  },
+  {
+    key: "insurance",
+    label: "Insurance",
+    icon: "umbrella",
+    agents: [
+      { key: "bank_auto_insurance", name: "Auto insurance", icon: "umbrella", automationRate: 78, description: "Auto insurance quotes, claims, and policy management.", capabilities: [], quickActions: [], flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] } },
+      { key: "bank_insurance_general", name: "Insurance", icon: "hand-protection", automationRate: 80, description: "General insurance inquiries and policy information.", capabilities: [], quickActions: [], flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] } },
+    ],
+  },
+  {
+    key: "loans",
+    label: "Loans",
+    icon: "balance",
+    agents: [
+      { key: "bank_carloan", name: "Carloan", icon: "balance", automationRate: 76, description: "Car loan applications, rates, and management.", capabilities: [], quickActions: [], flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] } },
+      { key: "bank_consumer_loans", name: "Consumer loans", icon: "balance", automationRate: 79, description: "Personal and consumer loan inquiries.", capabilities: [], quickActions: [], flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] } },
+      BANKING_AGENTS.find(a => a.key === "bank_lending")!,
+    ],
+  },
+  {
+    key: "other_bank_services",
+    label: "Other bank services",
+    icon: "cogs",
+    agents: [
+      { key: "bank_fraud", name: "Bank fraud", icon: "lock-security", automationRate: 85, description: "Fraud detection, reporting, and prevention.", capabilities: [], quickActions: [], flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] } },
+      BANKING_AGENTS.find(a => a.key === "bank_general")!,
+      { key: "bank_prices", name: "Prices", icon: "bar-chart", automationRate: 80, description: "Product pricing, fee schedules, and rate information.", capabilities: [], quickActions: [], flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] } },
+    ],
+  },
+  {
+    key: "savings",
+    label: "Savings",
+    icon: "growth-graph",
+    agents: [
+      { key: "bank_pension", name: "Pension", icon: "users", automationRate: 75, description: "Pension products, contributions, and retirement planning.", capabilities: [], quickActions: [], flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] } },
+      { key: "bank_stocks_funds", name: "Stocks and funds", icon: "bar-chart", automationRate: 77, description: "Investment products, stock trading, and fund management.", capabilities: [], quickActions: [], flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] } },
+    ],
+  },
+];
+
+// ─── Orchestrator Config Registry ───
+
+export const ORCHESTRATOR_BY_INDUSTRY: Record<string, OrchestratorConfig> = {
+  banking: {
+    standaloneAgents: BANKING_STANDALONE,
+    topicGroups: BANKING_TOPIC_GROUPS,
+  },
+  insurance: {
+    standaloneAgents: [],
+    topicGroups: [
+      {
+        key: "insurance_agents",
+        label: "Insurance",
+        icon: "umbrella",
+        agents: INSURANCE_AGENTS,
+      },
+    ],
+  },
 };
 
 /**
- * Get agents filtered by areas of interest.
- * - If specific industries are selected, returns agents for those industries.
- * - If no areas selected, returns all available agents.
- * - De-duplicates agents with the same key across industries.
+ * Get the orchestrator config for given areas of interest.
+ * Merges multiple industries if more than one selected.
  */
-export function getAgentsForGuide(areasOfInterest: string[]): SpecialistAgent[] {
-  if (areasOfInterest.length === 0) {
-    // Return all agents from all industries
-    const allAgents: SpecialistAgent[] = [];
-    const seen = new Set<string>();
-    for (const agents of Object.values(AGENTS_BY_INDUSTRY)) {
-      for (const agent of agents) {
-        if (!seen.has(agent.key)) {
-          seen.add(agent.key);
-          allAgents.push(agent);
-        }
-      }
-    }
-    return allAgents;
-  }
+export function getOrchestratorConfig(areasOfInterest: string[]): OrchestratorConfig {
+  const areas = areasOfInterest.length > 0
+    ? areasOfInterest
+    : Object.keys(ORCHESTRATOR_BY_INDUSTRY);
 
-  const filtered: SpecialistAgent[] = [];
-  const seen = new Set<string>();
-  for (const industry of areasOfInterest) {
-    const agents = AGENTS_BY_INDUSTRY[industry] || [];
-    for (const agent of agents) {
-      if (!seen.has(agent.key)) {
-        seen.add(agent.key);
-        filtered.push(agent);
+  const merged: OrchestratorConfig = { standaloneAgents: [], topicGroups: [] };
+  const seenGroups = new Set<string>();
+
+  for (const area of areas) {
+    const config = ORCHESTRATOR_BY_INDUSTRY[area];
+    if (!config) continue;
+    merged.standaloneAgents.push(...config.standaloneAgents);
+    for (const group of config.topicGroups) {
+      if (!seenGroups.has(group.key)) {
+        seenGroups.add(group.key);
+        merged.topicGroups.push(group);
       }
     }
   }
 
-  return filtered;
+  return merged;
 }
 
-// Legacy export for backward compatibility
+// ─── Flat agent helpers (for other sections) ───
+
+export function getAgentsForGuide(areasOfInterest: string[]): SpecialistAgent[] {
+  const config = getOrchestratorConfig(areasOfInterest);
+  const all: SpecialistAgent[] = [...config.standaloneAgents];
+  for (const group of config.topicGroups) {
+    all.push(...group.agents);
+  }
+  return all;
+}
+
 export const SPECIALIST_AGENTS = [...INSURANCE_AGENTS, ...BANKING_AGENTS];
