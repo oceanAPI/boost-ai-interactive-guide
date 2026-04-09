@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { assetPath } from "@/lib/asset-path";
 import { INTEGRATION_CATEGORIES } from "@/data/integrations";
 import { INDUSTRIES, SUPPORTING_DEPARTMENTS } from "@/data/agents";
 import { encodeGuideData } from "@/lib/url-encoding";
@@ -226,13 +226,11 @@ export default function AdminPage() {
       <header className="border-b border-boost-border bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image
-              src="/brand/boost_logo_purple-_main.svg"
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={assetPath("/brand/boost_logo_purple-_main.svg")}
               alt="boost.ai"
-              width={100}
-              height={24}
               className="h-6 w-auto"
-              unoptimized
             />
             <span className="text-boost-muted text-sm ml-2">Guide Builder</span>
           </div>

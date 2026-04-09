@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import type { GuideData } from "@/lib/types";
-import BoostLogo from "@/components/BoostLogo";
-import SparkleDecoration from "@/components/SparkleDecoration";
+import { assetPath } from "@/lib/asset-path";
+import BoostIcon from "@/components/BoostIcon";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 export default function NextStepsSection({
@@ -28,21 +28,21 @@ export default function NextStepsSection({
 
   const steps = [
     {
-      icon: "📞",
+      iconName: "headset",
       title: "Schedule a Demo",
       description: "See boost.ai in action with a live walkthrough tailored to your use cases.",
       action: "Book a demo",
       primary: true,
     },
     {
-      icon: "🔧",
+      iconName: "cogs",
       title: "Technical Deep-Dive",
       description: "Architecture review with our solutions engineers covering integration, security, and deployment.",
       action: "Request deep-dive",
       primary: false,
     },
     {
-      icon: "🔗",
+      iconName: "desktop-network",
       title: "Share This Guide",
       description: "Send this interactive guide to other stakeholders in your organization.",
       action: copied ? "Copied!" : "Copy link",
@@ -62,10 +62,23 @@ export default function NextStepsSection({
           background: "linear-gradient(135deg, #59195d 0%, #451149 40%, #208269 100%)",
         }}
       >
-        <SparkleDecoration />
+        {/* Brand shape decoration */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetPath("/brand/boost_brandshape_white.svg")}
+          alt=""
+          className="absolute top-6 right-10 w-40 opacity-[0.04] pointer-events-none"
+          aria-hidden="true"
+        />
+
         <div className="relative z-10 px-8 py-12 text-center">
           <div className="flex justify-center mb-6">
-            <BoostLogo height={28} color="#ffffff" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={assetPath("/brand/boost_logo-_negative.svg")}
+              alt="boost.ai"
+              className="h-7 w-auto"
+            />
           </div>
 
           <h2 className="text-3xl font-bold text-white mb-3">
@@ -86,13 +99,15 @@ export default function NextStepsSection({
                     : "bg-white/10 backdrop-blur-sm border border-white/20 text-white"
                 }`}
               >
-                <span className="text-2xl block mb-2">{step.icon}</span>
+                <div className="mb-2">
+                  <BoostIcon name={step.iconName} variant="white" size={28} />
+                </div>
                 <h3 className="font-semibold text-sm mb-1">{step.title}</h3>
                 <p className={`text-xs mb-3 ${step.primary ? "text-white/80" : "text-white/50"}`}>
                   {step.description}
                 </p>
                 <span className={`text-xs font-semibold ${step.primary ? "text-white" : "text-boost-green-light"}`}>
-                  {step.action} →
+                  {step.action}
                 </span>
               </button>
             ))}

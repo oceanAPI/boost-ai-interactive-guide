@@ -39,6 +39,11 @@ export default function GuideClient({ guide }: { guide: GuideData }) {
     sectionRefs.current["agents"]?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  // Always start at top when guide loads
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {

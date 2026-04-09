@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import type { GuideData } from "@/lib/types";
+import { assetPath } from "@/lib/asset-path";
 import { StatCounter } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
@@ -43,35 +43,33 @@ export default function HeroSection({
     >
       <div className="relative">
         {/* Brand shape decorations */}
-        <Image
-          src="/brand/boost_brandshape_white.svg"
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetPath("/brand/boost_brandshape_white.svg")}
           alt=""
           width={200}
           height={200}
           className="absolute top-4 right-8 opacity-[0.04] pointer-events-none"
-          unoptimized
-          aria-hidden
+          aria-hidden="true"
         />
-        <Image
-          src="/brand/ai-bubble_white.svg"
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetPath("/brand/ai-bubble_white.svg")}
           alt=""
           width={120}
           height={120}
           className="absolute bottom-24 left-6 opacity-[0.06] pointer-events-none"
-          unoptimized
-          aria-hidden
+          aria-hidden="true"
         />
 
         <div className="relative z-10 text-center px-8 max-w-3xl mx-auto pt-16 pb-28">
           {/* Real boost.ai logo (white negative) */}
           <div className="flex justify-center mb-8">
-            <Image
-              src="/brand/boost_logo-_negative.svg"
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={assetPath("/brand/boost_logo-_negative.svg")}
               alt="boost.ai"
-              width={160}
-              height={40}
               className="h-8 w-auto"
-              unoptimized
             />
           </div>
 

@@ -1,7 +1,6 @@
 "use client";
 
-import Image from "next/image";
-import { iconPath } from "@/lib/icons";
+import { assetPath } from "@/lib/asset-path";
 
 interface BoostIconProps {
   name: string;
@@ -19,13 +18,13 @@ export default function BoostIcon({
   alt,
 }: BoostIconProps) {
   return (
-    <Image
-      src={iconPath(variant, name)}
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={assetPath(`/icons/${variant}/${name}.svg`)}
       alt={alt || name.replace(/-/g, " ")}
       width={size}
       height={size}
       className={className}
-      unoptimized
     />
   );
 }
