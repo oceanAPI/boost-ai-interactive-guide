@@ -91,7 +91,7 @@ export default function FlowNodeCard({
     <div
       className={`
         bg-white rounded-lg border border-boost-green-light/25 border-t-[3px] ${config.borderColor}
-        shadow-sm min-w-[200px] max-w-[260px] overflow-hidden
+        shadow-sm overflow-hidden
         ${className}
       `}
     >

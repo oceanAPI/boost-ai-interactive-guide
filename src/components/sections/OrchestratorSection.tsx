@@ -8,7 +8,6 @@ import BoostIcon from "@/components/BoostIcon";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import FlowNodeCard from "./orchestrator/FlowNodeCard";
-import FlowConnector from "./orchestrator/FlowConnector";
 
 /* ─── Agent card (small, inside topic group) ─── */
 function AgentCard({
@@ -32,7 +31,7 @@ function AgentCard({
         />
       </button>
 
-      {/* Expanded placeholder content */}
+      {/* Expanded placeholder */}
       <div
         className="grid transition-[grid-template-rows] duration-300 ease-out"
         style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
@@ -43,9 +42,7 @@ function AgentCard({
               <p className="text-xs font-bold text-boost-muted uppercase tracking-wider mb-2">
                 Agent details coming soon
               </p>
-              <p className="text-xs text-boost-muted">
-                {agent.description}
-              </p>
+              <p className="text-xs text-boost-muted">{agent.description}</p>
               {agent.capabilities.length > 0 && (
                 <div className="mt-3 space-y-1.5">
                   {agent.capabilities.slice(0, 4).map((cap) => (
@@ -77,28 +74,42 @@ function TopicGroupColumn({
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="flex flex-col min-w-[200px] max-w-[240px]">
+    <div className="flex flex-col">
+      {/* Vertical dashed stub from horizontal line */}
+      <div className="flex justify-center h-8" aria-hidden="true">
+        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
+      </div>
+
+      {/* Count badge */}
+      <div className="flex justify-center -mt-1 mb-1" aria-hidden="true">
+        <span className="w-5 h-5 rounded-full bg-white border text-[10px] font-semibold text-boost-muted flex items-center justify-center"
+          style={{ borderColor: "#b2dfdb" }}
+        >
+          {group.agents.length}
+        </span>
+      </div>
+
+      {/* Vertical dashed stub below badge */}
+      <div className="flex justify-center h-4" aria-hidden="true">
+        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
+      </div>
+
       {/* Column header */}
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="flex items-center justify-between gap-2 px-3 py-2 rounded-t-lg bg-boost-purple/90 text-white"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <BoostIcon name={group.icon} variant="white" size={14} />
           <span className="text-xs font-semibold truncate">{group.label}</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full">
-            {group.agents.length}
-          </span>
-          <svg
-            width="12" height="12" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="2"
-            className={`transition-transform ${collapsed ? "" : "rotate-180"}`}
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </div>
+        <svg
+          width="12" height="12" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="2"
+          className={`flex-shrink-0 transition-transform ${collapsed ? "" : "rotate-180"}`}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
       </button>
 
       {/* Agent cards */}
@@ -118,6 +129,28 @@ function TopicGroupColumn({
   );
 }
 
+/* ─── Standalone agent column (no topic group header) ─── */
+function StandaloneColumn({
+  agent,
+  isExpanded,
+  onClick,
+}: {
+  agent: SpecialistAgent;
+  isExpanded: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <div className="flex flex-col">
+      {/* Vertical dashed stub */}
+      <div className="flex justify-center h-12" aria-hidden="true">
+        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
+      </div>
+
+      <AgentCard agent={agent} isExpanded={isExpanded} onClick={onClick} />
+    </div>
+  );
+}
+
 /* ─── Main Section ─── */
 export default function OrchestratorSection({
   guide,
@@ -128,6 +161,7 @@ export default function OrchestratorSection({
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
 
   const config = getOrchestratorConfig(guide.areas_of_interest);
+  const totalColumns = config.standaloneAgents.length + config.topicGroups.length;
 
   const toggleAgent = (key: string) => {
     setExpandedAgent((prev) => (prev === key ? null : key));
@@ -141,8 +175,8 @@ export default function OrchestratorSection({
         subtitle={`How boost.ai routes and resolves every interaction for ${guide.company_name}`}
       />
 
-      {/* Orchestrator card (FlowNodeCard style, not purple hub) */}
-      <div ref={ref} className={`flex justify-center mb-6 transition-all duration-700 ${
+      {/* Orchestrator card */}
+      <div ref={ref} className={`flex justify-center mb-0 transition-all duration-700 ${
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
       }`}>
         <FlowNodeCard
@@ -153,53 +187,34 @@ export default function OrchestratorSection({
         />
       </div>
 
-      {/* Connector lines from orchestrator to columns */}
-      <div className="flex justify-center" aria-hidden="true">
-        <svg
-          width="100%"
-          height="50"
-          viewBox="0 0 800 50"
-          preserveAspectRatio="xMidYMin meet"
-          className="max-w-3xl"
-        >
-          {/* Vertical line from orchestrator down */}
-          <line x1="400" y1="0" x2="400" y2="20" stroke="#b2dfdb" strokeWidth="1.5" strokeDasharray="6 4" />
-          {/* Horizontal line spanning columns */}
-          <line x1="60" y1="20" x2="740" y2="20" stroke="#b2dfdb" strokeWidth="1.5" strokeDasharray="6 4" />
-          {/* Vertical stubs down to each column (evenly spaced) */}
-          {[60, 180, 310, 440, 570, 700].map((x) => (
-            <line key={x} x1={x} y1="20" x2={x} y2="50" stroke="#b2dfdb" strokeWidth="1.5" strokeDasharray="6 4" />
-          ))}
-          {/* Count badges */}
-          {[
-            { x: 180, n: config.topicGroups[0]?.agents.length || 0 },
-            { x: 310, n: config.topicGroups[1]?.agents.length || 0 },
-            { x: 440, n: config.topicGroups[2]?.agents.length || 0 },
-            { x: 570, n: config.topicGroups[3]?.agents.length || 0 },
-            { x: 700, n: config.topicGroups[4]?.agents.length || 0 },
-          ].map(({ x, n }) => n > 0 ? (
-            <g key={x}>
-              <circle cx={x} cy="12" r="10" fill="white" stroke="#b2dfdb" strokeWidth="1" />
-              <text x={x} y="16" textAnchor="middle" fontSize="10" fill="#7a6b80" fontWeight="600">{n}</text>
-            </g>
-          ) : null)}
-        </svg>
+      {/* Vertical line from orchestrator down to horizontal bar */}
+      <div className="flex justify-center h-8" aria-hidden="true">
+        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
       </div>
 
-      {/* Columns: standalone agents + topic groups */}
-      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-        {/* Standalone agents (e.g. Customer relationship) */}
+      {/* Horizontal dashed bar spanning all columns */}
+      <div className="mx-4" aria-hidden="true">
+        <div className="border-t-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
+      </div>
+
+      {/* Columns grid — responsive, wraps on small screens */}
+      <div
+        className="grid gap-2"
+        style={{
+          gridTemplateColumns: `repeat(${Math.min(totalColumns, 6)}, minmax(0, 1fr))`,
+        }}
+      >
+        {/* Standalone agents */}
         {config.standaloneAgents.map((agent) => (
-          <div key={agent.key} className="flex flex-col min-w-[200px] max-w-[240px]">
-            <AgentCard
-              agent={agent}
-              isExpanded={expandedAgent === agent.key}
-              onClick={() => toggleAgent(agent.key)}
-            />
-          </div>
+          <StandaloneColumn
+            key={agent.key}
+            agent={agent}
+            isExpanded={expandedAgent === agent.key}
+            onClick={() => toggleAgent(agent.key)}
+          />
         ))}
 
-        {/* Topic group columns */}
+        {/* Topic groups */}
         {config.topicGroups.map((group) => (
           <TopicGroupColumn
             key={group.key}
