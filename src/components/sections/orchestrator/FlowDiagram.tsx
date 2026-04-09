@@ -74,8 +74,8 @@ export default function FlowDiagram({ agent }: FlowDiagramProps) {
   }));
 
   return (
-    <div className="overflow-x-auto pb-4 scrollbar-hide">
-      <div className="inline-flex flex-col items-center min-w-full">
+    <div className="pb-4">
+      <div className="flex flex-col items-center w-full">
         {/* Top: AGENTIC node */}
         <FlowNodeCard
           category="agentic"
@@ -104,7 +104,7 @@ export default function FlowDiagram({ agent }: FlowDiagramProps) {
             {/* Vertical stubs down from the horizontal line */}
             <div className="flex justify-center gap-4" style={{ paddingTop: 0 }}>
               {branches.map((b) => (
-                <div key={b.node.id} className="flex justify-center" style={{ minWidth: 200 }}>
+                <div key={b.node.id} className="flex justify-center flex-1">
                   <div
                     className="w-0 border-l-[1.5px] border-dashed"
                     style={{ height: 40, borderColor: "#b2dfdb" }}
