@@ -1,133 +1,206 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import type { GuideData } from "@/lib/types";
+import type { StakeholderRole } from "@/data/roles";
 import { SPECIALIST_AGENTS } from "@/data/agents";
-import { ROI_HIGHLIGHTS } from "@/data/guide-content";
+import { getRoleDefinition } from "@/data/roles";
+import { calculateROI } from "@/lib/roi-calculator";
+import { SectionHeader, CalloutBanner, StatCounter } from "@/components/ui";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
-const HIGHLIGHT_COLORS: Record<string, { border: string; bg: string; text: string }> = {
-  emerald: { border: "border-boost-green-light", bg: "bg-boost-green-light/5", text: "text-boost-green" },
-  purple: { border: "border-boost-purple", bg: "bg-boost-purple/5", text: "text-boost-purple" },
-  amber: { border: "border-boost-orange", bg: "bg-boost-orange/5", text: "text-boost-orange" },
-  rose: { border: "border-boost-pink", bg: "bg-boost-pink/5", text: "text-boost-pink" },
-};
+function formatCurrency(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n.toFixed(0)}`;
+}
 
-export default function ROISection({ guide }: { guide: GuideData }) {
-  const agents =
-    guide.areas_of_interest.length > 0
-      ? SPECIALIST_AGENTS.filter((a) => guide.areas_of_interest.includes(a.key))
-      : SPECIALIST_AGENTS;
+export default function ROISection({
+  guide,
+  role = "general",
+}: {
+  guide: GuideData;
+  role?: StakeholderRole;
+}) {
+  const { ref, isVisible } = useScrollReveal({ once: true });
+  const roleDef = getRoleDefinition(role);
+  const highlight = roleDef.highlights["roi"];
 
-  const sortedAgents = [...agents].sort((a, b) => b.automationRate - a.automationRate);
-  const avgRate = Math.round(agents.reduce((sum, a) => sum + a.automationRate, 0) / agents.length);
-  const maxRate = Math.max(...agents.map((a) => a.automationRate));
+  // Default values from guide data
+  const totalVolumeFromGuide = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0);
+  const costFromGuide = parseFloat(guide.conversation_cost?.replace(/[^0-9.]/g, "") || "0");
+
+  const agents = guide.areas_of_interest.length > 0
+    ? SPECIALIST_AGENTS.filter((a) => guide.areas_of_interest.includes(a.key))
+    : SPECIALIST_AGENTS;
+  const avgRate = Math.round(agents.reduce((s, a) => s + a.automationRate, 0) / agents.length);
+
+  // Interactive slider state
+  const [volume, setVolume] = useState(totalVolumeFromGuide || 10000);
+  const [cost, setCost] = useState(costFromGuide || 8);
+
+  const roi = useMemo(
+    () => calculateROI({
+      monthlyConversations: volume,
+      costPerConversation: cost,
+      pricingModel: guide.pricing_model || "fixed",
+      automationRate: avgRate,
+      markets: guide.deployment_markets || 1,
+    }),
+    [volume, cost, guide.pricing_model, avgRate, guide.deployment_markets],
+  );
+
+  const savingsBarWidth = roi.currentMonthlyCost > 0
+    ? Math.round((roi.monthlySavings / roi.currentMonthlyCost) * 100)
+    : 0;
 
   return (
-    <section className="section-enter">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-boost-dark mb-2">Automation Rates & ROI Impact</h2>
-        <p className="text-boost-muted">
-          Every conversation not escalated to a human is a direct, measurable cost saving
-        </p>
-      </div>
+    <section>
+      <SectionHeader
+        number="05"
+        title="ROI Calculator"
+        subtitle={`Projected return on investment for ${guide.company_name}`}
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left: Bar chart */}
-        <div className="bg-white border border-boost-border rounded-xl p-6">
-          <h3 className="text-sm font-semibold text-boost-dark uppercase tracking-wider mb-6">
-            Automation Rate by Agent
-          </h3>
-          <div className="space-y-4">
-            {sortedAgents.map((agent) => (
-              <div key={agent.key}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm text-boost-text-secondary">{agent.name}</span>
-                  <span className="text-sm text-boost-green font-bold tabular-nums">
-                    {agent.automationRate}%
-                  </span>
-                </div>
-                <div className="w-full h-3 bg-boost-light rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full progress-bar"
-                    style={{
-                      width: `${(agent.automationRate / maxRate) * 100}%`,
-                      background:
-                        agent.automationRate >= 82
-                          ? "linear-gradient(90deg, #208269, #36b595)"
-                          : agent.automationRate >= 79
-                          ? "linear-gradient(90deg, #59195d, #8a4d8e)"
-                          : "linear-gradient(90deg, #e383b7, #ef8b00)",
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
+      {highlight && (
+        <CalloutBanner title="Key for your decision" description={highlight} variant="green" />
+      )}
 
-            {/* Overall average */}
-            <div className="pt-4 mt-4 border-t border-boost-border">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-sm text-boost-dark font-semibold">Overall Average</span>
-                <span className="text-sm text-boost-green font-bold tabular-nums">{avgRate}%</span>
+      <div ref={ref} className={`transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
+        {/* Interactive sliders */}
+        <div className="bg-boost-surface rounded-xl border border-boost-border p-6 mb-6">
+          <h3 className="text-sm font-semibold text-boost-dark mb-4">Adjust Your Numbers</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <div className="flex justify-between mb-2">
+                <label className="text-xs text-boost-muted">Monthly Conversations</label>
+                <span className="text-sm font-bold text-boost-dark tabular-nums">{volume.toLocaleString()}</span>
               </div>
-              <div className="w-full h-3 bg-boost-light rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-boost-green-light progress-bar"
-                  style={{ width: `${(avgRate / maxRate) * 100}%` }}
-                />
+              <input
+                type="range"
+                min={500}
+                max={200000}
+                step={500}
+                value={volume}
+                onChange={(e) => setVolume(parseInt(e.target.value))}
+                className="w-full accent-boost-green-light"
+              />
+              <div className="flex justify-between text-[10px] text-boost-muted mt-1">
+                <span>500</span><span>200K</span>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between mb-2">
+                <label className="text-xs text-boost-muted">Cost per Conversation</label>
+                <span className="text-sm font-bold text-boost-dark tabular-nums">${cost.toFixed(2)}</span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={25}
+                step={0.5}
+                value={cost}
+                onChange={(e) => setCost(parseFloat(e.target.value))}
+                className="w-full accent-boost-green-light"
+              />
+              <div className="flex justify-between text-[10px] text-boost-muted mt-1">
+                <span>$1</span><span>$25</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right: Highlights */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-boost-dark uppercase tracking-wider mb-2">
-            What This Means for {guide.company_name}
-          </h3>
-          {ROI_HIGHLIGHTS.map((item, idx) => {
-            const c = HIGHLIGHT_COLORS[item.color] || HIGHLIGHT_COLORS.emerald;
-            return (
-              <div
-                key={idx}
-                className={`p-4 rounded-xl border-l-4 ${c.border} ${c.bg}`}
-              >
-                <h4 className={`font-semibold text-sm ${c.text} mb-1`}>{item.title}</h4>
-                <p className="text-xs text-boost-muted leading-relaxed">{item.description}</p>
+        {/* Big savings number */}
+        <div className="text-center mb-8">
+          <p className="text-xs text-boost-muted uppercase tracking-wider mb-2">Projected Annual Savings</p>
+          <div className="text-5xl md:text-6xl font-bold text-boost-green tabular-nums">
+            {formatCurrency(roi.annualSavings)}
+          </div>
+          <p className="text-sm text-boost-muted mt-2">
+            {roi.roiPercentage}% cost reduction · Break-even in {roi.breakEvenMonths} month{roi.breakEvenMonths > 1 ? "s" : ""}
+          </p>
+        </div>
+
+        {/* Before / After comparison */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          {/* Before */}
+          <div className="rounded-xl border border-boost-border bg-white p-5">
+            <p className="text-xs text-boost-muted uppercase tracking-wider mb-3">Current State</p>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-boost-text-secondary">Monthly conversations</span>
+                <span className="font-semibold text-boost-dark tabular-nums">{volume.toLocaleString()}</span>
               </div>
-            );
-          })}
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-boost-text-secondary">Cost per conversation</span>
+                <span className="font-semibold text-boost-dark">${cost.toFixed(2)}</span>
+              </div>
+              <div className="border-t border-boost-border pt-3 flex justify-between items-center">
+                <span className="text-sm font-medium text-boost-dark">Total monthly cost</span>
+                <span className="font-bold text-lg text-boost-dark">{formatCurrency(roi.currentMonthlyCost)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* After */}
+          <div className="rounded-xl border-2 border-boost-green-light/30 bg-boost-green-light/5 p-5">
+            <p className="text-xs text-boost-green uppercase tracking-wider mb-3">With boost.ai</p>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-boost-text-secondary">Automated ({avgRate}%)</span>
+                <span className="font-semibold text-boost-green tabular-nums">{roi.automatedConversations.toLocaleString()} @ ${roi.aiCostPerConversation}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-boost-text-secondary">Human handled</span>
+                <span className="font-semibold text-boost-dark tabular-nums">{roi.humanConversations.toLocaleString()} @ ${cost.toFixed(2)}</span>
+              </div>
+              <div className="border-t border-boost-green-light/20 pt-3 flex justify-between items-center">
+                <span className="text-sm font-medium text-boost-dark">New monthly cost</span>
+                <span className="font-bold text-lg text-boost-green">{formatCurrency(roi.newMonthlyCost)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Cost breakdown bar */}
+        <div className="bg-white rounded-xl border border-boost-border p-5 mb-8">
+          <p className="text-xs text-boost-muted uppercase tracking-wider mb-3">Monthly Cost Breakdown</p>
+          <div className="h-8 rounded-full overflow-hidden bg-boost-surface flex">
+            <div
+              className="bg-boost-green-light/80 h-full transition-all duration-1000 flex items-center justify-center"
+              style={{ width: `${100 - savingsBarWidth}%` }}
+            >
+              <span className="text-[10px] text-white font-medium px-2 truncate">
+                New cost: {formatCurrency(roi.newMonthlyCost)}
+              </span>
+            </div>
+            <div
+              className="bg-boost-green h-full transition-all duration-1000 flex items-center justify-center"
+              style={{ width: `${savingsBarWidth}%` }}
+            >
+              <span className="text-[10px] text-white font-medium px-2 truncate">
+                Savings: {formatCurrency(roi.monthlySavings)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Impact grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl border border-boost-border p-4 text-center">
+            <StatCounter value={roi.roiPercentage} suffix="%" label="Cost Reduction" color="green" size="md" />
+          </div>
+          <div className="bg-white rounded-xl border border-boost-border p-4 text-center">
+            <StatCounter value={roi.fteEquivalent} suffix="" label="FTE Equivalent" color="purple" size="md" />
+          </div>
+          <div className="bg-white rounded-xl border border-boost-border p-4 text-center">
+            <StatCounter value={roi.automatedConversations} suffix="" label="Automated / mo" color="green" size="sm" />
+          </div>
+          <div className="bg-white rounded-xl border border-boost-border p-4 text-center">
+            <StatCounter value={roi.breakEvenMonths} suffix=" mo" label="Break-even" color="purple" size="md" />
+          </div>
         </div>
       </div>
-
-      {/* Volume-based ROI if data present */}
-      {Object.keys(guide.channel_volumes).length > 0 && (
-        <div className="mt-8 bg-boost-green-light/5 border border-boost-green-light/20 rounded-xl p-6">
-          <h3 className="text-sm font-semibold text-boost-dark uppercase tracking-wider mb-4">
-            Estimated Impact — {guide.company_name} Volumes
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Object.entries(guide.channel_volumes).map(([ch, vol]) => {
-              if (!vol) return null;
-              const automated = Math.round(vol * (avgRate / 100));
-              return (
-                <div key={ch} className="text-center">
-                  <p className="text-xs text-boost-muted uppercase mb-1">{ch}</p>
-                  <p className="text-boost-dark font-bold text-2xl tabular-nums">
-                    {automated.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-boost-green">
-                    of {vol.toLocaleString()} automated/mo
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-          {guide.conversation_cost && (
-            <p className="text-xs text-boost-muted mt-4 pt-4 border-t border-boost-green-light/20">
-              Current cost per conversation: {guide.conversation_cost} — with boost.ai, expect reduction to under $0.50 per automated contact.
-            </p>
-          )}
-        </div>
-      )}
     </section>
   );
 }

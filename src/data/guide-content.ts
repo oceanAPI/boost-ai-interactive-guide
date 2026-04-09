@@ -1,67 +1,79 @@
 export interface ComparisonRow {
   capability: string;
-  boostai: string;
-  genericLLM: string;
-  legacyIVR: string;
-  buildInHouse: string;
+  boost: string;
+  llm: string;
+  ivr: string;
+  diy: string;
+  boostDetail?: string;
+  llmDetail?: string;
+  ivrDetail?: string;
+  diyDetail?: string;
 }
 
 export const COMPARISON_TABLE: ComparisonRow[] = [
   {
     capability: "Time to production",
-    boostai: "6–8 weeks",
-    genericLLM: "3–6 months",
-    legacyIVR: "6–12 months",
-    buildInHouse: "12–24 months",
+    boost: "yes", llm: "partial", ivr: "no", diy: "no",
+    boostDetail: "6-8 weeks with pre-built financial services intents and templates",
+    llmDetail: "3-6 months of prompt engineering and custom development",
+    ivrDetail: "6-12 months for traditional IVR tree configuration",
+    diyDetail: "12-24 months including ML team hiring and model training",
   },
   {
-    capability: "Insurance domain expertise",
-    boostai: "Deep, pre-built",
-    genericLLM: "Generic",
-    legacyIVR: "Limited",
-    buildInHouse: "Must build",
+    capability: "Financial domain expertise",
+    boost: "yes", llm: "partial", ivr: "partial", diy: "no",
+    boostDetail: "Deep pre-built knowledge across insurance, banking, and wealth management",
+    llmDetail: "Generic language model requires extensive domain fine-tuning",
+    ivrDetail: "Basic menu trees with limited understanding",
+    diyDetail: "Must build domain expertise from scratch",
   },
   {
-    capability: "Automation rate (insurance)",
-    boostai: "90%+",
-    genericLLM: "Variable",
-    legacyIVR: "40–60%",
-    buildInHouse: "Unknown",
+    capability: "Automation rate",
+    boost: "yes", llm: "partial", ivr: "no", diy: "partial",
+    boostDetail: "80-90%+ automation with supervised guardrails",
+    llmDetail: "Highly variable — depends on prompt quality and hallucination rate",
+    ivrDetail: "40-60% containment with rigid decision trees",
+    diyDetail: "Unknown — depends entirely on investment and team capability",
   },
   {
     capability: "Agentic orchestration",
-    boostai: "Native",
-    genericLLM: "Emerging",
-    legacyIVR: "No",
-    buildInHouse: "Must build",
+    boost: "yes", llm: "partial", ivr: "no", diy: "no",
+    boostDetail: "Native multi-agent routing with intent-based orchestration",
+    llmDetail: "Emerging frameworks, not production-hardened",
+    ivrDetail: "No agent concept — fixed menu paths only",
+    diyDetail: "Requires building full orchestration layer from scratch",
   },
   {
-    capability: "FNOL + claims intake",
-    boostai: "Built-in",
-    genericLLM: "Custom build",
-    legacyIVR: "No",
-    buildInHouse: "Must build",
+    capability: "Claims & policy intake",
+    boost: "yes", llm: "no", ivr: "no", diy: "no",
+    boostDetail: "FNOL, claim status, policy servicing built into specialist agents",
+    llmDetail: "Must custom-build every workflow and integration",
+    ivrDetail: "Cannot handle complex multi-step processes",
+    diyDetail: "Must build and maintain every workflow",
   },
   {
     capability: "Compliance & guardrails",
-    boostai: "Insurance-grade",
-    genericLLM: "Generic",
-    legacyIVR: "Basic",
-    buildInHouse: "Must build",
+    boost: "yes", llm: "partial", ivr: "partial", diy: "no",
+    boostDetail: "Financial-grade guardrails prevent hallucination and off-topic responses",
+    llmDetail: "Generic safety filters — not industry-specific compliance",
+    ivrDetail: "Basic script compliance — rigid but limited",
+    diyDetail: "Must build and maintain all compliance layers",
   },
   {
     capability: "Human handoff quality",
-    boostai: "Full context transfer",
-    genericLLM: "Variable",
-    legacyIVR: "Drops context",
-    buildInHouse: "Custom",
+    boost: "yes", llm: "partial", ivr: "no", diy: "partial",
+    boostDetail: "Full conversation context, intent data, and sentiment transferred to agent",
+    llmDetail: "Varies by implementation — often loses context",
+    ivrDetail: "Typically drops all context on transfer",
+    diyDetail: "Custom integration required with each contact center",
   },
   {
     capability: "Ongoing learning",
-    boostai: "Continuous",
-    genericLLM: "Requires prompt eng.",
-    legacyIVR: "Manual",
-    buildInHouse: "Manual",
+    boost: "yes", llm: "no", ivr: "no", diy: "partial",
+    boostDetail: "Continuous improvement via conversation analytics and AI trainer tools",
+    llmDetail: "Requires manual prompt engineering and re-deployment",
+    ivrDetail: "Manual menu tree updates by vendor or IT",
+    diyDetail: "Manual model retraining and deployment cycles",
   },
 ];
 
@@ -69,6 +81,7 @@ export interface TimelinePhase {
   weeks: string;
   title: string;
   tasks: string[];
+  color: string;
 }
 
 export function getTimeline(companyName: string): TimelinePhase[] {
@@ -76,41 +89,45 @@ export function getTimeline(companyName: string): TimelinePhase[] {
     {
       weeks: "Week 1–2",
       title: "Discovery & Design",
+      color: "#59195d",
       tasks: [
         `Map top 50 ${companyName} inquiry types`,
-        "Define agent architecture",
+        "Define agent architecture and routing logic",
         "Align on KPIs & automation targets",
-        "Identify system integrations",
+        "Identify system integrations and data flows",
       ],
     },
     {
       weeks: "Week 3–4",
       title: "Build & Configure",
+      color: "#208269",
       tasks: [
-        "Configure specialist agents",
-        "Load insurance intent library",
-        "Connect to claims & policy APIs",
-        "Guardrail logic setup",
+        "Configure specialist agents with intent libraries",
+        "Load financial services NLP models",
+        "Connect APIs (claims, policy, billing systems)",
+        "Setup guardrails, compliance rules, and escalation triggers",
       ],
     },
     {
       weeks: "Week 5–6",
       title: "Test & Tune",
+      color: "#36b595",
       tasks: [
-        `UAT with ${companyName} team`,
+        `UAT with ${companyName} stakeholders`,
         "NLP accuracy testing (>95% target)",
-        "Human escalation testing",
-        "CSAT measurement baseline",
+        "Human escalation and handoff testing",
+        "CSAT measurement baseline established",
       ],
     },
     {
       weeks: "Week 7–8",
       title: "Launch & Optimize",
+      color: "#ef8b00",
       tasks: [
-        "Soft launch (20% traffic)",
-        "Monitor automation rates live",
-        "Tune edge cases in real-time",
-        "Full production rollout",
+        "Soft launch (20% traffic ramp-up)",
+        "Real-time automation rate monitoring",
+        "Edge case tuning from live conversations",
+        "Full production rollout across channels",
       ],
     },
   ];
@@ -120,25 +137,25 @@ export const ROI_HIGHLIGHTS = [
   {
     title: "Cost per contact reduced by 80%",
     description:
-      "AI handles 90% of interactions at a fraction of human agent cost. Typical cost drops from $8-15 per contact to under $0.50.",
+      "AI handles 80-90% of interactions at a fraction of human agent cost.",
     color: "emerald",
   },
   {
-    title: "Go live in 6-8 weeks, not 6-8 months",
+    title: "Go live in 6-8 weeks, not months",
     description:
-      "boost.ai deploys in weeks using pre-built insurance intents, NLP models, and a no-code agent builder. Competitors take 6-12 months.",
+      "Pre-built intents, NLP models, and no-code builder accelerate deployment.",
     color: "purple",
   },
   {
-    title: "CSAT improves as humans focus on what matters",
+    title: "CSAT improves as humans focus on complex cases",
     description:
-      "When AI handles tier-1, human agents focus on complex cases — driving higher satisfaction scores across the board.",
+      "AI handles tier-1, freeing agents for high-value interactions.",
     color: "amber",
   },
   {
-    title: "Infinite scale without incremental headcount",
+    title: "Infinite scale without headcount",
     description:
-      "Handle 10x the volume during CAT events or open enrollment with zero additional staffing — AI scales instantly.",
+      "Handle 10x volume during peak events with zero additional staffing.",
     color: "rose",
   },
 ];

@@ -1,142 +1,218 @@
 "use client";
 
+import { useState } from "react";
 import type { GuideData } from "@/lib/types";
-import { INTEGRATION_CATEGORIES } from "@/data/integrations";
-import BoostLogo from "@/components/BoostLogo";
+import type { StakeholderRole } from "@/data/roles";
+import { getRoleDefinition } from "@/data/roles";
+import { SectionHeader, CalloutBanner, Badge } from "@/components/ui";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
-const CATEGORY_ICONS: Record<string, string> = {
-  channel: "💬",
-  human_handover: "🤝",
-  openid: "🔐",
-  utility: "⚙️",
-  voice: "🎙️",
-};
+const PLATFORM_COMPONENTS = [
+  { label: "NLP Engine", desc: "Intent classification with 95%+ accuracy" },
+  { label: "Agent Orchestrator", desc: "Multi-agent routing and context management" },
+  { label: "Guardrails", desc: "Policy compliance and hallucination prevention" },
+  { label: "Generative AI", desc: "LLM-powered responses within safe boundaries" },
+  { label: "Knowledge Base", desc: "Document ingestion and retrieval" },
+  { label: "Analytics", desc: "Conversation insights and performance dashboards" },
+];
 
-export default function ArchitectureSection({ guide }: { guide: GuideData }) {
-  const hasIntegrations = Object.values(guide.integrations).some((arr) => arr && arr.length > 0);
+function ArchLayer({
+  label,
+  icon,
+  items,
+  color,
+  isVisible,
+  delay,
+}: {
+  label: string;
+  icon: string;
+  items: string[];
+  color: string;
+  isVisible: boolean;
+  delay: number;
+}) {
+  return (
+    <div
+      className={`rounded-xl border border-boost-border bg-white p-4 transition-all duration-500 ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      }`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-lg">{icon}</span>
+        <h4 className="text-sm font-semibold text-boost-dark">{label}</h4>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {items.map((item) => (
+          <span
+            key={item}
+            className="px-2.5 py-1 rounded-md text-xs font-medium border"
+            style={{
+              backgroundColor: `${color}08`,
+              borderColor: `${color}25`,
+              color: color,
+            }}
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function ArchitectureSection({
+  guide,
+  role = "general",
+}: {
+  guide: GuideData;
+  role?: StakeholderRole;
+}) {
+  const { ref, isVisible } = useScrollReveal({ once: true });
+  const [showPlatformDetail, setShowPlatformDetail] = useState(false);
+  const roleDef = getRoleDefinition(role);
+  const highlight = roleDef.highlights["architecture"];
+
+  // Build integration lists from form data or defaults
+  const channels = guide.integrations?.channel?.length
+    ? guide.integrations.channel
+    : ["Web Chat", "Voice", "WhatsApp", "SMS", "Email"];
+
+  const handover = guide.integrations?.human_handover?.length
+    ? guide.integrations.human_handover
+    : ["Contact Center", "Live Agent Platform"];
+
+  const backends = [
+    ...(guide.integrations?.utility?.length ? guide.integrations.utility : ["CRM", "Core Platform", "Knowledge Base"]),
+    ...(guide.integrations?.openid?.length ? guide.integrations.openid.map(i => `${i} (Auth)`) : []),
+  ];
+
+  const voiceInteg = guide.integrations?.voice?.length
+    ? guide.integrations.voice
+    : [];
+
+  const totalIntegrations = channels.length + handover.length + backends.length + voiceInteg.length;
 
   return (
-    <section className="section-enter">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-boost-dark mb-2">System Architecture</h2>
-        <p className="text-boost-muted">
-          {hasIntegrations
-            ? `How boost.ai integrates with ${guide.company_name}'s existing technology stack`
-            : "boost.ai connects to your existing systems through 100+ pre-built integrations"}
-        </p>
-      </div>
+    <section>
+      <SectionHeader
+        number="08"
+        title="System Architecture"
+        subtitle={`How boost.ai integrates with ${guide.company_name}'s technology stack`}
+      />
 
-      {/* Architecture diagram */}
-      <div className="bg-white border border-boost-border rounded-xl p-6 mb-8">
-        <div className="flex flex-col items-center gap-4">
-          {/* End users */}
-          <div className="flex items-center gap-3 px-5 py-3 bg-boost-surface rounded-xl border border-boost-border">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-boost-muted">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            <span className="text-sm text-boost-text-secondary">End Users / Customers</span>
-          </div>
-
-          <div className="w-px h-6 bg-boost-border" />
-
-          {/* Channels row */}
-          <div className="w-full">
-            <p className="text-xs text-boost-muted text-center uppercase tracking-wider mb-3">Channels</p>
-            <div className="flex flex-wrap justify-center gap-2">
-              {(hasIntegrations && guide.integrations.channel?.length
-                ? guide.integrations.channel
-                : ["Web Chat", "Voice", "WhatsApp", "SMS", "Facebook"]
-              ).map((ch) => (
-                <span key={ch} className="px-3 py-1.5 bg-boost-green-light/10 border border-boost-green-light/20 rounded-lg text-xs text-boost-green font-medium">
-                  {ch}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="w-px h-6 bg-boost-border" />
-
-          {/* boost.ai core */}
-          <div className="w-full max-w-md px-6 py-5 bg-boost-purple rounded-xl text-center">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <BoostLogo height={20} color="#ffffff" showText={false} />
-              <span className="text-white font-bold">boost.ai Agent Orchestrator</span>
-            </div>
-            <p className="text-xs text-white/60">NLP Engine · Guardrails · Intent Routing · Generative AI</p>
-          </div>
-
-          <div className="w-px h-6 bg-boost-border" />
-
-          {/* Human handover row */}
-          <div className="w-full">
-            <p className="text-xs text-boost-muted text-center uppercase tracking-wider mb-3">Human Handover</p>
-            <div className="flex flex-wrap justify-center gap-2">
-              {(hasIntegrations && guide.integrations.human_handover?.length
-                ? guide.integrations.human_handover
-                : ["Contact Center", "Live Agent Platform"]
-              ).map((hh) => (
-                <span key={hh} className="px-3 py-1.5 bg-boost-purple/5 border border-boost-purple/15 rounded-lg text-xs text-boost-purple font-medium">
-                  {hh}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="w-px h-6 bg-boost-border" />
-
-          {/* Backend systems */}
-          <div className="w-full">
-            <p className="text-xs text-boost-muted text-center uppercase tracking-wider mb-3">Backend Systems</p>
-            <div className="flex flex-wrap justify-center gap-2">
-              {(hasIntegrations && guide.integrations.utility?.length
-                ? guide.integrations.utility
-                : ["CRM", "Core Platform", "Knowledge Base", "Ticketing"]
-              ).map((sys) => (
-                <span key={sys} className="px-3 py-1.5 bg-boost-surface border border-boost-border rounded-lg text-xs text-boost-text-secondary">
-                  {sys}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Integration categories */}
-      {hasIntegrations && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {INTEGRATION_CATEGORIES.map((cat) => {
-            const selected = guide.integrations[cat.key as keyof typeof guide.integrations] || [];
-            if (selected.length === 0) return null;
-            return (
-              <div key={cat.key} className="bg-white border border-boost-border rounded-xl p-4">
-                <h4 className="text-sm font-semibold text-boost-dark mb-3 flex items-center gap-2">
-                  <span>{CATEGORY_ICONS[cat.key] || "📦"}</span>
-                  {cat.label}
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {selected.map((name) => (
-                    <span
-                      key={name}
-                      className="px-3 py-1.5 bg-boost-green-light/10 border border-boost-green-light/20 rounded-lg text-xs text-boost-green font-medium"
-                    >
-                      {name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {highlight && (
+        <CalloutBanner title="Technical overview" description={highlight} variant="purple" />
       )}
 
-      {/* API note */}
-      <div className="mt-6 p-4 bg-boost-surface border border-boost-border rounded-xl">
-        <p className="text-xs text-boost-muted">
-          <span className="text-boost-dark font-medium">Custom integrations:</span> Beyond 100+ pre-built connectors, boost.ai&apos;s API connector lets you build integrations to any system with a REST API.
-        </p>
+      <div ref={ref} className="space-y-3">
+        {/* Layer 1: Channels */}
+        <ArchLayer
+          label="Customer Channels"
+          icon="📱"
+          items={channels}
+          color="#36b595"
+          isVisible={isVisible}
+          delay={0}
+        />
+
+        {/* Flow arrow */}
+        <div className="flex justify-center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d1c7d2" strokeWidth="2" className={`transition-opacity duration-500 ${isVisible ? "opacity-100" : "opacity-0"}`}>
+            <path d="M12 5v14M19 12l-7 7-7-7" />
+          </svg>
+        </div>
+
+        {/* Layer 2: boost.ai Platform */}
+        <div
+          className={`rounded-xl border-2 border-boost-purple/30 bg-gradient-to-br from-boost-purple/5 to-boost-green-light/5 p-5 transition-all duration-500 ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          }`}
+          style={{ transitionDelay: "200ms" }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🧠</span>
+              <h4 className="text-sm font-semibold text-boost-purple">boost.ai Platform</h4>
+              <Badge variant="purple">Core</Badge>
+            </div>
+            <button
+              onClick={() => setShowPlatformDetail(!showPlatformDetail)}
+              className="text-xs text-boost-purple hover:text-boost-green transition-colors"
+            >
+              {showPlatformDetail ? "Collapse" : "Expand platform →"}
+            </button>
+          </div>
+
+          {showPlatformDetail ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-3">
+              {PLATFORM_COMPONENTS.map((comp) => (
+                <div key={comp.label} className="bg-white rounded-lg p-3 border border-boost-purple/15">
+                  <p className="text-xs font-semibold text-boost-purple">{comp.label}</p>
+                  <p className="text-[11px] text-boost-muted mt-0.5">{comp.desc}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {PLATFORM_COMPONENTS.map((comp) => (
+                <span key={comp.label} className="px-2.5 py-1 rounded-md text-xs font-medium bg-boost-purple/10 text-boost-purple border border-boost-purple/20">
+                  {comp.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Flow arrows */}
+        <div className="flex justify-center gap-16">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d1c7d2" strokeWidth="2" className={`transition-opacity duration-500 ${isVisible ? "opacity-100" : "opacity-0"}`}>
+            <path d="M12 5v14M19 12l-7 7-7-7" />
+          </svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d1c7d2" strokeWidth="2" className={`transition-opacity duration-500 ${isVisible ? "opacity-100" : "opacity-0"}`}>
+            <path d="M12 5v14M19 12l-7 7-7-7" />
+          </svg>
+        </div>
+
+        {/* Layer 3: Human Handover + Backend */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <ArchLayer
+            label="Human Handover"
+            icon="🤝"
+            items={handover}
+            color="#59195d"
+            isVisible={isVisible}
+            delay={400}
+          />
+          <ArchLayer
+            label="Backend Systems"
+            icon="⚙️"
+            items={backends}
+            color="#208269"
+            isVisible={isVisible}
+            delay={500}
+          />
+        </div>
+
+        {voiceInteg.length > 0 && (
+          <ArchLayer
+            label="Voice Integrations"
+            icon="🎙️"
+            items={voiceInteg}
+            color="#ef8b00"
+            isVisible={isVisible}
+            delay={600}
+          />
+        )}
+
+        {/* Summary */}
+        <div className="bg-boost-surface rounded-xl p-4 border border-boost-border text-center mt-4">
+          <p className="text-sm text-boost-text-secondary">
+            <span className="font-semibold text-boost-dark">{totalIntegrations} integrations</span> configured
+            {" · "}100+ pre-built connectors available
+            {" · "}Custom API connector for anything else
+          </p>
+        </div>
       </div>
     </section>
   );
