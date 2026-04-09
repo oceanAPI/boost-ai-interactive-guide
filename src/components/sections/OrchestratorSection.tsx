@@ -200,11 +200,13 @@ export default function OrchestratorSection({
             <div className="flex justify-center h-4" aria-hidden="true">
               <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
             </div>
-            {/* Placeholder header to match topic group height */}
-            <div className="px-3 py-2 rounded-t-lg bg-boost-green-light/10 text-boost-green">
-              <span className="text-xs font-semibold">Active</span>
+            {/* Header matching topic group button exactly */}
+            <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-t-lg bg-boost-purple/90 text-white">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs font-semibold truncate">No group</span>
+              </div>
             </div>
-            <div className="pt-2">
+            <div className="space-y-2 pt-2">
               <AgentCard agent={agent} onClick={() => setSelectedAgent(agent)} />
             </div>
           </div>
