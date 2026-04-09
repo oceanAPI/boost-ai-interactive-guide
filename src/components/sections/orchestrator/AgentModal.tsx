@@ -30,7 +30,7 @@ export default function AgentModal({ agent, onClose }: AgentModalProps) {
     || agent.flow.actionHooks.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 pb-12 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-8">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -38,9 +38,9 @@ export default function AgentModal({ agent, onClose }: AgentModalProps) {
       />
 
       {/* Modal panel */}
-      <div className="relative bg-white rounded-2xl shadow-2xl border border-boost-border max-w-2xl w-full max-h-[calc(100vh-6rem)] overflow-y-auto animate-modal-in">
+      <div className="relative bg-white rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border border-boost-border max-w-2xl w-full h-full sm:h-auto sm:max-h-[calc(100vh-4rem)] overflow-y-auto animate-modal-in">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-boost-border rounded-t-2xl px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 z-10 bg-white border-b border-boost-border sm:rounded-t-2xl px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-boost-green-light/10 flex items-center justify-center">
               <BoostIcon name={agent.icon} variant="purple" size={24} />
@@ -63,7 +63,7 @@ export default function AgentModal({ agent, onClose }: AgentModalProps) {
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 space-y-6">
+        <div className="px-4 sm:px-6 py-5 space-y-6">
           {/* Capabilities */}
           {agent.capabilities.length > 0 && (
             <div>

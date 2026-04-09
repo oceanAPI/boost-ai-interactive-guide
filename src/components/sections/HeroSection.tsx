@@ -90,11 +90,11 @@ export default function HeroSection({
         </div>
 
         {/* Stat boxes floating on the gradient transition */}
-        <div ref={statsRef} className="relative z-10 flex items-center justify-center gap-4 -mt-16 pb-10 px-4">
+        <div ref={statsRef} className="relative z-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 -mt-16 pb-10 px-4">
           {stats.map((stat, i) => (
             <div
               key={stat.label}
-              className="px-6 py-4 bg-white rounded-xl shadow-lg border border-white/20 text-center min-w-[140px]"
+              className="px-6 py-3 sm:py-4 bg-white rounded-xl shadow-lg border border-white/20 text-center min-w-[140px] w-full sm:w-auto"
               style={{
                 opacity: statsVisible ? 1 : 0,
                 transform: statsVisible ? "translateY(0)" : "translateY(16px)",

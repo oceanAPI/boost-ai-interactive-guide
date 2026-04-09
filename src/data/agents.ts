@@ -454,7 +454,7 @@ const BANKING_TOPIC_GROUPS: TopicGroup[] = [
     ],
   },
   {
-    key: "insurance",
+    key: "bank_insurance",
     label: "Insurance",
     icon: "umbrella",
     agents: [
@@ -523,15 +523,16 @@ export function getOrchestratorConfig(areasOfInterest: string[]): OrchestratorCo
     : Object.keys(ORCHESTRATOR_BY_INDUSTRY);
 
   const merged: OrchestratorConfig = { standaloneAgents: [], topicGroups: [] };
-  const seenGroups = new Set<string>();
+  const seenLabels = new Set<string>();
 
   for (const area of areas) {
     const config = ORCHESTRATOR_BY_INDUSTRY[area];
     if (!config) continue;
     merged.standaloneAgents.push(...config.standaloneAgents);
     for (const group of config.topicGroups) {
-      if (!seenGroups.has(group.key)) {
-        seenGroups.add(group.key);
+      // Dedup by label to avoid "Insurance" appearing from both banking and insurance configs
+      if (!seenLabels.has(group.label)) {
+        seenLabels.add(group.label);
         merged.topicGroups.push(group);
       }
     }

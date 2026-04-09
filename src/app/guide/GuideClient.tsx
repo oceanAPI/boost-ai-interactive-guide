@@ -73,7 +73,7 @@ export default function GuideClient({ guide }: { guide: GuideData }) {
       />
 
       <main>
-        <div className="max-w-5xl mx-auto px-8 py-6 space-y-16">
+        <div className="max-w-5xl mx-auto px-4 sm:px-8 py-6 space-y-12 sm:space-y-16">
           <div id="hero" ref={(el) => { sectionRefs.current["hero"] = el; }}>
             <HeroSection guide={guide} />
           </div>
