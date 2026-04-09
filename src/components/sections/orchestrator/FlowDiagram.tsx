@@ -139,13 +139,16 @@ function InlineSection({
   if (nodes.length === 0) return null;
 
   return (
-    <div className="border-t border-boost-border">
+    <div className="border-t border-boost-border overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-boost-purple/90 text-white relative z-10"
       >
         <div className="flex items-center gap-2">
-          <BoostIcon name={icon} variant="white" size={14} />
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" className="flex-shrink-0" aria-hidden="true">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+          </svg>
           <span className="text-[10px] font-semibold">{label}</span>
           <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full">{nodes.length}</span>
         </div>
