@@ -8,68 +8,34 @@ import BoostIcon from "@/components/BoostIcon";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import FlowNodeCard from "./orchestrator/FlowNodeCard";
+import AgentModal from "./orchestrator/AgentModal";
 
-/* ─── Agent card (small, inside topic group) ─── */
+/* ─── Agent card (clickable, opens modal) ─── */
 function AgentCard({
   agent,
-  isExpanded,
   onClick,
 }: {
   agent: SpecialistAgent;
-  isExpanded: boolean;
   onClick: () => void;
 }) {
   return (
-    <div>
-      <button onClick={onClick} className="w-full text-left">
-        <FlowNodeCard
-          category="agentic"
-          name={agent.name}
-          className={`w-full max-w-none cursor-pointer transition-shadow hover:shadow-md ${
-            isExpanded ? "ring-2 ring-boost-green-light shadow-md" : ""
-          }`}
-        />
-      </button>
-
-      {/* Expanded placeholder */}
-      <div
-        className="grid transition-[grid-template-rows] duration-300 ease-out"
-        style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
-      >
-        <div className="overflow-hidden">
-          {isExpanded && (
-            <div className="mt-2 p-4 bg-boost-surface rounded-lg border border-boost-border">
-              <p className="text-xs font-bold text-boost-muted uppercase tracking-wider mb-2">
-                Agent details coming soon
-              </p>
-              <p className="text-xs text-boost-muted">{agent.description}</p>
-              {agent.capabilities.length > 0 && (
-                <div className="mt-3 space-y-1.5">
-                  {agent.capabilities.slice(0, 4).map((cap) => (
-                    <div key={cap.title} className="flex items-start gap-2 p-2 rounded bg-white border border-boost-border">
-                      <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light mt-1.5 flex-shrink-0" />
-                      <span className="text-[11px] text-boost-dark">{cap.title}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    <button onClick={onClick} className="w-full text-left">
+      <FlowNodeCard
+        category="agentic"
+        name={agent.name}
+        className="w-full max-w-none cursor-pointer transition-shadow hover:shadow-md hover:border-boost-green-light/50"
+      />
+    </button>
   );
 }
 
 /* ─── Topic group column ─── */
 function TopicGroupColumn({
   group,
-  expandedAgent,
-  onToggleAgent,
+  onSelectAgent,
 }: {
   group: TopicGroup;
-  expandedAgent: string | null;
-  onToggleAgent: (key: string) => void;
+  onSelectAgent: (agent: SpecialistAgent) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -119,34 +85,11 @@ function TopicGroupColumn({
             <AgentCard
               key={agent.key}
               agent={agent}
-              isExpanded={expandedAgent === agent.key}
-              onClick={() => onToggleAgent(agent.key)}
+              onClick={() => onSelectAgent(agent)}
             />
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-/* ─── Standalone agent column (no topic group header) ─── */
-function StandaloneColumn({
-  agent,
-  isExpanded,
-  onClick,
-}: {
-  agent: SpecialistAgent;
-  isExpanded: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <div className="flex flex-col">
-      {/* Vertical dashed stub */}
-      <div className="flex justify-center h-12" aria-hidden="true">
-        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
-      </div>
-
-      <AgentCard agent={agent} isExpanded={isExpanded} onClick={onClick} />
     </div>
   );
 }
@@ -158,14 +101,10 @@ export default function OrchestratorSection({
   guide: GuideData;
 }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
-  const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<SpecialistAgent | null>(null);
 
   const config = getOrchestratorConfig(guide.areas_of_interest);
   const totalColumns = config.standaloneAgents.length + config.topicGroups.length;
-
-  const toggleAgent = (key: string) => {
-    setExpandedAgent((prev) => (prev === key ? null : key));
-  };
 
   return (
     <section>
@@ -197,7 +136,7 @@ export default function OrchestratorSection({
         <div className="border-t-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
       </div>
 
-      {/* Columns grid — responsive, wraps on small screens */}
+      {/* Columns grid */}
       <div
         className="grid gap-2"
         style={{
@@ -206,12 +145,12 @@ export default function OrchestratorSection({
       >
         {/* Standalone agents */}
         {config.standaloneAgents.map((agent) => (
-          <StandaloneColumn
-            key={agent.key}
-            agent={agent}
-            isExpanded={expandedAgent === agent.key}
-            onClick={() => toggleAgent(agent.key)}
-          />
+          <div key={agent.key} className="flex flex-col">
+            <div className="flex justify-center h-12" aria-hidden="true">
+              <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
+            </div>
+            <AgentCard agent={agent} onClick={() => setSelectedAgent(agent)} />
+          </div>
         ))}
 
         {/* Topic groups */}
@@ -219,11 +158,18 @@ export default function OrchestratorSection({
           <TopicGroupColumn
             key={group.key}
             group={group}
-            expandedAgent={expandedAgent}
-            onToggleAgent={toggleAgent}
+            onSelectAgent={setSelectedAgent}
           />
         ))}
       </div>
+
+      {/* Agent detail modal */}
+      {selectedAgent && (
+        <AgentModal
+          agent={selectedAgent}
+          onClose={() => setSelectedAgent(null)}
+        />
+      )}
     </section>
   );
 }
