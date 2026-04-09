@@ -5,12 +5,13 @@ import type { GuideData } from "@/lib/types";
 import { SPECIALIST_AGENTS } from "@/data/agents";
 import { SectionHeader, ProgressRing } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import BoostIcon from "@/components/BoostIcon";
 
 const SIMULATION_STEPS = [
-  { label: "Customer sends message", detail: "\"I need to file a claim for water damage in my basement\"", icon: "💬" },
-  { label: "Orchestrator analyzes intent", detail: "Intent: home_property_claim → Confidence: 94%", icon: "🧠" },
-  { label: "Routes to specialist agent", detail: "Home & Property Agent activated with claim context", icon: "🎯" },
-  { label: "Agent resolves or escalates", detail: "FNOL filed, reference #HC-29481 generated, adjuster scheduled", icon: "✅" },
+  { label: "Customer sends message", detail: "\"I need to file a claim for water damage in my basement\"", icon: "chat" },
+  { label: "Orchestrator analyzes intent", detail: "Intent: home_property_claim -> Confidence: 94%", icon: "brain-integration" },
+  { label: "Routes to specialist agent", detail: "Home & Property Agent activated with claim context", icon: "target-selection" },
+  { label: "Agent resolves or escalates", detail: "FNOL filed, reference #HC-29481 generated, adjuster scheduled", icon: "check-robot" },
 ];
 
 export default function OrchestratorSection({
@@ -60,6 +61,9 @@ export default function OrchestratorSection({
             transition-all duration-700
             ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-90"}
           `}>
+            <div className="flex justify-center mb-3">
+              <BoostIcon name="robot-brain" variant="white" size={48} />
+            </div>
             <div className="text-white/60 text-xs uppercase tracking-wider mb-1">Intelligence Hub</div>
             <div className="text-white font-bold text-lg">Agent Orchestrator</div>
             <div className="text-boost-green-light text-xs mt-1">NLP + Intent Routing + Guardrails</div>
@@ -69,7 +73,7 @@ export default function OrchestratorSection({
               disabled={simStep >= 0}
               className="mt-3 px-4 py-1.5 bg-boost-green-light/20 border border-boost-green-light/40 text-boost-green-light text-xs rounded-lg hover:bg-boost-green-light/30 disabled:opacity-50 transition-colors"
             >
-              {simStep >= 0 ? "Running..." : "See it in action →"}
+              {simStep >= 0 ? "Running..." : "See it in action"}
             </button>
           </div>
         </div>
@@ -85,15 +89,15 @@ export default function OrchestratorSection({
                     i <= simStep ? "opacity-100" : "opacity-20"
                   }`}
                 >
-                  <span className={`text-lg flex-shrink-0 ${i === simStep ? "animate-pulse" : ""}`}>
-                    {step.icon}
-                  </span>
+                  <div className={`flex-shrink-0 ${i === simStep ? "animate-pulse" : ""}`}>
+                    <BoostIcon name={step.icon} variant="purple" size={24} />
+                  </div>
                   <div>
                     <p className="text-sm font-medium text-boost-dark">{step.label}</p>
                     <p className="text-xs text-boost-muted font-mono">{step.detail}</p>
                   </div>
                   {i < simStep && (
-                    <span className="ml-auto text-boost-green flex-shrink-0">✓</span>
+                    <span className="ml-auto text-boost-green flex-shrink-0 text-sm font-bold">Done</span>
                   )}
                 </div>
               ))}
@@ -136,7 +140,7 @@ export default function OrchestratorSection({
                 <div className="border-t border-boost-border pt-2 space-y-1">
                   {agent.capabilities.slice(0, 3).map((cap) => (
                     <p key={cap.title} className="text-[11px] text-boost-text-secondary flex items-center gap-1.5">
-                      <span className="text-boost-green-light">•</span>
+                      <span className="w-1 h-1 rounded-full bg-boost-green-light flex-shrink-0" />
                       {cap.title}
                     </p>
                   ))}
@@ -147,7 +151,7 @@ export default function OrchestratorSection({
                 text-xs text-boost-green font-medium mt-2 transition-opacity
                 ${hoveredAgent === agent.key ? "opacity-100" : "opacity-0"}
               `}>
-                Explore agent →
+                Explore agent
               </div>
             </button>
           ))}
@@ -156,9 +160,9 @@ export default function OrchestratorSection({
         {/* Bottom pillars */}
         <div className="grid grid-cols-3 gap-4 mt-8">
           {[
-            { icon: "🛡️", title: "Guardrails", desc: "Every response validated against policy rules and compliance requirements" },
-            { icon: "🏦", title: "Industry-Specific", desc: "Pre-trained on financial services terminology, regulations, and workflows" },
-            { icon: "🤝", title: "Human Escalation", desc: "Seamless handoff to live agents with full conversation context preserved" },
+            { icon: "shield-medal", title: "Guardrails", desc: "Every response validated against policy rules and compliance requirements" },
+            { icon: "bank", title: "Industry-Specific", desc: "Pre-trained on financial services terminology, regulations, and workflows" },
+            { icon: "human-interaction", title: "Human Escalation", desc: "Seamless handoff to live agents with full conversation context preserved" },
           ].map((pillar, i) => (
             <div
               key={pillar.title}
@@ -169,7 +173,9 @@ export default function OrchestratorSection({
               `}
               style={{ transitionDelay: `${(agents.length + i + 1) * 100}ms` }}
             >
-              <span className="text-2xl block mb-2">{pillar.icon}</span>
+              <div className="flex justify-center mb-2">
+                <BoostIcon name={pillar.icon} variant="purple" size={36} />
+              </div>
               <h4 className="text-sm font-semibold text-boost-dark">{pillar.title}</h4>
               <p className="text-xs text-boost-muted mt-1">{pillar.desc}</p>
             </div>

@@ -1,8 +1,7 @@
 "use client";
 
+import Image from "next/image";
 import type { GuideData } from "@/lib/types";
-import BoostLogo from "@/components/BoostLogo";
-import SparkleDecoration from "@/components/SparkleDecoration";
 import { StatCounter } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
@@ -34,7 +33,6 @@ export default function HeroSection({
 }) {
   const { ref: statsRef, isVisible: statsVisible } = useScrollReveal({ once: true });
   const stats = computeDynamicStats(guide);
-  const subtitle = "Your AI-powered customer service transformation — from first contact to full resolution.";
 
   return (
     <section
@@ -44,10 +42,37 @@ export default function HeroSection({
       }}
     >
       <div className="relative">
-        <SparkleDecoration />
+        {/* Brand shape decorations */}
+        <Image
+          src="/brand/boost_brandshape_white.svg"
+          alt=""
+          width={200}
+          height={200}
+          className="absolute top-4 right-8 opacity-[0.04] pointer-events-none"
+          unoptimized
+          aria-hidden
+        />
+        <Image
+          src="/brand/ai-bubble_white.svg"
+          alt=""
+          width={120}
+          height={120}
+          className="absolute bottom-24 left-6 opacity-[0.06] pointer-events-none"
+          unoptimized
+          aria-hidden
+        />
+
         <div className="relative z-10 text-center px-8 max-w-3xl mx-auto pt-16 pb-28">
+          {/* Real boost.ai logo (white negative) */}
           <div className="flex justify-center mb-8">
-            <BoostLogo height={32} color="#ffffff" />
+            <Image
+              src="/brand/boost_logo-_negative.svg"
+              alt="boost.ai"
+              width={160}
+              height={40}
+              className="h-8 w-auto"
+              unoptimized
+            />
           </div>
 
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
@@ -62,7 +87,7 @@ export default function HeroSection({
           )}
 
           <p className="text-lg text-white/70 mt-6 leading-relaxed max-w-xl mx-auto">
-            {subtitle}
+            Your AI-powered customer service transformation — from first contact to full resolution.
           </p>
         </div>
 
@@ -71,10 +96,11 @@ export default function HeroSection({
           {stats.map((stat, i) => (
             <div
               key={stat.label}
-              className="px-6 py-4 bg-white rounded-xl shadow-lg border border-white/20 text-center min-w-[140px] opacity-0 translate-y-4 transition-all duration-500"
+              className="px-6 py-4 bg-white rounded-xl shadow-lg border border-white/20 text-center min-w-[140px]"
               style={{
                 opacity: statsVisible ? 1 : 0,
                 transform: statsVisible ? "translateY(0)" : "translateY(16px)",
+                transition: "all 0.5s ease",
                 transitionDelay: `${i * 120}ms`,
               }}
             >

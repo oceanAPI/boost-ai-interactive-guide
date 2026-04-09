@@ -4,26 +4,27 @@ import { useState } from "react";
 import type { GuideData } from "@/lib/types";
 import { SectionHeader, Badge } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import BoostIcon from "@/components/BoostIcon";
 
 const PLATFORM_COMPONENTS = [
-  { label: "NLP Engine", desc: "Intent classification with 95%+ accuracy" },
-  { label: "Agent Orchestrator", desc: "Multi-agent routing and context management" },
-  { label: "Guardrails", desc: "Policy compliance and hallucination prevention" },
-  { label: "Generative AI", desc: "LLM-powered responses within safe boundaries" },
-  { label: "Knowledge Base", desc: "Document ingestion and retrieval" },
-  { label: "Analytics", desc: "Conversation insights and performance dashboards" },
+  { label: "NLP Engine", desc: "Intent classification with 95%+ accuracy", icon: "brain-integration" },
+  { label: "Agent Orchestrator", desc: "Multi-agent routing and context management", icon: "robot-brain" },
+  { label: "Guardrails", desc: "Policy compliance and hallucination prevention", icon: "shield-medal" },
+  { label: "Generative AI", desc: "LLM-powered responses within safe boundaries", icon: "integration-artificial-intelligence" },
+  { label: "Knowledge Base", desc: "Document ingestion and retrieval", icon: "books" },
+  { label: "Analytics", desc: "Conversation insights and performance dashboards", icon: "bar-chart" },
 ];
 
 function ArchLayer({
   label,
-  icon,
+  iconName,
   items,
   color,
   isVisible,
   delay,
 }: {
   label: string;
-  icon: string;
+  iconName: string;
   items: string[];
   color: string;
   isVisible: boolean;
@@ -37,7 +38,7 @@ function ArchLayer({
       style={{ transitionDelay: `${delay}ms` }}
     >
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-lg">{icon}</span>
+        <BoostIcon name={iconName} variant="purple" size={24} />
         <h4 className="text-sm font-semibold text-boost-dark">{label}</h4>
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -67,7 +68,6 @@ export default function ArchitectureSection({
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [showPlatformDetail, setShowPlatformDetail] = useState(false);
 
-  // Build integration lists from form data or defaults
   const channels = guide.integrations?.channel?.length
     ? guide.integrations.channel
     : ["Web Chat", "Voice", "WhatsApp", "SMS", "Email"];
@@ -99,7 +99,7 @@ export default function ArchitectureSection({
         {/* Layer 1: Channels */}
         <ArchLayer
           label="Customer Channels"
-          icon="📱"
+          iconName="chat"
           items={channels}
           color="#36b595"
           isVisible={isVisible}
@@ -122,7 +122,7 @@ export default function ArchitectureSection({
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <span className="text-lg">🧠</span>
+              <BoostIcon name="robot-brain" variant="purple" size={24} />
               <h4 className="text-sm font-semibold text-boost-purple">boost.ai Platform</h4>
               <Badge variant="purple">Core</Badge>
             </div>
@@ -130,16 +130,19 @@ export default function ArchitectureSection({
               onClick={() => setShowPlatformDetail(!showPlatformDetail)}
               className="text-xs text-boost-purple hover:text-boost-green transition-colors"
             >
-              {showPlatformDetail ? "Collapse" : "Expand platform →"}
+              {showPlatformDetail ? "Collapse" : "Expand platform"}
             </button>
           </div>
 
           {showPlatformDetail ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-3">
               {PLATFORM_COMPONENTS.map((comp) => (
-                <div key={comp.label} className="bg-white rounded-lg p-3 border border-boost-purple/15">
-                  <p className="text-xs font-semibold text-boost-purple">{comp.label}</p>
-                  <p className="text-[11px] text-boost-muted mt-0.5">{comp.desc}</p>
+                <div key={comp.label} className="bg-white rounded-lg p-3 border border-boost-purple/15 flex items-start gap-2">
+                  <BoostIcon name={comp.icon} variant="purple" size={20} className="mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold text-boost-purple">{comp.label}</p>
+                    <p className="text-[11px] text-boost-muted mt-0.5">{comp.desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -168,7 +171,7 @@ export default function ArchitectureSection({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <ArchLayer
             label="Human Handover"
-            icon="🤝"
+            iconName="human-interaction"
             items={handover}
             color="#59195d"
             isVisible={isVisible}
@@ -176,7 +179,7 @@ export default function ArchitectureSection({
           />
           <ArchLayer
             label="Backend Systems"
-            icon="⚙️"
+            iconName="cogs"
             items={backends}
             color="#208269"
             isVisible={isVisible}
@@ -187,7 +190,7 @@ export default function ArchitectureSection({
         {voiceInteg.length > 0 && (
           <ArchLayer
             label="Voice Integrations"
-            icon="🎙️"
+            iconName="headset"
             items={voiceInteg}
             color="#ef8b00"
             isVisible={isVisible}
@@ -199,8 +202,8 @@ export default function ArchitectureSection({
         <div className="bg-boost-surface rounded-xl p-4 border border-boost-border text-center mt-4">
           <p className="text-sm text-boost-text-secondary">
             <span className="font-semibold text-boost-dark">{totalIntegrations} integrations</span> configured
-            {" · "}100+ pre-built connectors available
-            {" · "}Custom API connector for anything else
+            {" | "}100+ pre-built connectors available
+            {" | "}Custom API connector for anything else
           </p>
         </div>
       </div>

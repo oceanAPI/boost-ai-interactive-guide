@@ -1,6 +1,6 @@
 "use client";
 
-import BoostLogo from "@/components/BoostLogo";
+import Image from "next/image";
 
 interface GuideNavProps {
   sections: { id: string; label: string; icon: string }[];
@@ -21,7 +21,14 @@ export default function GuideNav({
         {/* Top row: logo + company */}
         <div className="flex items-center justify-between py-3">
           <div className="flex items-center gap-3">
-            <BoostLogo height={20} color="#59195d" />
+            <Image
+              src="/brand/boost_logo_purple-_main.svg"
+              alt="boost.ai"
+              width={100}
+              height={24}
+              className="h-5 w-auto"
+              unoptimized
+            />
             <span className="text-xs text-boost-muted">|</span>
             <span className="text-sm font-medium text-boost-dark">{companyName}</span>
           </div>
