@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { SpecialistAgent } from "@/data/agents";
 import BoostIcon from "@/components/BoostIcon";
 import FlowDiagram from "./FlowDiagram";
@@ -88,6 +88,8 @@ export default function AgentModal({ agent, onClose }: AgentModalProps) {
     };
   }, [onClose]);
 
+  const [isDrilledIn, setIsDrilledIn] = useState(false);
+
   const hasFlow =
     agent.flow.knowledgeSources.length > 0 ||
     agent.flow.guardrails.length > 0 ||
@@ -129,7 +131,7 @@ export default function AgentModal({ agent, onClose }: AgentModalProps) {
           {/* Agent Architecture */}
           {hasFlow && (
             <ModalSection title="Agent architecture">
-              <FlowDiagram agent={agent} />
+              <FlowDiagram agent={agent} onDrillChange={setIsDrilledIn} />
             </ModalSection>
           )}
 
@@ -143,10 +145,12 @@ export default function AgentModal({ agent, onClose }: AgentModalProps) {
             </div>
           )}
 
-          {/* Most Frequently Asked Questions — placeholder chart */}
-          <ModalSection title="Most frequently asked questions">
-            <FAQChart agent={agent} />
-          </ModalSection>
+          {/* Most Frequently Asked Questions — only on top-level view */}
+          {!isDrilledIn && (
+            <ModalSection title="Most frequently asked questions">
+              <FAQChart agent={agent} />
+            </ModalSection>
+          )}
 
           {/*
            * ─── Future sections (uncomment when ready) ───

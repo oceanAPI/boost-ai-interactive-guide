@@ -8,6 +8,7 @@ import FlowConnector from "./FlowConnector";
 
 interface FlowDiagramProps {
   agent: SpecialistAgent;
+  onDrillChange?: (isDrilledIn: boolean) => void;
 }
 
 /* ─── Category column (same style as topic group in orchestrator) ─── */
@@ -230,13 +231,18 @@ function AgenticCard({
 }
 
 /* ─── Main Flow Diagram ─── */
-export default function FlowDiagram({ agent }: FlowDiagramProps) {
+export default function FlowDiagram({ agent, onDrillChange }: FlowDiagramProps) {
   const { flow } = agent;
   const [selectedNode, setSelectedNode] = useState<FlowNode | null>(null);
 
+  const selectNode = (node: FlowNode | null) => {
+    setSelectedNode(node);
+    onDrillChange?.(node !== null);
+  };
+
   // If a node is selected, show its detail view
   if (selectedNode) {
-    return <NodeDetail node={selectedNode} onBack={() => setSelectedNode(null)} />;
+    return <NodeDetail node={selectedNode} onBack={() => selectNode(null)} />;
   }
 
   // Separate knowledge/API from the flow columns — they go inside the agentic card
@@ -259,7 +265,7 @@ export default function FlowDiagram({ agent }: FlowDiagramProps) {
           agent={agent}
           knowledgeDocs={knowledgeDocs}
           apiHooks={apiHooks}
-          onSelectNode={setSelectedNode}
+          onSelectNode={selectNode}
         />
       </div>
 
@@ -287,7 +293,7 @@ export default function FlowDiagram({ agent }: FlowDiagramProps) {
             icon={cat.icon}
             nodes={cat.nodes}
             category={cat.key}
-            onSelect={setSelectedNode}
+            onSelect={selectNode}
           />
         ))}
       </div>
