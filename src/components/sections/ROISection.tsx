@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import type { GuideData } from "@/lib/types";
-import { SPECIALIST_AGENTS } from "@/data/agents";
+import { getAgentsForGuide } from "@/data/agents";
 import { calculateROI } from "@/lib/roi-calculator";
 import { SectionHeader, StatCounter } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -24,9 +24,7 @@ export default function ROISection({
   const totalVolumeFromGuide = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0);
   const costFromGuide = parseFloat(guide.conversation_cost?.replace(/[^0-9.]/g, "") || "0");
 
-  const agents = guide.areas_of_interest.length > 0
-    ? SPECIALIST_AGENTS.filter((a) => guide.areas_of_interest.includes(a.key))
-    : SPECIALIST_AGENTS;
+  const agents = getAgentsForGuide(guide.areas_of_interest);
   const avgRate = Math.round(agents.reduce((s, a) => s + a.automationRate, 0) / agents.length);
 
   // Interactive slider state

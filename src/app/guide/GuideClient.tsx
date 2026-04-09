@@ -79,7 +79,7 @@ export default function GuideClient({ guide }: { guide: GuideData }) {
           </div>
 
           <div id="orchestrator" ref={(el) => { sectionRefs.current["orchestrator"] = el; }}>
-            <OrchestratorSection guide={guide} onDrillDown={handleDrillDown} />
+            <OrchestratorSection guide={guide} />
           </div>
 
           <div id="agents" ref={(el) => { sectionRefs.current["agents"] = el; }}>

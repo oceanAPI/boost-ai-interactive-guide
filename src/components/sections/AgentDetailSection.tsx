@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { GuideData } from "@/lib/types";
-import { SPECIALIST_AGENTS } from "@/data/agents";
+import { getAgentsForGuide } from "@/data/agents";
 import { SectionHeader, TabGroup, ExpandableCard, Badge } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
@@ -50,9 +50,7 @@ export default function AgentDetailSection({
   focusedAgent: string | null;
   onBack: () => void;
 }) {
-  const agents = guide.areas_of_interest.length > 0
-    ? SPECIALIST_AGENTS.filter((a) => guide.areas_of_interest.includes(a.key))
-    : SPECIALIST_AGENTS;
+  const agents = getAgentsForGuide(guide.areas_of_interest);
 
   const [activeTab, setActiveTab] = useState(focusedAgent || agents[0]?.key || "claims");
 

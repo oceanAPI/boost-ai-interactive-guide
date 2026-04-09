@@ -2,45 +2,24 @@
 
 import { useState } from "react";
 import type { GuideData } from "@/lib/types";
-import { SPECIALIST_AGENTS } from "@/data/agents";
-import { SectionHeader, ProgressRing } from "@/components/ui";
-import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { getAgentsForGuide } from "@/data/agents";
 import BoostIcon from "@/components/BoostIcon";
-
-const SIMULATION_STEPS = [
-  { label: "Customer sends message", detail: "\"I need to file a claim for water damage in my basement\"", icon: "chat" },
-  { label: "Orchestrator analyzes intent", detail: "Intent: home_property_claim -> Confidence: 94%", icon: "brain-integration" },
-  { label: "Routes to specialist agent", detail: "Home & Property Agent activated with claim context", icon: "target-selection" },
-  { label: "Agent resolves or escalates", detail: "FNOL filed, reference #HC-29481 generated, adjuster scheduled", icon: "check-robot" },
-];
+import { SectionHeader, ProgressRing, Badge } from "@/components/ui";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
+import FlowDiagram from "./orchestrator/FlowDiagram";
 
 export default function OrchestratorSection({
   guide,
-  onDrillDown,
 }: {
   guide: GuideData;
-  onDrillDown: (agentKey: string) => void;
 }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
-  const [simStep, setSimStep] = useState(-1);
-  const [hoveredAgent, setHoveredAgent] = useState<string | null>(null);
+  const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
 
-  const agents = guide.areas_of_interest.length > 0
-    ? SPECIALIST_AGENTS.filter((a) => guide.areas_of_interest.includes(a.key))
-    : SPECIALIST_AGENTS;
+  const agents = getAgentsForGuide(guide.areas_of_interest);
 
-  const runSimulation = () => {
-    setSimStep(0);
-    let step = 0;
-    const interval = setInterval(() => {
-      step++;
-      if (step >= SIMULATION_STEPS.length) {
-        clearInterval(interval);
-        setTimeout(() => setSimStep(-1), 3000);
-      } else {
-        setSimStep(step);
-      }
-    }, 1800);
+  const toggleAgent = (key: string) => {
+    setExpandedAgent((prev) => (prev === key ? null : key));
   };
 
   return (
@@ -51,136 +30,169 @@ export default function OrchestratorSection({
         subtitle={`How boost.ai routes and resolves every interaction for ${guide.company_name}`}
       />
 
-      {/* Hub and spoke layout */}
-      <div ref={ref} className="relative mt-8">
-        {/* Central hub */}
-        <div className="flex justify-center mb-8">
-          <div className={`
-            relative bg-gradient-to-br from-boost-purple to-boost-purple-dark
-            rounded-2xl px-8 py-6 text-center shadow-xl max-w-sm w-full
-            transition-all duration-700
-            ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-90"}
-          `}>
-            <div className="flex justify-center mb-3">
-              <BoostIcon name="robot-brain" variant="white" size={48} />
-            </div>
-            <div className="text-white/60 text-xs uppercase tracking-wider mb-1">Intelligence Hub</div>
-            <div className="text-white font-bold text-lg">Agent Orchestrator</div>
-            <div className="text-boost-green-light text-xs mt-1">NLP + Intent Routing + Guardrails</div>
-
-            <button
-              onClick={runSimulation}
-              disabled={simStep >= 0}
-              className="mt-3 px-4 py-1.5 bg-boost-green-light/20 border border-boost-green-light/40 text-boost-green-light text-xs rounded-lg hover:bg-boost-green-light/30 disabled:opacity-50 transition-colors"
-            >
-              {simStep >= 0 ? "Running..." : "See it in action"}
-            </button>
+      {/* Hub card */}
+      <div ref={ref} className="flex justify-center mb-8">
+        <div
+          className={`
+            relative inline-flex items-center gap-4 px-8 py-5 rounded-2xl
+            bg-gradient-to-br from-boost-purple to-boost-purple-dark
+            text-white shadow-lg transition-all duration-700
+            ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}
+          `}
+        >
+          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center">
+            <BoostIcon name="robot-brain" variant="white" size={28} />
+          </div>
+          <div>
+            <span className="text-xs font-medium text-white/50 uppercase tracking-wider">Central Hub</span>
+            <h3 className="text-lg font-bold">Agent Orchestrator</h3>
+            <p className="text-xs text-white/60 max-w-xs">
+              Analyzes every incoming message, determines intent, and routes to the right specialist agent.
+            </p>
           </div>
         </div>
+      </div>
 
-        {/* Simulation overlay */}
-        {simStep >= 0 && (
-          <div className="mb-8 mx-auto max-w-lg">
-            <div className="bg-boost-surface rounded-xl border border-boost-border p-4 space-y-3">
-              {SIMULATION_STEPS.map((step, i) => (
-                <div
-                  key={i}
-                  className={`flex items-start gap-3 transition-all duration-300 ${
-                    i <= simStep ? "opacity-100" : "opacity-20"
-                  }`}
-                >
-                  <div className={`flex-shrink-0 ${i === simStep ? "animate-pulse" : ""}`}>
-                    <BoostIcon name={step.icon} variant="purple" size={24} />
+      {/* SVG connector from hub to grid */}
+      <div className="flex justify-center mb-4" aria-hidden="true">
+        <svg width="200" height="32" viewBox="0 0 200 32" fill="none">
+          <line x1="100" y1="0" x2="40" y2="32" stroke="#36b595" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.3" />
+          <line x1="100" y1="0" x2="100" y2="32" stroke="#36b595" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.3" />
+          <line x1="100" y1="0" x2="160" y2="32" stroke="#36b595" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.3" />
+        </svg>
+      </div>
+
+      {/* Agent cards grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {agents.map((agent, i) => {
+          const isExpanded = expandedAgent === agent.key;
+          const isDimmed = expandedAgent !== null && !isExpanded;
+
+          return (
+            <div
+              key={agent.key}
+              className={`transition-all duration-300 ${
+                isExpanded ? "sm:col-span-2 lg:col-span-3" : ""
+              }`}
+              style={{
+                opacity: isDimmed ? 0.5 : 1,
+                transitionDelay: `${i * 50}ms`,
+              }}
+            >
+              {/* Agent card header */}
+              <button
+                onClick={() => toggleAgent(agent.key)}
+                aria-expanded={isExpanded}
+                className={`
+                  w-full text-left rounded-xl p-4 transition-all
+                  border-l-4 border-boost-green-light
+                  ${isExpanded
+                    ? "bg-boost-surface border border-boost-border shadow-md rounded-b-none"
+                    : "bg-white border border-boost-border hover:shadow-md card-lift"
+                  }
+                `}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-boost-green-light/10 flex items-center justify-center">
+                    <BoostIcon name={agent.icon} variant="purple" size={24} />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-boost-dark">{step.label}</p>
-                    <p className="text-xs text-boost-muted font-mono">{step.detail}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-bold text-boost-dark">{agent.name}</h4>
+                      <div className="flex items-center gap-2">
+                        <ProgressRing
+                          percentage={agent.automationRate}
+                          size={36}
+                          strokeWidth={3}
+                          showValue
+                        />
+                        <svg
+                          width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" strokeWidth="2"
+                          className={`text-boost-muted transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                        >
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </div>
+                    </div>
+                    <p className="text-xs text-boost-muted mt-0.5 line-clamp-1">{agent.description}</p>
                   </div>
-                  {i < simStep && (
-                    <span className="ml-auto text-boost-green flex-shrink-0 text-sm font-bold">Done</span>
+                </div>
+
+                {/* Quick actions — only when collapsed */}
+                {!isExpanded && (
+                  <div className="flex flex-wrap gap-1 mt-3 ml-13">
+                    {agent.quickActions.slice(0, 4).map((action) => (
+                      <Badge key={action} variant="muted" size="sm">{action}</Badge>
+                    ))}
+                    {agent.quickActions.length > 4 && (
+                      <Badge variant="muted" size="sm">+{agent.quickActions.length - 4}</Badge>
+                    )}
+                  </div>
+                )}
+              </button>
+
+              {/* Expanded content */}
+              <div
+                className="grid transition-[grid-template-rows] duration-300 ease-out"
+                style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
+              >
+                <div className="overflow-hidden">
+                  {isExpanded && (
+                    <div className="px-4 pb-4 pt-3 bg-boost-surface border border-t-0 border-boost-border border-l-4 border-l-boost-green-light rounded-b-xl">
+                      {/* Capabilities */}
+                      <div className="mb-5">
+                        <h5 className="text-xs font-bold text-boost-muted uppercase tracking-wider mb-2">
+                          Capabilities ({agent.capabilities.length})
+                        </h5>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {agent.capabilities.map((cap) => (
+                            <div key={cap.title} className="flex items-start gap-2 p-2.5 rounded-lg bg-white border border-boost-border">
+                              <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light mt-1.5 flex-shrink-0" />
+                              <div>
+                                <span className="text-xs font-medium text-boost-dark">{cap.title}</span>
+                                <p className="text-[11px] text-boost-muted leading-snug">{cap.description}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Flow architecture */}
+                      <div>
+                        <h5 className="text-xs font-bold text-boost-muted uppercase tracking-wider mb-2">
+                          Agent Architecture
+                        </h5>
+                        <div className="bg-white rounded-xl border border-boost-border p-4">
+                          <FlowDiagram agent={agent} />
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
-              ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Bottom pillars */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-8">
+        {[
+          { icon: "shield-medal", title: "Built-in Guardrails", desc: "Hallucination detection, PII protection, and compliance checks on every response." },
+          { icon: "brain-integration", title: "Industry-Specific NLP", desc: "Pre-trained on financial services terminology, products, and workflows." },
+          { icon: "headset", title: "Seamless Escalation", desc: "Intelligent human handover with full context transfer when needed." },
+        ].map((pillar) => (
+          <div key={pillar.title} className="flex items-start gap-3 p-4 rounded-xl bg-white border border-boost-border">
+            <div className="w-9 h-9 rounded-lg bg-boost-purple/10 flex items-center justify-center flex-shrink-0">
+              <BoostIcon name={pillar.icon} variant="purple" size={20} />
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-boost-dark">{pillar.title}</h4>
+              <p className="text-xs text-boost-muted mt-0.5">{pillar.desc}</p>
             </div>
           </div>
-        )}
-
-        {/* Agent spoke cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {agents.map((agent, i) => (
-            <button
-              key={agent.key}
-              onClick={() => onDrillDown(agent.key)}
-              onMouseEnter={() => setHoveredAgent(agent.key)}
-              onMouseLeave={() => setHoveredAgent(null)}
-              className={`
-                relative bg-white rounded-xl border border-boost-border p-5 text-left
-                card-lift transition-all duration-500
-                ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}
-              `}
-              style={{ transitionDelay: `${(i + 1) * 100}ms` }}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 min-w-0 mr-3">
-                  <h3 className="font-semibold text-boost-dark text-sm">{agent.name}</h3>
-                  <p className="text-xs text-boost-muted mt-0.5 line-clamp-2">{agent.description}</p>
-                </div>
-                <ProgressRing
-                  percentage={agent.automationRate}
-                  size={52}
-                  strokeWidth={4}
-                />
-              </div>
-
-              {/* Hover preview: top 3 capabilities */}
-              <div className={`
-                overflow-hidden transition-all duration-300
-                ${hoveredAgent === agent.key ? "max-h-40 opacity-100 mt-2" : "max-h-0 opacity-0"}
-              `}>
-                <div className="border-t border-boost-border pt-2 space-y-1">
-                  {agent.capabilities.slice(0, 3).map((cap) => (
-                    <p key={cap.title} className="text-[11px] text-boost-text-secondary flex items-center gap-1.5">
-                      <span className="w-1 h-1 rounded-full bg-boost-green-light flex-shrink-0" />
-                      {cap.title}
-                    </p>
-                  ))}
-                </div>
-              </div>
-
-              <div className={`
-                text-xs text-boost-green font-medium mt-2 transition-opacity
-                ${hoveredAgent === agent.key ? "opacity-100" : "opacity-0"}
-              `}>
-                Explore agent
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Bottom pillars */}
-        <div className="grid grid-cols-3 gap-4 mt-8">
-          {[
-            { icon: "shield-medal", title: "Guardrails", desc: "Every response validated against policy rules and compliance requirements" },
-            { icon: "bank", title: "Industry-Specific", desc: "Pre-trained on financial services terminology, regulations, and workflows" },
-            { icon: "human-interaction", title: "Human Escalation", desc: "Seamless handoff to live agents with full conversation context preserved" },
-          ].map((pillar, i) => (
-            <div
-              key={pillar.title}
-              className={`
-                bg-boost-surface rounded-xl p-4 text-center border border-boost-border
-                transition-all duration-500
-                ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
-              `}
-              style={{ transitionDelay: `${(agents.length + i + 1) * 100}ms` }}
-            >
-              <div className="flex justify-center mb-2">
-                <BoostIcon name={pillar.icon} variant="purple" size={36} />
-              </div>
-              <h4 className="text-sm font-semibold text-boost-dark">{pillar.title}</h4>
-              <p className="text-xs text-boost-muted mt-1">{pillar.desc}</p>
-            </div>
-          ))}
-        </div>
+        ))}
       </div>
     </section>
   );
