@@ -121,6 +121,8 @@ interface AgentModalProps {
   orchestratorConfig?: OrchestratorConfig;
   /** Callback to switch to a different agent's modal */
   onSwitchAgent?: (agent: SpecialistAgent) => void;
+  /** If set, shows a back button to return to the orchestrator */
+  onBackToOrchestrator?: () => void;
 }
 
 export default function AgentModal({
@@ -128,6 +130,7 @@ export default function AgentModal({
   onClose,
   orchestratorConfig,
   onSwitchAgent,
+  onBackToOrchestrator,
 }: AgentModalProps) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -160,24 +163,39 @@ export default function AgentModal({
       {/* Modal panel */}
       <div className="relative bg-white rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border border-boost-border max-w-3xl w-full h-full sm:h-auto sm:max-h-[calc(100vh-4rem)] overflow-y-auto animate-modal-in">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-boost-border sm:rounded-t-2xl px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <BoostIcon name={agent.icon} variant="purple" size={24} />
-            <div>
-              <h3 className="text-lg font-bold text-boost-dark">{agent.name}</h3>
-              <p className="text-xs text-boost-muted max-w-md">{agent.description}</p>
+        <div className="sticky top-0 z-10 bg-white border-b border-boost-border sm:rounded-t-2xl px-4 sm:px-6 py-4">
+          {/* Back to orchestrator breadcrumb */}
+          {onBackToOrchestrator && (
+            <button
+              onClick={onBackToOrchestrator}
+              className="flex items-center gap-1.5 text-[11px] text-boost-muted hover:text-boost-green transition-colors mb-2 -mt-1"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+              <BoostIcon name="robot-brain" variant="purple" size={12} />
+              <span>Agent Orchestrator</span>
+            </button>
+          )}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <BoostIcon name={agent.icon} variant="purple" size={24} />
+              <div>
+                <h3 className="text-lg font-bold text-boost-dark">{agent.name}</h3>
+                <p className="text-xs text-boost-muted max-w-md">{agent.description}</p>
+              </div>
             </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-boost-muted hover:bg-boost-surface hover:text-boost-dark transition-colors flex-shrink-0"
+              aria-label="Close"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-boost-muted hover:bg-boost-surface hover:text-boost-dark transition-colors flex-shrink-0"
-            aria-label="Close"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
         </div>
 
         {/* Body */}

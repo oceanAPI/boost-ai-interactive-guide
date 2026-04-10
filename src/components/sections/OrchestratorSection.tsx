@@ -142,6 +142,7 @@ export default function OrchestratorSection({
 }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [selectedAgent, setSelectedAgent] = useState<SpecialistAgent | null>(null);
+  const [cameFromOrchestrator, setCameFromOrchestrator] = useState(false);
 
   const config = getOrchestratorConfig(guide.areas_of_interest);
   const totalColumns = config.standaloneAgents.length + config.topicGroups.length;
@@ -283,9 +284,16 @@ export default function OrchestratorSection({
       {selectedAgent && (
         <AgentModal
           agent={selectedAgent}
-          onClose={() => setSelectedAgent(null)}
+          onClose={() => { setSelectedAgent(null); setCameFromOrchestrator(false); }}
           orchestratorConfig={selectedAgent.key === "orchestrator" ? config : undefined}
-          onSwitchAgent={selectedAgent.key === "orchestrator" ? (agent) => setSelectedAgent(agent) : undefined}
+          onSwitchAgent={selectedAgent.key === "orchestrator" ? (agent) => {
+            setCameFromOrchestrator(true);
+            setSelectedAgent(agent);
+          } : undefined}
+          onBackToOrchestrator={cameFromOrchestrator && selectedAgent.key !== "orchestrator" ? () => {
+            setCameFromOrchestrator(false);
+            setSelectedAgent(orchestratorAgent);
+          } : undefined}
         />
       )}
     </section>
