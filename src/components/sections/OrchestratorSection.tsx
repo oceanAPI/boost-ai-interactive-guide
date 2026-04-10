@@ -146,6 +146,42 @@ export default function OrchestratorSection({
   const config = getOrchestratorConfig(guide.areas_of_interest);
   const totalColumns = config.standaloneAgents.length + config.topicGroups.length;
 
+  // Build orchestrator as a clickable agent with its own flow data
+  const orchestratorAgent: SpecialistAgent = {
+    key: "orchestrator",
+    name: "Agent Orchestrator",
+    icon: "robot-brain",
+    automationRate: 95,
+    description: "The main orchestrator handles all incoming requests and traffic to pass on to agents.",
+    capabilities: [
+      { title: "Intent Classification", description: "Classifies incoming customer requests and routes to the correct specialist agent" },
+      { title: "Language Detection", description: "Detects the customer's language and routes to the correct language model" },
+      { title: "Fallback Handling", description: "Manages unrecognized intents with graceful fallback responses" },
+      { title: "Context Management", description: "Maintains conversation context across agent hand-offs" },
+    ],
+    quickActions: ["Route to agent", "Detect language", "Classify intent", "Manage context", "Handle fallback"],
+    flow: {
+      knowledgeSources: [
+        { id: "orch-kb-routing", name: "Routing Rules", type: "faq", icon: "books", description: "Rules and logic for routing conversations to specialist agents" },
+        { id: "orch-kb-lang", name: "Language Models", type: "api", icon: "computer-api", description: "NLU models for intent classification and language detection" },
+      ],
+      guardrails: [
+        { id: "orch-gr-hallucination", name: "Hallucination Detection", type: "hallucination", icon: "shield-medal", description: "Prevents the orchestrator from misrouting conversations" },
+        { id: "orch-gr-loop", name: "Loop Prevention", type: "compliance", icon: "lock-security", description: "Detects and breaks circular routing between agents" },
+      ],
+      actionHooks: [
+        { id: "orch-ah-escalate", name: "Escalate to Human", type: "transfer", icon: "headset", description: "Escalates to a live agent when no specialist can handle the request" },
+      ],
+      processes: [
+        { id: "orch-pr-classify", name: "Intent Classification", type: "workflow", icon: "hierarchy", description: "Multi-step intent classification using NLU pipeline" },
+      ],
+      standardResponses: [
+        { id: "orch-sr-welcome", name: "Welcome Message", type: "confirmation", icon: "thumbs-up", description: "Greets the customer and asks how to help" },
+        { id: "orch-sr-fallback", name: "Fallback Response", type: "fallback", icon: "route", description: "Default response when intent is not recognized" },
+      ],
+    },
+  };
+
   return (
     <section>
       <SectionHeader
@@ -154,16 +190,21 @@ export default function OrchestratorSection({
         subtitle={`How boost.ai routes and resolves every interaction for ${guide.company_name}`}
       />
 
-      {/* Orchestrator card */}
+      {/* Orchestrator card — clickable */}
       <div ref={ref} className={`flex justify-center mb-0 transition-all duration-700 ${
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
       }`}>
-        <FlowNodeCard
-          category="agentic"
-          name="Agent Orchestrator"
-          description="The main orchestrator handles all incoming requests and traffic to pass on to agents."
-          className="min-w-[280px] max-w-[360px]"
-        />
+        <button
+          onClick={() => setSelectedAgent(orchestratorAgent)}
+          className="text-left cursor-pointer transition-shadow hover:shadow-lg rounded-lg"
+        >
+          <FlowNodeCard
+            category="agentic"
+            name="Agent Orchestrator"
+            description="The main orchestrator handles all incoming requests and traffic to pass on to agents."
+            className="min-w-[280px] max-w-[360px]"
+          />
+        </button>
       </div>
 
       {/* Vertical line from orchestrator down */}
