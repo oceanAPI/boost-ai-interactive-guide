@@ -146,38 +146,38 @@ export default function OrchestratorSection({
   const config = getOrchestratorConfig(guide.areas_of_interest);
   const totalColumns = config.standaloneAgents.length + config.topicGroups.length;
 
-  // Build orchestrator as a clickable agent with its own flow data
+  // Orchestrator agent data — sourced from elev.io article #935
   const orchestratorAgent: SpecialistAgent = {
     key: "orchestrator",
     name: "Agent Orchestrator",
     icon: "robot-brain",
     automationRate: 95,
-    description: "The main orchestrator handles all incoming requests and traffic to pass on to agents.",
+    description: "The central routing engine that classifies every incoming request and routes it to the best specialist agent. When no agent fits, it responds directly using its own knowledge and instructions.",
     capabilities: [
-      { title: "Intent Classification", description: "Classifies incoming customer requests and routes to the correct specialist agent" },
-      { title: "Language Detection", description: "Detects the customer's language and routes to the correct language model" },
-      { title: "Fallback Handling", description: "Manages unrecognized intents with graceful fallback responses" },
-      { title: "Context Management", description: "Maintains conversation context across agent hand-offs" },
+      { title: "Intent Classification & Routing", description: "LLM-powered classification that analyzes each message and routes to the most suitable specialist agent" },
+      { title: "Clarification Handling", description: "When a request is vague, incomplete, or ambiguous, asks focused follow-up questions to remove uncertainty" },
+      { title: "Direct Response", description: "Handles general or out-of-scope requests directly when no specialist agent is suitable, using its own knowledge base" },
+      { title: "Global Safety Layer", description: "Enforces global guardrails (hallucination prevention, jailbreak protection) across all conversations before routing" },
     ],
-    quickActions: ["Route to agent", "Detect language", "Classify intent", "Manage context", "Handle fallback"],
+    quickActions: [],
     flow: {
       knowledgeSources: [
-        { id: "orch-kb-routing", name: "Routing Rules", type: "faq", icon: "books", description: "Rules and logic for routing conversations to specialist agents" },
-        { id: "orch-kb-lang", name: "Language Models", type: "api", icon: "computer-api", description: "NLU models for intent classification and language detection" },
+        { id: "orch-kb-general", name: "General Knowledge Base", type: "faq", icon: "books", description: "General company knowledge used when no specialist agent is suitable. Covers out-of-scope and cross-domain questions.", elevioUrl: "https://boost.elevio.help/en/articles/935" },
+        { id: "orch-kb-routing", name: "LLM Routing Model", type: "api", icon: "computer-api", description: "boost.ai-hosted LLM that powers intent classification and agent selection. Configured in LLM settings — cannot use external models for orchestration.", elevioUrl: "https://boost.elevio.help/en/articles/935" },
       ],
       guardrails: [
-        { id: "orch-gr-hallucination", name: "Hallucination Detection", type: "hallucination", icon: "shield-medal", description: "Prevents the orchestrator from misrouting conversations" },
-        { id: "orch-gr-loop", name: "Loop Prevention", type: "compliance", icon: "lock-security", description: "Detects and breaks circular routing between agents" },
+        { id: "orch-gr-hallucination", name: "Hallucination Prevention", type: "hallucination", icon: "shield-medal", description: "Global guardrail that prevents the orchestrator from generating inaccurate information. Applied across all conversations.", elevioUrl: "https://boost.elevio.help/en/articles/935" },
+        { id: "orch-gr-jailbreak", name: "Jailbreak Protection", type: "compliance", icon: "lock-security", description: "Global guardrail that detects and blocks prompt injection and jailbreak attempts before they reach any agent.", elevioUrl: "https://boost.elevio.help/en/articles/935" },
       ],
       actionHooks: [
-        { id: "orch-ah-escalate", name: "Escalate to Human", type: "transfer", icon: "headset", description: "Escalates to a live agent when no specialist can handle the request" },
+        { id: "orch-ah-transfer", name: "Transfer to Human", type: "transfer", icon: "headset", description: "Global action hook that transfers the conversation to a live agent. Triggered when the orchestrator determines no automated path can resolve the request.", elevioUrl: "https://boost.elevio.help/en/articles/935" },
       ],
       processes: [
-        { id: "orch-pr-classify", name: "Intent Classification", type: "workflow", icon: "hierarchy", description: "Multi-step intent classification using NLU pipeline" },
+        { id: "orch-pr-classify", name: "Intent Classification", type: "workflow", icon: "hierarchy", description: "Multi-step LLM pipeline that classifies the customer's intent and selects the optimal specialist agent for routing." },
       ],
       standardResponses: [
-        { id: "orch-sr-welcome", name: "Welcome Message", type: "confirmation", icon: "thumbs-up", description: "Greets the customer and asks how to help" },
-        { id: "orch-sr-fallback", name: "Fallback Response", type: "fallback", icon: "route", description: "Default response when intent is not recognized" },
+        { id: "orch-sr-clarify", name: "Clarification Request", type: "confirmation", icon: "speech", description: "When the request is vague or multi-interpretable, asks a short focused question to remove uncertainty. Only asks what is necessary." },
+        { id: "orch-sr-fallback", name: "Fallback Response", type: "fallback", icon: "route", description: "Generated when no suitable agent exists. Uses the orchestrator's own knowledge and instructions to provide a helpful response." },
       ],
     },
   };
@@ -264,7 +264,11 @@ export default function OrchestratorSection({
       {/* Mobile vertical list */}
       <div className="md:hidden space-y-3">
         {config.standaloneAgents.map((agent) => (
-          <AgentCard key={agent.key} agent={agent} onClick={() => setSelectedAgent(agent)} />
+          <MobileTopicGroup
+            key={agent.key}
+            group={{ key: agent.key, label: agent.name, icon: agent.icon, agents: [agent] }}
+            onSelectAgent={setSelectedAgent}
+          />
         ))}
         {config.topicGroups.map((group) => (
           <MobileTopicGroup
@@ -280,6 +284,8 @@ export default function OrchestratorSection({
         <AgentModal
           agent={selectedAgent}
           onClose={() => setSelectedAgent(null)}
+          orchestratorConfig={selectedAgent.key === "orchestrator" ? config : undefined}
+          onSwitchAgent={selectedAgent.key === "orchestrator" ? (agent) => setSelectedAgent(agent) : undefined}
         />
       )}
     </section>

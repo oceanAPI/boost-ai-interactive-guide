@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { SpecialistAgent } from "@/data/agents";
+import type { SpecialistAgent, OrchestratorConfig } from "@/data/agents";
 import BoostIcon from "@/components/BoostIcon";
 import FlowDiagram from "./FlowDiagram";
+import OrchestratorExplainer from "./OrchestratorExplainer";
 
 /* ─── Placeholder FAQ bar chart ─── */
 function FAQChart({ agent }: { agent: SpecialistAgent }) {
-  // Placeholder data — will be replaced with real production data
   const faqData = agent.quickActions.slice(0, 8).map((q, i) => ({
     label: q,
     value: Math.max(15, 95 - i * 10 - Math.round(Math.random() * 5)),
@@ -42,20 +42,16 @@ function FAQChart({ agent }: { agent: SpecialistAgent }) {
   );
 }
 
-/* ─── Expandable section wrapper (for future use) ─── */
+/* ─── Section wrapper ─── */
 function ModalSection({
   title,
   count,
   children,
-  defaultVisible = true,
 }: {
   title: string;
   count?: number;
   children: React.ReactNode;
-  defaultVisible?: boolean;
 }) {
-  if (!defaultVisible) return null;
-
   return (
     <div>
       <h4 className="text-xs font-bold text-boost-muted uppercase tracking-wider mb-3">
@@ -69,13 +65,70 @@ function ModalSection({
   );
 }
 
+/* ─── Connected Agents grid (orchestrator only) ─── */
+function ConnectedAgents({
+  config,
+  onSelectAgent,
+}: {
+  config: OrchestratorConfig;
+  onSelectAgent: (agent: SpecialistAgent) => void;
+}) {
+  const allGroups = [
+    ...config.standaloneAgents.length > 0
+      ? [{ label: "Standalone", agents: config.standaloneAgents }]
+      : [],
+    ...config.topicGroups.map((g) => ({ label: g.label, agents: g.agents })),
+  ];
+
+  if (allGroups.length === 0) return null;
+
+  return (
+    <div className="space-y-4">
+      {allGroups.map((group) => (
+        <div key={group.label}>
+          <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-wider mb-2">
+            {group.label}
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {group.agents.map((agent) => (
+              <button
+                key={agent.key}
+                onClick={() => onSelectAgent(agent)}
+                className="flex items-center gap-2 p-2.5 rounded-lg bg-boost-surface border border-boost-border hover:border-boost-green-light/50 hover:shadow-sm transition-all text-left"
+              >
+                <BoostIcon name={agent.icon} variant="purple" size={16} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold text-boost-dark truncate">{agent.name}</p>
+                  <p className="text-[9px] text-boost-muted truncate">{agent.automationRate}% automation</p>
+                </div>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#b0a3b5" strokeWidth="2" className="flex-shrink-0">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ─── Main modal ─── */
 interface AgentModalProps {
   agent: SpecialistAgent;
   onClose: () => void;
+  /** Only passed when opening the orchestrator — enables "connected agents" section */
+  orchestratorConfig?: OrchestratorConfig;
+  /** Callback to switch to a different agent's modal */
+  onSwitchAgent?: (agent: SpecialistAgent) => void;
 }
 
-export default function AgentModal({ agent, onClose }: AgentModalProps) {
+export default function AgentModal({
+  agent,
+  onClose,
+  orchestratorConfig,
+  onSwitchAgent,
+}: AgentModalProps) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -90,6 +143,7 @@ export default function AgentModal({ agent, onClose }: AgentModalProps) {
 
   const [isDrilledIn, setIsDrilledIn] = useState(false);
 
+  const isOrchestrator = agent.key === "orchestrator";
   const hasFlow =
     agent.flow.knowledgeSources.length > 0 ||
     agent.flow.guardrails.length > 0 ||
@@ -111,7 +165,7 @@ export default function AgentModal({ agent, onClose }: AgentModalProps) {
             <BoostIcon name={agent.icon} variant="purple" size={24} />
             <div>
               <h3 className="text-lg font-bold text-boost-dark">{agent.name}</h3>
-              <p className="text-xs text-boost-muted">{agent.description}</p>
+              <p className="text-xs text-boost-muted max-w-md">{agent.description}</p>
             </div>
           </div>
           <button
@@ -128,7 +182,12 @@ export default function AgentModal({ agent, onClose }: AgentModalProps) {
 
         {/* Body */}
         <div className="px-4 sm:px-6 py-5 space-y-6">
-          {/* Agent Architecture */}
+          {/* ─── Orchestrator-only: How it Works ─── */}
+          {isOrchestrator && !isDrilledIn && (
+            <OrchestratorExplainer />
+          )}
+
+          {/* ─── Agent Architecture ─── */}
           {hasFlow && (
             <ModalSection title="Agent architecture">
               <FlowDiagram agent={agent} onDrillChange={setIsDrilledIn} />
@@ -145,8 +204,18 @@ export default function AgentModal({ agent, onClose }: AgentModalProps) {
             </div>
           )}
 
-          {/* Most Frequently Asked Questions — only on top-level view */}
-          {!isDrilledIn && (
+          {/* ─── Orchestrator-only: Connected Agents ─── */}
+          {isOrchestrator && !isDrilledIn && orchestratorConfig && onSwitchAgent && (
+            <ModalSection title="Connected agents">
+              <ConnectedAgents
+                config={orchestratorConfig}
+                onSelectAgent={onSwitchAgent}
+              />
+            </ModalSection>
+          )}
+
+          {/* ─── Top-level only: FAQ chart ─── */}
+          {!isDrilledIn && agent.quickActions.length > 0 && (
             <ModalSection title="Most frequently asked questions">
               <FAQChart agent={agent} />
             </ModalSection>
@@ -155,37 +224,10 @@ export default function AgentModal({ agent, onClose }: AgentModalProps) {
           {/*
            * ─── Future sections (uncomment when ready) ───
            *
-           * <ModalSection title="Capabilities" count={agent.capabilities.length}>
-           *   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-           *     {agent.capabilities.map((cap) => (
-           *       <div key={cap.title} className="flex items-start gap-2 p-3 rounded-lg bg-boost-surface border border-boost-border">
-           *         <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light mt-1.5 flex-shrink-0" />
-           *         <div>
-           *           <span className="text-xs font-semibold text-boost-dark">{cap.title}</span>
-           *           <p className="text-[11px] text-boost-muted leading-snug mt-0.5">{cap.description}</p>
-           *         </div>
-           *       </div>
-           *     ))}
-           *   </div>
-           * </ModalSection>
-           *
-           * <ModalSection title="Common requests">
-           *   <div className="flex flex-wrap gap-2">
-           *     {agent.quickActions.map((action) => (
-           *       <span key={action} className="px-3 py-1.5 text-xs font-medium text-boost-dark bg-boost-surface border border-boost-border rounded-full">
-           *         {action}
-           *       </span>
-           *     ))}
-           *   </div>
-           * </ModalSection>
-           *
-           * <ModalSection title="Resolution metrics">
-           *   {/* Real-time resolution rates, CSAT, etc. *\/}
-           * </ModalSection>
-           *
-           * <ModalSection title="Case studies">
-           *   {/* Related case studies / success stories *\/}
-           * </ModalSection>
+           * <ModalSection title="Capabilities" count={agent.capabilities.length}>...</ModalSection>
+           * <ModalSection title="Common requests">...</ModalSection>
+           * <ModalSection title="Resolution metrics">...</ModalSection>
+           * <ModalSection title="Case studies">...</ModalSection>
            */}
         </div>
       </div>
