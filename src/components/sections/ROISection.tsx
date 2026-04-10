@@ -101,7 +101,7 @@ export default function ROISection({
         {/* Big savings number */}
         <div className="text-center mb-8">
           <p className="text-xs text-boost-muted uppercase tracking-wider mb-2">Projected Annual Savings</p>
-          <div className="text-5xl md:text-6xl font-bold text-boost-green tabular-nums">
+          <div className="text-3xl sm:text-5xl md:text-6xl font-bold text-boost-green tabular-nums">
             {formatCurrency(roi.annualSavings)}
           </div>
           <p className="text-sm text-boost-muted mt-2">

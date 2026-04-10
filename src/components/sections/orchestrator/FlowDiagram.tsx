@@ -52,7 +52,7 @@ function CategoryColumn({
       >
         <div className="flex items-center gap-2 min-w-0">
           <BoostIcon name={icon} variant="white" size={14} />
-          <span className="text-xs font-semibold truncate">{label}</span>
+          <span className="text-[10px] sm:text-xs font-semibold truncate">{label}</span>
         </div>
         <svg
           width="12" height="12" viewBox="0 0 24 24" fill="none"
@@ -201,7 +201,7 @@ function AgenticCard({
   onSelectNode: (node: FlowNode) => void;
 }) {
   return (
-    <div className="bg-white rounded-lg border border-boost-green-light/25 border-t-[3px] border-t-boost-green-light shadow-sm overflow-hidden max-w-[340px] w-full">
+    <div className="bg-white rounded-lg border border-boost-green-light/25 border-t-[3px] border-t-boost-green-light shadow-sm overflow-hidden w-full sm:max-w-[340px]">
       {/* Header */}
       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-boost-green-light/8">
         <BoostIcon name="robot-brain" variant="purple" size={14} />
@@ -279,13 +279,8 @@ export default function FlowDiagram({ agent, onDrillChange }: FlowDiagramProps) 
         <div className="border-t-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
       </div>
 
-      {/* Category columns grid */}
-      <div
-        className="grid gap-2"
-        style={{
-          gridTemplateColumns: `repeat(${Math.min(categories.length, 5)}, minmax(0, 1fr))`,
-        }}
-      >
+      {/* Category columns grid — 2 cols on mobile, auto on desktop */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
         {categories.map((cat) => (
           <CategoryColumn
             key={cat.key}

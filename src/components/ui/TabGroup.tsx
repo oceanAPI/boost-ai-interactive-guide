@@ -34,7 +34,7 @@ export default function TabGroup({ tabs, activeTab, onChange, size = "md" }: Tab
   const sizeClasses = size === "sm" ? "text-xs px-3 py-1.5" : "text-sm px-4 py-2";
 
   return (
-    <div ref={containerRef} className="relative flex gap-1 bg-boost-surface rounded-lg p-1">
+    <div ref={containerRef} className="relative flex gap-1 bg-boost-surface rounded-lg p-1 overflow-x-auto scrollbar-hide">
       {/* Animated indicator */}
       <div
         className="absolute top-1 bottom-1 bg-white rounded-md shadow-sm transition-all duration-200 ease-out"
@@ -46,7 +46,7 @@ export default function TabGroup({ tabs, activeTab, onChange, size = "md" }: Tab
           data-tab={tab.key}
           onClick={() => onChange(tab.key)}
           className={`
-            relative z-10 ${sizeClasses} rounded-md font-medium transition-colors
+            relative z-10 ${sizeClasses} rounded-md font-medium transition-colors whitespace-nowrap flex-shrink-0
             ${activeTab === tab.key ? "text-boost-dark" : "text-boost-muted hover:text-boost-dark"}
           `}
         >

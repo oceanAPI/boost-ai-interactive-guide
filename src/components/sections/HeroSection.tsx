@@ -62,18 +62,18 @@ export default function HeroSection({
           aria-hidden="true"
         />
 
-        <div className="relative z-10 text-center px-8 max-w-3xl mx-auto pt-16 pb-28">
+        <div className="relative z-10 text-center px-5 sm:px-8 max-w-3xl mx-auto pt-10 sm:pt-16 pb-24 sm:pb-28">
           {/* Real boost.ai logo (white negative) */}
-          <div className="flex justify-center mb-8">
+          <div className="flex justify-center mb-6 sm:mb-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={assetPath("/brand/boost_logo-_negative.svg")}
               alt="boost.ai"
-              className="h-8 w-auto"
+              className="h-6 sm:h-8 w-auto"
             />
           </div>
 
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
             {guide.company_name}
           </h1>
 
@@ -84,7 +84,7 @@ export default function HeroSection({
             </p>
           )}
 
-          <p className="text-lg text-white/70 mt-6 leading-relaxed max-w-xl mx-auto">
+          <p className="text-sm sm:text-lg text-white/70 mt-4 sm:mt-6 leading-relaxed max-w-xl mx-auto">
             Your AI-powered customer service transformation — from first contact to full resolution.
           </p>
         </div>

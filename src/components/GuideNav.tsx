@@ -17,7 +17,7 @@ export default function GuideNav({
 }: GuideNavProps) {
   return (
     <nav className="guide-nav sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-boost-border">
-      <div className="max-w-5xl mx-auto px-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-8">
         {/* Top row: logo + company */}
         <div className="flex items-center justify-between py-3">
           <div className="flex items-center gap-3">

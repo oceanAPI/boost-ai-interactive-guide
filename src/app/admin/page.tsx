@@ -224,27 +224,27 @@ export default function AdminPage() {
     <div className="min-h-screen bg-boost-surface">
       {/* Header */}
       <header className="border-b border-boost-border bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={assetPath("/brand/boost_logo_purple-_main.svg")}
               alt="boost.ai"
-              className="h-6 w-auto"
+              className="h-5 sm:h-6 w-auto flex-shrink-0"
             />
-            <span className="text-boost-muted text-sm ml-2">Guide Builder</span>
+            <span className="text-boost-muted text-xs sm:text-sm hidden sm:inline">Guide Builder</span>
           </div>
           <button
             onClick={handleSubmit}
             disabled={!form.company_name.trim()}
-            className="px-5 py-2 bg-boost-green-light text-white font-semibold rounded-lg hover:bg-boost-green disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 text-sm sm:text-base bg-boost-green-light text-white font-semibold rounded-lg hover:bg-boost-green disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
           >
-            Generate Guide →
+            Generate →
           </button>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-4">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-4">
         {/* 1 — Company Info */}
         <CollapsibleSection
           number={1}

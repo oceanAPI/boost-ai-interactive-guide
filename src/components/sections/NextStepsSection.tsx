@@ -81,10 +81,10 @@ export default function NextStepsSection({
             />
           </div>
 
-          <h2 className="text-3xl font-bold text-white mb-3">
+          <h2 className="text-xl sm:text-3xl font-bold text-white mb-3">
             Ready to transform {guide.company_name}&apos;s customer service?
           </h2>
-          <p className="text-white/60 max-w-lg mx-auto mb-10">
+          <p className="text-sm sm:text-base text-white/60 max-w-lg mx-auto mb-8 sm:mb-10">
             From this guide to production in 6-8 weeks. Let&apos;s discuss how boost.ai fits your specific needs.
           </p>
 

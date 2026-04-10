@@ -27,9 +27,9 @@ export default function SectionHeader({
           {number}
         </span>
       )}
-      <h2 className="text-2xl md:text-3xl font-bold text-boost-dark">{title}</h2>
+      <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-boost-dark">{title}</h2>
       {subtitle && (
-        <p className="text-boost-muted mt-2 max-w-2xl leading-relaxed">
+        <p className="text-sm sm:text-base text-boost-muted mt-2 max-w-2xl leading-relaxed">
           {align === "center" ? <span className="mx-auto block">{subtitle}</span> : subtitle}
         </p>
       )}
