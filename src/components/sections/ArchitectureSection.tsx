@@ -90,7 +90,7 @@ export default function ArchitectureSection({
   return (
     <section>
       <SectionHeader
-        number="05"
+        number="09"
         title="System Architecture"
         subtitle={`How boost.ai integrates with ${guide.company_name}'s technology stack`}
       />

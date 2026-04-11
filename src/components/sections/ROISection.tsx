@@ -49,7 +49,7 @@ export default function ROISection({
   return (
     <section>
       <SectionHeader
-        number="04"
+        number="08"
         title="ROI Calculator"
         subtitle={`Projected return on investment for ${guide.company_name}`}
       />

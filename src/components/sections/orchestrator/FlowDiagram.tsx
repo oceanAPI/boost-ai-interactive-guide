@@ -33,16 +33,16 @@ function CategoryColumn({
     <div className="flex flex-col min-w-0">
       {/* Vertical dashed stub */}
       <div className="flex justify-center h-6" aria-hidden="true">
-        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
+        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
       </div>
       {/* Count badge */}
       <div className="flex justify-center -mt-0.5 mb-0.5" aria-hidden="true">
         <span className="w-5 h-5 rounded-full bg-white border text-[10px] font-semibold text-boost-muted flex items-center justify-center"
-          style={{ borderColor: "#b2dfdb" }}
+          style={{ borderColor: "var(--color-boost-connector)" }}
         >{nodes.length}</span>
       </div>
       <div className="flex justify-center h-3" aria-hidden="true">
-        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
+        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
       </div>
 
       {/* Header */}
@@ -271,12 +271,12 @@ export default function FlowDiagram({ agent, onDrillChange }: FlowDiagramProps) 
 
       {/* Vertical line down */}
       <div className="flex justify-center h-6" aria-hidden="true">
-        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
+        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
       </div>
 
       {/* Horizontal dashed bar */}
       <div className="mx-2" aria-hidden="true">
-        <div className="border-t-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
+        <div className="border-t-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
       </div>
 
       {/* Category columns grid — 2 cols on mobile, auto on desktop */}

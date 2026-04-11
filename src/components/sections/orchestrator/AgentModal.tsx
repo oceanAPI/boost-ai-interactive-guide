@@ -1,16 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SpecialistAgent, OrchestratorConfig } from "@/data/agents";
 import BoostIcon from "@/components/BoostIcon";
 import FlowDiagram from "./FlowDiagram";
 import OrchestratorExplainer from "./OrchestratorExplainer";
 
-/* ─── Placeholder FAQ bar chart ─── */
+/* ─── Simple hash for deterministic "random" values ─── */
+function seededValue(seed: string, index: number): number {
+  let hash = 0;
+  const str = `${seed}-${index}`;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash % 8); // 0-7 range for small variance
+}
+
+/* ─── FAQ bar chart ─── */
 function FAQChart({ agent }: { agent: SpecialistAgent }) {
   const faqData = agent.quickActions.slice(0, 8).map((q, i) => ({
     label: q,
-    value: Math.max(15, 95 - i * 10 - Math.round(Math.random() * 5)),
+    value: Math.max(15, 95 - i * 10 - seededValue(agent.key, i)),
   }));
 
   if (faqData.length === 0) return null;
@@ -99,7 +109,7 @@ function ConnectedAgents({
                 <BoostIcon name={agent.icon} variant="purple" size={16} />
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-semibold text-boost-dark truncate">{agent.name}</p>
-                  <p className="text-[9px] text-boost-muted truncate">{agent.automationRate}% automation</p>
+                  <p className="text-[11px] text-boost-muted truncate">{agent.automationRate}% automation</p>
                 </div>
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#b0a3b5" strokeWidth="2" className="flex-shrink-0">
                   <polyline points="9 18 15 12 9 6" />
@@ -132,15 +142,37 @@ export default function AgentModal({
   onSwitchAgent,
   onBackToOrchestrator,
 }: AgentModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
+    previousFocus.current = document.activeElement as HTMLElement;
+
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") { onClose(); return; }
+      // Focus trap
+      if (e.key === "Tab" && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
     };
     document.addEventListener("keydown", handleKey);
     document.body.style.overflow = "hidden";
+    // Auto-focus the modal
+    setTimeout(() => modalRef.current?.focus(), 50);
     return () => {
       document.removeEventListener("keydown", handleKey);
       document.body.style.overflow = "";
+      previousFocus.current?.focus();
     };
   }, [onClose]);
 
@@ -153,15 +185,22 @@ export default function AgentModal({
     agent.flow.actionHooks.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-8" role="presentation">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Modal panel */}
-      <div className="relative bg-white rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border border-boost-border max-w-3xl w-full h-full sm:h-auto sm:max-h-[calc(100vh-4rem)] overflow-y-auto animate-modal-in">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="agent-modal-title"
+        tabIndex={-1}
+        className="relative bg-white rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border border-boost-border max-w-3xl w-full h-full sm:h-auto sm:max-h-[calc(100vh-4rem)] overflow-y-auto animate-modal-in focus:outline-none">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b border-boost-border sm:rounded-t-2xl px-4 sm:px-6 py-4">
           {/* Back to orchestrator breadcrumb */}
@@ -181,7 +220,7 @@ export default function AgentModal({
             <div className="flex items-center gap-3">
               <BoostIcon name={agent.icon} variant="purple" size={24} />
               <div>
-                <h3 className="text-lg font-bold text-boost-dark">{agent.name}</h3>
+                <h3 id="agent-modal-title" className="text-lg font-bold text-boost-dark">{agent.name}</h3>
                 <p className="text-xs text-boost-muted max-w-md">{agent.description}</p>
               </div>
             </div>

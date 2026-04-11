@@ -43,13 +43,13 @@ function TopicGroupColumn({
     <div className="flex flex-col">
       {/* Vertical dashed stub from horizontal line */}
       <div className="flex justify-center h-8" aria-hidden="true">
-        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
+        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
       </div>
 
       {/* Count badge */}
       <div className="flex justify-center -mt-1 mb-1" aria-hidden="true">
         <span className="w-5 h-5 rounded-full bg-white border text-[10px] font-semibold text-boost-muted flex items-center justify-center"
-          style={{ borderColor: "#b2dfdb" }}
+          style={{ borderColor: "var(--color-boost-connector)" }}
         >
           {group.agents.length}
         </span>
@@ -57,7 +57,7 @@ function TopicGroupColumn({
 
       {/* Vertical dashed stub below badge */}
       <div className="flex justify-center h-4" aria-hidden="true">
-        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
+        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
       </div>
 
       {/* Column header */}
@@ -164,7 +164,7 @@ export default function OrchestratorSection({
     flow: {
       knowledgeSources: [
         { id: "orch-kb-general", name: "General Knowledge Base", type: "faq", icon: "books", description: "General company knowledge used when no specialist agent is suitable. Covers out-of-scope and cross-domain questions.", elevioUrl: "https://boost.elevio.help/en/articles/935" },
-        { id: "orch-kb-routing", name: "LLM Routing Model", type: "api", icon: "computer-api", description: "boost.ai-hosted LLM that powers intent classification and agent selection. Configured in LLM settings — cannot use external models for orchestration.", elevioUrl: "https://boost.elevio.help/en/articles/935" },
+        { id: "orch-kb-routing", name: "LLM Routing Model", type: "api", icon: "computer-api-3671765", description: "boost.ai-hosted LLM that powers intent classification and agent selection. Configured in LLM settings — cannot use external models for orchestration.", elevioUrl: "https://boost.elevio.help/en/articles/935" },
       ],
       guardrails: [
         { id: "orch-gr-hallucination", name: "Hallucination Prevention", type: "hallucination", icon: "shield-medal", description: "Global guardrail that prevents the orchestrator from generating inaccurate information. Applied across all conversations.", elevioUrl: "https://boost.elevio.help/en/articles/935" },
@@ -210,7 +210,7 @@ export default function OrchestratorSection({
 
       {/* Vertical line from orchestrator down */}
       <div className="flex justify-center h-8" aria-hidden="true">
-        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
+        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
       </div>
 
       {/* Desktop: horizontal bar + columns grid */}
@@ -218,7 +218,7 @@ export default function OrchestratorSection({
 
       {/* Horizontal bar — hidden on mobile */}
       <div className="mx-4 hidden md:block" aria-hidden="true">
-        <div className="border-t-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
+        <div className="border-t-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
       </div>
 
       {/* Desktop grid */}
@@ -232,15 +232,15 @@ export default function OrchestratorSection({
           <div key={agent.key} className="flex flex-col">
             {/* Same vertical treatment as topic groups to align */}
             <div className="flex justify-center h-8" aria-hidden="true">
-              <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
+              <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
             </div>
             <div className="flex justify-center -mt-1 mb-1" aria-hidden="true">
               <span className="w-5 h-5 rounded-full bg-white border text-[10px] font-semibold text-boost-muted flex items-center justify-center"
-                style={{ borderColor: "#b2dfdb" }}
+                style={{ borderColor: "var(--color-boost-connector)" }}
               >1</span>
             </div>
             <div className="flex justify-center h-4" aria-hidden="true">
-              <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "#b2dfdb" }} />
+              <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
             </div>
             {/* Header matching topic group button exactly */}
             <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-t-lg bg-boost-purple/90 text-white">

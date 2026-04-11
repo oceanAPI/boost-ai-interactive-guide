@@ -13,12 +13,13 @@ export type NodeCategory =
 
 const CATEGORY_CONFIG: Record<
   NodeCategory,
-  { label: string; icon: string; borderColor: string; headerBg: string; headerText: string }
+  { label: string; icon: string; borderColor: string; headerBg: string; headerText: string; borderClass: string }
 > = {
   agentic: {
     label: "AGENTIC",
     icon: "robot-brain",
     borderColor: "border-t-boost-green-light",
+    borderClass: "border-boost-green-light/25",
     headerBg: "bg-boost-green-light/8",
     headerText: "text-boost-green",
   },
@@ -26,36 +27,41 @@ const CATEGORY_CONFIG: Record<
     label: "KNOWLEDGE",
     icon: "books",
     borderColor: "border-t-boost-green-light",
+    borderClass: "border-boost-green-light/25",
     headerBg: "bg-boost-green-light/8",
     headerText: "text-boost-green",
   },
   guardrail: {
     label: "GUARDRAIL",
     icon: "shield-medal",
-    borderColor: "border-t-boost-green-light",
-    headerBg: "bg-boost-green-light/8",
-    headerText: "text-boost-green",
+    borderColor: "border-t-boost-guardrail",
+    borderClass: "border-boost-guardrail/20",
+    headerBg: "bg-boost-guardrail/6",
+    headerText: "text-boost-guardrail",
   },
   actionHook: {
     label: "ACTION HOOK",
     icon: "target-selection",
-    borderColor: "border-t-boost-green-light",
-    headerBg: "bg-boost-green-light/8",
-    headerText: "text-boost-green",
+    borderColor: "border-t-boost-action-hook",
+    borderClass: "border-boost-action-hook/20",
+    headerBg: "bg-boost-action-hook/6",
+    headerText: "text-boost-action-hook",
   },
   process: {
     label: "PROCESS",
     icon: "cogs",
-    borderColor: "border-t-boost-green-light",
-    headerBg: "bg-boost-green-light/8",
-    headerText: "text-boost-green",
+    borderColor: "border-t-boost-process",
+    borderClass: "border-boost-process/20",
+    headerBg: "bg-boost-process/6",
+    headerText: "text-boost-process",
   },
   standardResponse: {
     label: "STANDARD RESPONSE",
     icon: "route",
-    borderColor: "border-t-boost-green-light",
-    headerBg: "bg-boost-green-light/8",
-    headerText: "text-boost-green",
+    borderColor: "border-t-boost-response",
+    borderClass: "border-boost-response/20",
+    headerBg: "bg-boost-response/6",
+    headerText: "text-boost-response",
   },
 };
 
@@ -90,7 +96,7 @@ export default function FlowNodeCard({
   return (
     <div
       className={`
-        bg-white rounded-lg border border-boost-green-light/25 border-t-[3px] ${config.borderColor}
+        bg-white rounded-lg border ${config.borderClass} border-t-[3px] ${config.borderColor}
         shadow-sm overflow-hidden
         ${className}
       `}
@@ -105,7 +111,7 @@ export default function FlowNodeCard({
 
       {/* Body */}
       <div className="px-3 py-2.5">
-        <p className="text-sm font-bold text-boost-dark leading-snug">{displayName}</p>
+        <p className="text-sm font-medium text-boost-text-secondary leading-snug">{displayName}</p>
         {displayDesc && (
           <p className="text-[11px] text-boost-muted mt-1 leading-snug line-clamp-3">
             {displayDesc}

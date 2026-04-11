@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "boost.ai — Interactive Guide",
   description: "Interactive service offering guide for financial services",
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({

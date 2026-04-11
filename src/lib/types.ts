@@ -31,6 +31,7 @@ export interface GuideData {
   company_url: string;
   contact_name: string;
   contact_role: string;
+  start_date: string;
   areas_of_interest: string[];
   specific_requirements: string;
   channel_volumes: ChannelVolumes;
@@ -47,6 +48,7 @@ export interface GuideFormData {
   company_url: string;
   contact_name: string;
   contact_role: string;
+  start_date: string;
   areas_of_interest: string[];
   specific_requirements: string;
   channel_volumes: ChannelVolumes;

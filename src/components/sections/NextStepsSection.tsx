@@ -113,7 +113,7 @@ export default function NextStepsSection({
             ))}
           </div>
 
-          <p className="text-white/30 text-xs mt-8">Trust every conversation</p>
+          <p className="text-white/50 text-xs mt-8">Trust every conversation</p>
         </div>
       </div>
     </section>

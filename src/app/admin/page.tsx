@@ -113,6 +113,7 @@ export default function AdminPage() {
     company_url: "",
     contact_name: "",
     contact_role: "",
+    start_date: new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0],
     areas_of_interest: [],
     specific_requirements: "",
     channel_volumes: {},
@@ -202,7 +203,8 @@ export default function AdminPage() {
     form.company_name ||
     form.company_url ||
     form.contact_name ||
-    form.contact_role
+    form.contact_role ||
+    form.start_date
   );
   const hasAreas = form.areas_of_interest.length > 0;
   const hasPricing = !!(form.conversation_cost);
@@ -293,6 +295,18 @@ export default function AdminPage() {
                 className={inputClass}
               />
             </div>
+          </div>
+          <div className="mt-4">
+            <FieldLabel>Projected Start Date</FieldLabel>
+            <input
+              type="date"
+              value={form.start_date}
+              onChange={(e) => updateField("start_date", e.target.value)}
+              className={`${inputClass} max-w-xs`}
+            />
+            <p className="text-xs text-boost-muted mt-1">
+              Sets the starting point for the implementation roadmap
+            </p>
           </div>
         </CollapsibleSection>
 

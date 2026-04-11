@@ -1,0 +1,556 @@
+"use client";
+
+import { useEffect, useRef, useState, useCallback } from "react";
+import { SectionHeader } from "@/components/ui";
+import ContentBlockRenderer from "@/components/sections/topics/ContentBlocks";
+import type { TopicContentBlock } from "@/data/topics/_types";
+import {
+  ROADMAP_PHASES,
+  ROADMAP_LANES,
+  TOTAL_WEEKS,
+  type RoadmapItem,
+} from "@/data/roadmap";
+
+/* ─── Helpers ─── */
+
+function getWeekDate(startDate: string, weekOffset: number): Date {
+  const d = new Date(startDate);
+  d.setDate(d.getDate() + (weekOffset - 1) * 7);
+  return d;
+}
+
+function formatWeekLabel(startDate: string, week: number): string {
+  const d = getWeekDate(startDate, week);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function getMonthSpans(startDate: string): { label: string; startCol: number; span: number }[] {
+  const months: { label: string; startCol: number; span: number }[] = [];
+  let currentMonth = "";
+  let startCol = 1;
+  let span = 0;
+
+  for (let w = 1; w <= TOTAL_WEEKS; w++) {
+    const d = getWeekDate(startDate, w);
+    const month = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    if (month !== currentMonth) {
+      if (currentMonth) months.push({ label: currentMonth, startCol, span });
+      currentMonth = month;
+      startCol = w;
+      span = 1;
+    } else {
+      span++;
+    }
+  }
+  if (currentMonth) months.push({ label: currentMonth, startCol, span });
+  return months;
+}
+
+const PHASE_COLORS = {
+  purple: "bg-boost-purple text-white",
+  "purple-dark": "bg-boost-purple-dark text-white",
+  green: "bg-boost-green text-white",
+  "green-light": "bg-boost-green-light text-white",
+} as const;
+
+const ITEM_COLORS = {
+  default: "bg-boost-green/90 text-white hover:bg-boost-green",
+  highlight: "bg-boost-purple text-white shadow-lg shadow-boost-purple/20 hover:bg-boost-purple-dark",
+} as const;
+
+/* ─── Unique key for an item ─── */
+function itemKey(laneIdx: number, itemIdx: number) {
+  return `${laneIdx}-${itemIdx}`;
+}
+
+/* ─── Detail Panel (shown below the chart when an item is clicked) ─── */
+function DetailPanel({
+  item,
+  startDate,
+  onClose,
+}: {
+  item: RoadmapItem;
+  startDate: string;
+  onClose: () => void;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, []);
+
+  const weekRange = item.startWeek === item.endWeek
+    ? `Week ${item.startWeek}`
+    : `Week ${item.startWeek}–${item.endWeek}`;
+  const dateRange = item.startWeek === item.endWeek
+    ? formatWeekLabel(startDate, item.startWeek)
+    : `${formatWeekLabel(startDate, item.startWeek)} – ${formatWeekLabel(startDate, item.endWeek)}`;
+
+  return (
+    <div
+      ref={panelRef}
+      className="mt-4 rounded-xl border border-boost-border bg-white shadow-lg overflow-hidden animate-modal-in"
+    >
+      <div className={`px-5 py-3 flex items-center justify-between ${
+        item.highlight ? "bg-boost-purple" : "bg-boost-green/90"
+      }`}>
+        <div className="text-white">
+          <h4 className="font-semibold text-sm">{item.name}</h4>
+          <p className="text-xs text-white/75">{weekRange} · {dateRange}</p>
+        </div>
+        <button
+          onClick={onClose}
+          className="text-white/60 hover:text-white transition-colors p-1"
+          aria-label="Close detail"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div className="px-5 py-4 space-y-3">
+        {item.detail && (
+          <p className="text-sm text-boost-text-secondary leading-relaxed">{item.detail}</p>
+        )}
+        <div className="flex flex-wrap gap-6 text-xs">
+          {item.owner && (
+            <div>
+              <span className="font-semibold text-boost-dark block mb-0.5">Owner</span>
+              <span className="text-boost-muted">{item.owner}</span>
+            </div>
+          )}
+          {item.deliverables && item.deliverables.length > 0 && (
+            <div className="flex-1 min-w-[200px]">
+              <span className="font-semibold text-boost-dark block mb-1">Deliverables</span>
+              <div className="flex flex-wrap gap-1.5">
+                {item.deliverables.map((d) => (
+                  <span
+                    key={d}
+                    className="px-2 py-0.5 rounded-md bg-boost-surface text-boost-text-secondary text-[11px]"
+                  >
+                    {d}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Desktop Item Pill ─── */
+function ItemPill({
+  item,
+  style,
+  animDelay,
+  visible,
+  isSelected,
+  onClick,
+}: {
+  item: RoadmapItem;
+  style: React.CSSProperties;
+  animDelay: number;
+  visible: boolean;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`
+        absolute top-1 bottom-1 rounded-lg flex items-center justify-center
+        text-[11px] sm:text-xs font-medium px-1.5 overflow-hidden
+        transition-all duration-700 ease-out cursor-pointer
+        ${item.highlight ? ITEM_COLORS.highlight : ITEM_COLORS.default}
+        ${visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-3 scale-95"}
+        ${isSelected ? "ring-2 ring-boost-gold ring-offset-1 scale-[1.03]" : ""}
+      `}
+      style={{
+        ...style,
+        transitionDelay: visible ? `${animDelay}ms` : "0ms",
+      }}
+      aria-label={`${item.name} — click for details`}
+    >
+      <span className="truncate">{item.name}</span>
+    </button>
+  );
+}
+
+/* ─── Mobile Card ─── */
+function MobileCard({
+  lane,
+  laneIdx,
+  startDate,
+  visible,
+  selectedKey,
+  onSelect,
+}: {
+  lane: (typeof ROADMAP_LANES)[0];
+  laneIdx: number;
+  startDate: string;
+  visible: boolean;
+  selectedKey: string | null;
+  onSelect: (key: string) => void;
+}) {
+  return (
+    <div
+      className={`transition-all duration-600 ease-out ${
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+      }`}
+      style={{ transitionDelay: visible ? `${laneIdx * 120}ms` : "0ms" }}
+    >
+      <h4 className="text-xs font-semibold text-boost-dark mb-2 uppercase tracking-wider">
+        {lane.name}
+      </h4>
+      <div className="space-y-2">
+        {lane.items.map((item, i) => {
+          const key = itemKey(laneIdx, i);
+          const isOpen = selectedKey === key;
+          return (
+            <div key={i}>
+              <button
+                onClick={() => onSelect(key)}
+                className={`
+                  w-full text-left px-3 py-2.5 rounded-lg text-xs font-medium
+                  transition-all duration-500 ease-out
+                  ${item.highlight ? ITEM_COLORS.highlight : ITEM_COLORS.default}
+                  ${visible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"}
+                  ${isOpen ? "ring-2 ring-boost-gold ring-offset-1" : ""}
+                `}
+                style={{ transitionDelay: visible ? `${laneIdx * 120 + i * 80}ms` : "0ms" }}
+              >
+                <div className="flex items-center justify-between">
+                  <span>{item.name}</span>
+                  <svg
+                    width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2"
+                    className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
+                <div className="text-[10px] opacity-75 mt-0.5">
+                  Wk {item.startWeek}{item.endWeek > item.startWeek ? `–${item.endWeek}` : ""} · {formatWeekLabel(startDate, item.startWeek)}
+                </div>
+              </button>
+              {isOpen && (
+                <div className="mt-1 rounded-lg bg-white border border-boost-border p-3 text-xs space-y-2 animate-modal-in">
+                  {item.detail && <p className="text-boost-text-secondary leading-relaxed">{item.detail}</p>}
+                  {item.owner && (
+                    <div>
+                      <span className="font-semibold text-boost-dark">Owner: </span>
+                      <span className="text-boost-muted">{item.owner}</span>
+                    </div>
+                  )}
+                  {item.deliverables && item.deliverables.length > 0 && (
+                    <div>
+                      <span className="font-semibold text-boost-dark block mb-1">Deliverables</span>
+                      <div className="flex flex-wrap gap-1">
+                        {item.deliverables.map((d) => (
+                          <span key={d} className="px-2 py-0.5 rounded bg-boost-surface text-boost-text-secondary text-[10px]">
+                            {d}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main Section ─── */
+export default function RoadmapSection({
+  startDate,
+  sectionNumber,
+  headerBlocks,
+  contentBlocks,
+}: {
+  startDate: string;
+  sectionNumber: string;
+  headerBlocks?: TopicContentBlock[];
+  contentBlocks?: TopicContentBlock[];
+}) {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  const toggleItem = useCallback((key: string) => {
+    setSelectedKey((prev) => (prev === key ? null : key));
+  }, []);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  /* Resolve the selected item for the detail panel */
+  const selectedItem = (() => {
+    if (!selectedKey) return null;
+    const [laneStr, itemStr] = selectedKey.split("-");
+    const lane = ROADMAP_LANES[Number(laneStr)];
+    return lane?.items[Number(itemStr)] ?? null;
+  })();
+
+  const months = getMonthSpans(startDate);
+  const startLabel = new Date(startDate).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  return (
+    <section ref={sectionRef}>
+      <SectionHeader
+        number={sectionNumber}
+        title="Implementation & Rollout"
+        subtitle={`Starting ${startLabel} — 12-week roadmap from kickoff to full scale`}
+      />
+
+      {/* Header content blocks — above the roadmap */}
+      {headerBlocks && headerBlocks.length > 0 && (
+        <div className="mt-6 space-y-6">
+          {headerBlocks.map((block, i) => (
+            <ContentBlockRenderer key={i} block={block} />
+          ))}
+        </div>
+      )}
+
+      {/* ─── Desktop Roadmap (hidden on small screens) ─── */}
+      <div className="mt-8 hidden md:block">
+        <div className="rounded-2xl border border-boost-border bg-white overflow-hidden shadow-sm">
+
+          {/* Phase headers */}
+          <div
+            className="grid"
+            style={{ gridTemplateColumns: `140px repeat(${TOTAL_WEEKS}, 1fr)` }}
+          >
+            <div className="bg-boost-surface border-r border-boost-border" />
+            {ROADMAP_PHASES.map((phase) => (
+              <div
+                key={phase.name}
+                className={`
+                  ${PHASE_COLORS[phase.color]} py-2.5 px-3 text-center text-sm font-semibold
+                  border-r border-white/20 last:border-r-0
+                  transition-all duration-700 ease-out
+                  ${visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"}
+                `}
+                style={{
+                  gridColumn: `${phase.startWeek + 1} / ${phase.endWeek + 2}`,
+                  transitionDelay: visible ? "100ms" : "0ms",
+                }}
+              >
+                {phase.name}
+              </div>
+            ))}
+          </div>
+
+          {/* Month labels */}
+          <div
+            className="grid border-b border-boost-border"
+            style={{ gridTemplateColumns: `140px repeat(${TOTAL_WEEKS}, 1fr)` }}
+          >
+            <div className="bg-boost-surface border-r border-boost-border" />
+            {months.map((m) => (
+              <div
+                key={m.label}
+                className={`
+                  bg-boost-surface/50 py-1.5 px-2 text-center text-[11px] font-medium
+                  text-boost-muted border-r border-boost-border/50 last:border-r-0
+                  transition-all duration-500 ease-out
+                  ${visible ? "opacity-100" : "opacity-0"}
+                `}
+                style={{
+                  gridColumn: `${m.startCol + 1} / ${m.startCol + m.span + 1}`,
+                  transitionDelay: visible ? "200ms" : "0ms",
+                }}
+              >
+                {m.label}
+              </div>
+            ))}
+          </div>
+
+          {/* Week numbers */}
+          <div
+            className="grid border-b border-boost-border"
+            style={{ gridTemplateColumns: `140px repeat(${TOTAL_WEEKS}, 1fr)` }}
+          >
+            <div className="bg-boost-surface border-r border-boost-border py-1 px-3 text-[10px] font-medium text-boost-muted">
+              Week
+            </div>
+            {Array.from({ length: TOTAL_WEEKS }, (_, i) => (
+              <div
+                key={i}
+                className={`
+                  py-1 text-center text-[10px] text-boost-muted border-r border-boost-border/30
+                  last:border-r-0 transition-all duration-500
+                  ${visible ? "opacity-100" : "opacity-0"}
+                `}
+                style={{ transitionDelay: visible ? `${250 + i * 30}ms` : "0ms" }}
+              >
+                {i + 1}
+              </div>
+            ))}
+          </div>
+
+          {/* Lanes */}
+          {ROADMAP_LANES.map((lane, laneIdx) => (
+            <div
+              key={lane.name}
+              className="grid border-b border-boost-border/50 last:border-b-0"
+              style={{ gridTemplateColumns: `140px repeat(${TOTAL_WEEKS}, 1fr)` }}
+            >
+              {/* Lane label */}
+              <div
+                className={`
+                  bg-boost-surface border-r border-boost-border py-3 px-3
+                  text-xs font-semibold text-boost-dark flex items-center
+                  transition-all duration-600 ease-out
+                  ${visible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-6"}
+                `}
+                style={{ transitionDelay: visible ? `${300 + laneIdx * 100}ms` : "0ms" }}
+              >
+                {lane.name}
+              </div>
+
+              {/* Item cells */}
+              <div
+                className="relative col-span-full"
+                style={{
+                  gridColumn: `2 / ${TOTAL_WEEKS + 2}`,
+                  minHeight: "44px",
+                }}
+              >
+                {lane.items.map((item, itemIdx) => {
+                  const leftPct = ((item.startWeek - 1) / TOTAL_WEEKS) * 100;
+                  const widthPct = ((item.endWeek - item.startWeek + 1) / TOTAL_WEEKS) * 100;
+                  const key = itemKey(laneIdx, itemIdx);
+                  return (
+                    <ItemPill
+                      key={itemIdx}
+                      item={item}
+                      visible={visible}
+                      isSelected={selectedKey === key}
+                      onClick={() => toggleItem(key)}
+                      animDelay={400 + laneIdx * 120 + itemIdx * 80}
+                      style={{
+                        left: `${leftPct}%`,
+                        width: `calc(${widthPct}% - 4px)`,
+                        marginLeft: "2px",
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Week date labels below the chart */}
+        <div
+          className="grid mt-1"
+          style={{ gridTemplateColumns: `140px repeat(${TOTAL_WEEKS}, 1fr)` }}
+        >
+          <div />
+          {Array.from({ length: TOTAL_WEEKS }, (_, i) => (
+            <div
+              key={i}
+              className={`
+                text-center text-[9px] text-boost-muted/60
+                transition-opacity duration-500
+                ${visible ? "opacity-100" : "opacity-0"}
+              `}
+              style={{ transitionDelay: visible ? `${800 + i * 30}ms` : "0ms" }}
+            >
+              {formatWeekLabel(startDate, i + 1)}
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop detail panel */}
+        {selectedItem && (
+          <DetailPanel
+            item={selectedItem}
+            startDate={startDate}
+            onClose={() => setSelectedKey(null)}
+          />
+        )}
+      </div>
+
+      {/* ─── Mobile Layout (card-based) ─── */}
+      <div className="mt-6 md:hidden space-y-6">
+        {/* Phase ribbon */}
+        <div className="flex rounded-xl overflow-hidden">
+          {ROADMAP_PHASES.map((phase) => {
+            const span = phase.endWeek - phase.startWeek + 1;
+            return (
+              <div
+                key={phase.name}
+                className={`${PHASE_COLORS[phase.color]} py-2 px-2 text-center text-[11px] font-semibold`}
+                style={{ flex: span }}
+              >
+                {phase.name}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Lane cards */}
+        {ROADMAP_LANES.map((lane, i) => (
+          <MobileCard
+            key={lane.name}
+            lane={lane}
+            laneIdx={i}
+            startDate={startDate}
+            visible={visible}
+            selectedKey={selectedKey}
+            onSelect={toggleItem}
+          />
+        ))}
+      </div>
+
+      {/* Legend */}
+      <div
+        className={`
+          mt-6 flex flex-wrap items-center gap-4 text-xs text-boost-muted
+          transition-all duration-500
+          ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
+        `}
+        style={{ transitionDelay: visible ? "1200ms" : "0ms" }}
+      >
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded bg-boost-purple" />
+          Milestone
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded bg-boost-green/90" />
+          Workstream
+        </div>
+        <span className="text-boost-border">|</span>
+        <span>Click any item for details · Timeline adapts to your projected start date</span>
+      </div>
+
+      {/* Additional content blocks from topic data */}
+      {contentBlocks && contentBlocks.length > 0 && (
+        <div className="mt-8 space-y-6">
+          {contentBlocks.map((block, i) => (
+            <ContentBlockRenderer key={i} block={block} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}

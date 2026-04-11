@@ -46,6 +46,7 @@ function GuideContent() {
     company_url: formData.company_url || "",
     contact_name: formData.contact_name || "",
     contact_role: formData.contact_role || "",
+    start_date: formData.start_date || new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0],
     areas_of_interest: formData.areas_of_interest || [],
     specific_requirements: formData.specific_requirements || "",
     channel_volumes: formData.channel_volumes || {},

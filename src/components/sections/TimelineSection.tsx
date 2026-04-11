@@ -20,7 +20,7 @@ export default function TimelineSection({
   return (
     <section>
       <SectionHeader
-        number="07"
+        number="11"
         title="Implementation Plan"
         subtitle={`From kickoff to production in 6-8 weeks for ${guide.company_name}`}
       />

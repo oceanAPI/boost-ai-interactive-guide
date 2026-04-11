@@ -8,8 +8,8 @@ export default function FlowConnector({ height = 32 }: { height?: number }) {
   return (
     <div className="flex justify-center" aria-hidden="true">
       <div
-        className="w-0 border-l-[1.5px] border-dashed"
-        style={{ height, borderColor: "#b2dfdb" }}
+        className="w-0 border-l-[1.5px] border-dashed border-boost-connector"
+        style={{ height }}
       />
     </div>
   );
@@ -21,8 +21,7 @@ export default function FlowConnector({ height = 32 }: { height?: number }) {
 export function BranchPoint() {
   return (
     <div className="flex justify-center" aria-hidden="true">
-      <div className="w-7 h-7 rounded-full border-[1.5px] border-dashed flex items-center justify-center bg-white"
-        style={{ borderColor: "#b2dfdb" }}
+      <div className="w-7 h-7 rounded-full border-[1.5px] border-dashed border-boost-connector flex items-center justify-center bg-white"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#208269" strokeWidth="2">
           <polyline points="1 4 1 10 7 10" />
