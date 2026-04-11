@@ -2,12 +2,20 @@
 
 import { useEffect, useRef } from "react";
 import { assetPath } from "@/lib/asset-path";
+import type { SpecialistAgent } from "@/data/agents";
+import type { TopicEntry } from "@/data/topics";
+import type { DemoScript } from "@/data/demo-scripts";
+import GuideSearch from "@/components/GuideSearch";
 
 interface GuideNavProps {
   sections: { id: string; label: string; icon: string }[];
   activeSection: string;
   onNavigate: (id: string) => void;
   companyName: string;
+  agents: SpecialistAgent[];
+  topics: TopicEntry[];
+  demoScripts: DemoScript[];
+  onOpenAgent?: (agentKey: string) => void;
 }
 
 export default function GuideNav({
@@ -15,6 +23,10 @@ export default function GuideNav({
   activeSection,
   onNavigate,
   companyName,
+  agents,
+  topics,
+  demoScripts,
+  onOpenAgent,
 }: GuideNavProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pillRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -52,6 +64,14 @@ export default function GuideNav({
             <span className="text-xs text-boost-muted">|</span>
             <span className="text-sm font-medium text-boost-dark">{companyName}</span>
           </div>
+          <GuideSearch
+            sections={sections}
+            agents={agents}
+            topics={topics}
+            demoScripts={demoScripts}
+            onNavigate={onNavigate}
+            onOpenAgent={onOpenAgent}
+          />
         </div>
 
         {/* Section pills -- scrollable row */}

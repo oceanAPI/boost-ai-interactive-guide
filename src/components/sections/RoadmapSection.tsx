@@ -268,16 +268,19 @@ function MobileCard({
 
 /* ─── Main Section ─── */
 export default function RoadmapSection({
-  startDate,
+  guide,
+  startDate: startDateProp,
   sectionNumber,
   headerBlocks,
   contentBlocks,
 }: {
-  startDate: string;
+  guide?: import("@/lib/types").GuideData;
+  startDate?: string;
   sectionNumber: string;
   headerBlocks?: TopicContentBlock[];
   contentBlocks?: TopicContentBlock[];
 }) {
+  const startDate = startDateProp || guide?.start_date || new Date().toISOString().slice(0, 10);
   const sectionRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -312,12 +315,24 @@ export default function RoadmapSection({
     year: "numeric",
   });
 
+  /* Build resource context from guide data */
+  const resourceHints: string[] = [];
+  if (guide?.resources?.supporting_departments?.length) {
+    resourceHints.push(`${guide.resources.supporting_departments.join(", ")} support`);
+  }
+  if (guide?.resources?.knowledge_management) {
+    resourceHints.push("knowledge management in place");
+  }
+  const resourceSuffix = resourceHints.length
+    ? ` · ${resourceHints.join(" · ")}`
+    : "";
+
   return (
     <section ref={sectionRef}>
       <SectionHeader
         number={sectionNumber}
         title="Implementation & Rollout"
-        subtitle={`Starting ${startLabel} — 12-week roadmap from kickoff to full scale`}
+        subtitle={`Starting ${startLabel} — 12-week roadmap from kickoff to full scale${resourceSuffix}`}
       />
 
       {/* Header content blocks — above the roadmap */}

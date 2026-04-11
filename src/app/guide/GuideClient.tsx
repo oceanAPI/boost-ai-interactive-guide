@@ -1,21 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { GuideData } from "@/lib/types";
-import { getTopicSections } from "@/data/topics";
+import { getTopicSections, getTopicsForGuide } from "@/data/topics";
+import { getAgentsForGuide } from "@/data/agents";
+import { getDemoScript, getEscalatedDemoScript } from "@/data/demo-scripts";
 import GuideNav from "@/components/GuideNav";
 import HeroSection from "@/components/sections/HeroSection";
 import OrchestratorSection from "@/components/sections/OrchestratorSection";
 import TopicHubSection from "@/components/sections/TopicHubSection";
 import TopicSection from "@/components/sections/topics/TopicSection";
-import RoadmapSection from "@/components/sections/RoadmapSection";
-import IntegrationArchSection from "@/components/sections/IntegrationArchSection";
-import SecurityComplianceSection from "@/components/sections/SecurityComplianceSection";
-import ROISection from "@/components/sections/ROISection";
-import ArchitectureSection from "@/components/sections/ArchitectureSection";
 import DemoPreviewSection from "@/components/sections/DemoPreviewSection";
-import TimelineSection from "@/components/sections/TimelineSection";
+import ROISection from "@/components/sections/ROISection";
 import NextStepsSection from "@/components/sections/NextStepsSection";
+import { TOPIC_COMPONENTS } from "@/data/topics/registry";
 
 const topicSections = getTopicSections();
 
@@ -29,10 +27,8 @@ const SECTIONS = [
     label: t.name,
     icon: "·",
   })),
-  { id: "roi", label: "ROI Calculator", icon: "◇" },
-  { id: "architecture", label: "Architecture", icon: "⬡" },
   { id: "demo", label: "Live Demo", icon: "▶" },
-  { id: "timeline", label: "Implementation Plan", icon: "◈" },
+  { id: "roi", label: "ROI Calculator", icon: "◇" },
   { id: "next-steps", label: "Next Steps", icon: "→" },
 ];
 
@@ -42,6 +38,15 @@ export default function GuideClient({ guide }: { guide: GuideData }) {
   const isScrollingRef = useRef(false);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const openAgentRef = useRef<((agentKey: string) => void) | null>(null);
+
+  /* Data for search index */
+  const agents = useMemo(() => getAgentsForGuide(guide.areas_of_interest), [guide.areas_of_interest]);
+  const topics = useMemo(() => getTopicsForGuide(), []);
+  const demoScripts = useMemo(() => [
+    getDemoScript(guide.company_name, guide.areas_of_interest),
+    getEscalatedDemoScript(guide.company_name),
+  ], [guide.company_name, guide.areas_of_interest]);
 
   /* Debounced setter — only commits after scroll has been stable for 150ms */
   const setActiveSectionDebounced = (id: string) => {
@@ -72,14 +77,19 @@ export default function GuideClient({ guide }: { guide: GuideData }) {
     }, 1500);
   };
 
+  const handleOpenAgent = useCallback((agentKey: string) => {
+    openAgentRef.current?.(agentKey);
+  }, []);
+
+  const handleRegisterOpenAgent = useCallback((fn: (agentKey: string) => void) => {
+    openAgentRef.current = fn;
+  }, []);
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
   useEffect(() => {
-    /* On scroll, find the section whose top is closest to (but above) the
-       trigger line — 30% from the top of the viewport. This is far more
-       stable than IntersectionObserver which fires for every threshold cross. */
     let ticking = false;
 
     const onScroll = () => {
@@ -121,6 +131,10 @@ export default function GuideClient({ guide }: { guide: GuideData }) {
         activeSection={activeSection}
         onNavigate={navigateTo}
         companyName={guide.company_name}
+        agents={agents}
+        topics={topics}
+        demoScripts={demoScripts}
+        onOpenAgent={handleOpenAgent}
       />
 
       <main id="main-content">
@@ -130,64 +144,48 @@ export default function GuideClient({ guide }: { guide: GuideData }) {
           </div>
 
           <div id="orchestrator" ref={(el) => { sectionRefs.current["orchestrator"] = el; }}>
-            <OrchestratorSection guide={guide} />
+            <OrchestratorSection
+              guide={guide}
+              onRegisterOpenAgent={handleRegisterOpenAgent}
+            />
           </div>
 
           <div id="topics" ref={(el) => { sectionRefs.current["topics"] = el; }}>
             <TopicHubSection guide={guide} onNavigate={navigateTo} />
           </div>
 
-          {/* Topic sections (04-07) — rendered from data */}
-          {topicSections.map((topic, i) => (
-            <div
-              key={topic.key}
-              id={topic.sectionId}
-              ref={(el) => { sectionRefs.current[topic.sectionId] = el; }}
-            >
-              {topic.key === "implementation" ? (
-                <RoadmapSection
-                  startDate={guide.start_date}
-                  sectionNumber={String(i + 4).padStart(2, "0")}
-                  headerBlocks={topic.headerContent}
-                  contentBlocks={topic.content}
-                />
-              ) : topic.key === "integrations" ? (
-                <IntegrationArchSection
-                  guide={guide}
-                  sectionNumber={String(i + 4).padStart(2, "0")}
-                  headerBlocks={topic.headerContent}
-                  contentBlocks={topic.content}
-                />
-              ) : topic.key === "security-compliance" ? (
-                <SecurityComplianceSection
-                  guide={guide}
-                  sectionNumber={String(i + 4).padStart(2, "0")}
-                  headerBlocks={topic.headerContent}
-                  contentBlocks={topic.content}
-                />
-              ) : (
-                <TopicSection
-                  topic={topic}
-                  sectionNumber={String(i + 4).padStart(2, "0")}
-                />
-              )}
-            </div>
-          ))}
-
-          <div id="roi" ref={(el) => { sectionRefs.current["roi"] = el; }}>
-            <ROISection guide={guide} />
-          </div>
-
-          <div id="architecture" ref={(el) => { sectionRefs.current["architecture"] = el; }}>
-            <ArchitectureSection guide={guide} />
-          </div>
+          {/* Topic sections (04-07) — rendered from registry or generic fallback */}
+          {topicSections.map((topic, i) => {
+            const SpecializedComponent = TOPIC_COMPONENTS[topic.key];
+            return (
+              <div
+                key={topic.key}
+                id={topic.sectionId}
+                ref={(el) => { sectionRefs.current[topic.sectionId] = el; }}
+              >
+                {SpecializedComponent ? (
+                  <SpecializedComponent
+                    guide={guide}
+                    sectionNumber={String(i + 4).padStart(2, "0")}
+                    headerBlocks={topic.headerContent}
+                    contentBlocks={topic.content}
+                  />
+                ) : (
+                  <TopicSection
+                    topic={topic}
+                    sectionNumber={String(i + 4).padStart(2, "0")}
+                  />
+                )}
+              </div>
+            );
+          })}
 
           <div id="demo" ref={(el) => { sectionRefs.current["demo"] = el; }}>
             <DemoPreviewSection guide={guide} />
           </div>
 
-          <div id="timeline" ref={(el) => { sectionRefs.current["timeline"] = el; }}>
-            <TimelineSection guide={guide} />
+          <div id="roi" ref={(el) => { sectionRefs.current["roi"] = el; }}>
+            <ROISection guide={guide} />
           </div>
 
           <div id="next-steps" ref={(el) => { sectionRefs.current["next-steps"] = el; }}>

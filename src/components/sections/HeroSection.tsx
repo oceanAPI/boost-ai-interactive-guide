@@ -213,7 +213,7 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
             radial-gradient(ellipse 80% 50% at 50% 0%, rgba(89,25,93,0.5) 0%, transparent 60%),
             radial-gradient(ellipse 60% 40% at 80% 100%, rgba(32,130,105,0.25) 0%, transparent 60%),
             radial-gradient(ellipse 40% 30% at 10% 80%, rgba(54,181,149,0.1) 0%, transparent 60%),
-            linear-gradient(180deg, #1a0e1e 0%, #120a14 40%, #0d0f12 100%)
+            linear-gradient(180deg, #231528 0%, #1a1020 40%, #141118 100%)
           `,
         }}
       />
@@ -300,6 +300,23 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
           </div>
         )}
 
+        {/* Company URL (if provided) */}
+        {guide.company_url && (
+          <div className="hero-fade-in mt-3 text-center" style={{ animationDelay: "0.45s" }}>
+            <a
+              href={guide.company_url.startsWith("http") ? guide.company_url : `https://${guide.company_url}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-white/30 hover:text-boost-green-light/60 transition-colors"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-50">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
+              </svg>
+              {guide.company_url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+            </a>
+          </div>
+        )}
+
         {/* Tagline */}
         <div className="hero-fade-in" style={{ animationDelay: "0.5s" }}>
           <p className="text-center text-base sm:text-lg text-white/40 mt-6 sm:mt-8 leading-relaxed max-w-2xl mx-auto font-light">
@@ -308,6 +325,24 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
             <span className="text-boost-green-light/60">from first contact to full resolution.</span>
           </p>
         </div>
+
+        {/* Requirements & notes (if provided) */}
+        {(guide.specific_requirements || guide.custom_notes) && (
+          <div className="hero-fade-in mt-4 flex justify-center" style={{ animationDelay: "0.55s" }}>
+            <div className="max-w-lg text-center space-y-2">
+              {guide.specific_requirements && (
+                <p className="text-xs text-white/25 leading-relaxed italic">
+                  &ldquo;{guide.specific_requirements}&rdquo;
+                </p>
+              )}
+              {guide.custom_notes && !guide.specific_requirements && (
+                <p className="text-xs text-white/25 leading-relaxed italic">
+                  &ldquo;{guide.custom_notes}&rdquo;
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* CTA hint */}
         <div className="hero-fade-in flex justify-center mt-8 sm:mt-10" style={{ animationDelay: "0.6s" }}>

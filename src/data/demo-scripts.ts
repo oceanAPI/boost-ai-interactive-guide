@@ -96,3 +96,21 @@ export function getDemoScript(companyName: string, industries: string[]): DemoSc
 
   return scripts[primary] || scripts.insurance;
 }
+
+/* ─── Second demo: Banking escalation by design ─── */
+export function getEscalatedDemoScript(companyName: string): DemoScript {
+  return {
+    industry: "Banking",
+    title: "Escalation by Design",
+    messages: [
+      { sender: "ai", text: `Welcome to ${companyName}. How can I assist you today?` },
+      { sender: "customer", text: "I applied for a mortgage 3 weeks ago and haven't heard anything. I need an update." },
+      { sender: "system", text: "🎯 Routed to Lending & Mortgages Agent (confidence: 94%)" },
+      { sender: "ai", text: "I can help with that. Let me verify your identity first. Could you confirm your application reference number?", agentLabel: "Lending & Mortgages" },
+      { sender: "customer", text: "MA-2024-55210" },
+      { sender: "ai", text: "Thank you. I've located your mortgage application.\n\n📋 Application #MA-2024-55210\n📅 Submitted: March 21, 2026\n📊 Status: Underwriting — additional review\n\nYour application has been flagged for additional income verification due to multiple income sources. This type of case requires a mortgage specialist to guide you through the next steps.", agentLabel: "Lending & Mortgages" },
+      { sender: "system", text: "🔄 Transferring to live agent — Mortgage Specialist" },
+      { sender: "ai", text: "I'm connecting you with a mortgage specialist who can walk you through exactly what documentation is needed and help expedite your application.\n\n⏱ Estimated wait: under 2 minutes\n📎 Full conversation history shared\n\nThey'll have all the context from our chat so you won't need to repeat anything.", agentLabel: "Lending & Mortgages" },
+    ],
+  };
+}

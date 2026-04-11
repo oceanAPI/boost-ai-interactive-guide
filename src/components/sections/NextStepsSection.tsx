@@ -26,31 +26,6 @@ export default function NextStepsSection({
     }
   };
 
-  const steps = [
-    {
-      iconName: "headset",
-      title: "Schedule a Demo",
-      description: "See boost.ai in action with a live walkthrough tailored to your use cases.",
-      action: "Book a demo",
-      primary: true,
-    },
-    {
-      iconName: "cogs",
-      title: "Technical Deep-Dive",
-      description: "Architecture review with our solutions engineers covering integration, security, and deployment.",
-      action: "Request deep-dive",
-      primary: false,
-    },
-    {
-      iconName: "desktop-network",
-      title: "Share This Guide",
-      description: "Send this interactive guide to other stakeholders in your organization.",
-      action: copied ? "Copied!" : "Copy link",
-      primary: false,
-      onClick: handleCopy,
-    },
-  ];
-
   return (
     <section>
       <div
@@ -62,58 +37,114 @@ export default function NextStepsSection({
           background: "linear-gradient(135deg, #59195d 0%, #451149 40%, #208269 100%)",
         }}
       >
-        {/* Brand shape decoration */}
+        {/* Subtle brand shape */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={assetPath("/brand/boost_brandshape_white.svg")}
           alt=""
-          className="absolute top-6 right-10 w-40 opacity-[0.04] pointer-events-none"
+          className="absolute -top-4 -right-4 w-56 opacity-[0.03] pointer-events-none rotate-12"
+          aria-hidden="true"
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetPath("/brand/boost_brandshape_white.svg")}
+          alt=""
+          className="absolute -bottom-8 -left-8 w-40 opacity-[0.03] pointer-events-none -rotate-45"
           aria-hidden="true"
         />
 
-        <div className="relative z-10 px-8 py-12 text-center">
-          <div className="flex justify-center mb-6">
+        <div className="relative z-10 px-6 sm:px-10 py-10 sm:py-14">
+          {/* Section label */}
+          <div className="flex items-center gap-2 mb-6 justify-center">
+            <span className="text-[10px] font-mono text-white/30 tracking-widest uppercase">
+              What&apos;s next
+            </span>
+            <span className="w-8 h-px bg-white/20" />
+          </div>
+
+          {/* Logo */}
+          <div className="flex justify-center mb-5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={assetPath("/brand/boost_logo-_negative.svg")}
               alt="boost.ai"
-              className="h-7 w-auto"
+              className="h-6 w-auto opacity-80"
             />
           </div>
 
-          <h2 className="text-xl sm:text-3xl font-bold text-white mb-3">
-            Ready to transform {guide.company_name}&apos;s customer service?
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 text-center">
+            Ready to transform {guide.company_name}&apos;s customer experience?
           </h2>
-          <p className="text-sm sm:text-base text-white/60 max-w-lg mx-auto mb-8 sm:mb-10">
-            From this guide to production in 6-8 weeks. Let&apos;s discuss how boost.ai fits your specific needs.
+          <p className="text-sm text-white/50 max-w-md mx-auto mb-10 text-center leading-relaxed">
+            From this guide to production in 6–8 weeks.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
-            {steps.map((step) => (
-              <button
-                key={step.title}
-                onClick={step.onClick}
-                className={`rounded-xl p-5 text-left transition-all card-lift ${
-                  step.primary
-                    ? "bg-boost-green-light text-white"
-                    : "bg-white/10 backdrop-blur-sm border border-white/20 text-white"
-                }`}
-              >
-                <div className="mb-2">
-                  <BoostIcon name={step.iconName} variant="white" size={28} />
+          {/* Steps */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto">
+            {/* Primary CTA — Schedule Demo (no link yet) */}
+            <div className="group relative rounded-xl p-5 text-left bg-boost-green">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center">
+                  <BoostIcon name="headset" variant="white" size={20} />
                 </div>
-                <h3 className="font-semibold text-sm mb-1">{step.title}</h3>
-                <p className={`text-xs mb-3 ${step.primary ? "text-white/80" : "text-white/50"}`}>
-                  {step.description}
-                </p>
-                <span className={`text-xs font-semibold ${step.primary ? "text-white" : "text-boost-green-light"}`}>
-                  {step.action}
-                </span>
-              </button>
-            ))}
+                <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">Coming soon</span>
+              </div>
+              <h3 className="font-semibold text-sm text-white mb-1">Schedule a Demo</h3>
+              <p className="text-xs text-white/70 leading-relaxed">
+                See boost.ai in action — a live walkthrough tailored to your use cases.
+              </p>
+            </div>
+
+            {/* Technical Deep-Dive (no link yet) */}
+            <div className="group rounded-xl p-5 text-left bg-white/[0.07] border border-white/[0.1]">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+                  <BoostIcon name="cogs" variant="white" size={20} />
+                </div>
+                <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">Coming soon</span>
+              </div>
+              <h3 className="font-semibold text-sm text-white mb-1">Technical Deep-Dive</h3>
+              <p className="text-xs text-white/50 leading-relaxed">
+                Architecture review covering integration, security, and deployment.
+              </p>
+            </div>
+
+            {/* Share This Guide */}
+            <button
+              onClick={handleCopy}
+              className="group rounded-xl p-5 text-left transition-all duration-200 bg-white/[0.07] hover:bg-white/[0.12] border border-white/[0.1]"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+                  {copied ? (
+                    <svg className="w-5 h-5 text-boost-green-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <BoostIcon name="desktop-network" variant="white" size={20} />
+                  )}
+                </div>
+                {copied ? (
+                  <span className="text-[11px] text-boost-green-light font-medium">Copied!</span>
+                ) : (
+                  <svg className="w-4 h-4 text-white/30 group-hover:translate-x-0.5 group-hover:text-white/50 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                  </svg>
+                )}
+              </div>
+              <h3 className="font-semibold text-sm text-white mb-1">Share This Guide</h3>
+              <p className="text-xs text-white/50 leading-relaxed">
+                Send this interactive guide to stakeholders in your organization.
+              </p>
+            </button>
           </div>
 
-          <p className="text-white/50 text-xs mt-8">Trust every conversation</p>
+          {/* Footer tagline */}
+          <div className="flex items-center justify-center gap-3 mt-10">
+            <span className="w-6 h-px bg-white/15" />
+            <p className="text-white/30 text-[11px] tracking-wide">Trust every conversation</p>
+            <span className="w-6 h-px bg-white/15" />
+          </div>
         </div>
       </div>
     </section>

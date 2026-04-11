@@ -37,7 +37,7 @@ export default function CaseStudiesSection({ guide }: { guide: GuideData }) {
             >
               <ExpandableCard
                 title={cs.companyDescription}
-                preview={`${cs.results[0].metric}: ${cs.results[0].value} · ${cs.timeline}`}
+                subtitle={`${cs.results[0].metric}: ${cs.results[0].value} · ${cs.timeline}`}
                 icon={
                   <div className="flex items-center gap-1.5">
                     <Badge variant={isRelevant ? "green" : "muted"} size="sm">{cs.companyType}</Badge>

@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { GuideData } from "@/lib/types";
-import { getOrchestratorConfig } from "@/data/agents";
+import { getOrchestratorConfig, getAgentsForGuide } from "@/data/agents";
 import type { SpecialistAgent, TopicGroup } from "@/data/agents";
 import BoostIcon from "@/components/BoostIcon";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import FlowNodeCard from "./orchestrator/FlowNodeCard";
 import AgentModal from "./orchestrator/AgentModal";
+import OrchestratorBuilder from "./orchestrator/OrchestratorBuilder";
 
 /* ─── Agent card (clickable, opens modal) ─── */
 function AgentCard({
@@ -137,14 +138,35 @@ function MobileTopicGroup({
 /* ─── Main Section ─── */
 export default function OrchestratorSection({
   guide,
+  onRegisterOpenAgent,
 }: {
   guide: GuideData;
+  onRegisterOpenAgent?: (fn: (agentKey: string) => void) => void;
 }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [selectedAgent, setSelectedAgent] = useState<SpecialistAgent | null>(null);
   const [cameFromOrchestrator, setCameFromOrchestrator] = useState(false);
+  const [builderMode, setBuilderMode] = useState(false);
 
   const config = getOrchestratorConfig(guide.areas_of_interest);
+  const availableAgents = useMemo(() => getAgentsForGuide(guide.areas_of_interest), [guide.areas_of_interest]);
+
+  // Collect all agents for lookup by key
+  const allAgents = useCallback(() => {
+    const agents: SpecialistAgent[] = [...config.standaloneAgents];
+    for (const group of config.topicGroups) agents.push(...group.agents);
+    return agents;
+  }, [config]);
+
+  // Register the openAgent callback so search can trigger it
+  useEffect(() => {
+    if (onRegisterOpenAgent) {
+      onRegisterOpenAgent((agentKey: string) => {
+        const agent = allAgents().find((a) => a.key === agentKey);
+        if (agent) setSelectedAgent(agent);
+      });
+    }
+  }, [onRegisterOpenAgent, allAgents]);
   const totalColumns = config.standaloneAgents.length + config.topicGroups.length;
 
   // Orchestrator agent data — sourced from elev.io article #935
@@ -191,96 +213,120 @@ export default function OrchestratorSection({
         subtitle={`How boost.ai routes and resolves every interaction for ${guide.company_name}`}
       />
 
-      {/* Orchestrator card — clickable */}
-      <div ref={ref} className={`flex justify-center mb-0 transition-all duration-700 ${
-        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-      }`}>
-        <button
-          onClick={() => setSelectedAgent(orchestratorAgent)}
-          className="text-left cursor-pointer transition-shadow hover:shadow-lg rounded-lg"
-        >
-          <FlowNodeCard
-            category="agentic"
-            name="Agent Orchestrator"
-            description="The main orchestrator handles all incoming requests and traffic to pass on to agents."
-            className="min-w-[280px] max-w-[360px]"
-          />
-        </button>
-      </div>
+      {builderMode ? (
+        /* ─── Builder Mode ─── */
+        <OrchestratorBuilder
+          availableAgents={availableAgents}
+          onSelectAgent={setSelectedAgent}
+          onSelectOrchestrator={() => setSelectedAgent(orchestratorAgent)}
+          onExit={() => setBuilderMode(false)}
+        />
+      ) : (
+        /* ─── Normal View ─── */
+        <>
+          {/* Orchestrator card — clickable, with flash button on corner */}
+          <div ref={ref} className={`flex justify-center mb-0 transition-all duration-700 ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+          }`}>
+            <div className="relative">
+              <button
+                onClick={() => setSelectedAgent(orchestratorAgent)}
+                className="text-left cursor-pointer transition-shadow hover:shadow-lg rounded-lg"
+              >
+                <FlowNodeCard
+                  category="agentic"
+                  name="Agent Orchestrator"
+                  description="The main orchestrator handles all incoming requests and traffic to pass on to agents."
+                  className="min-w-[280px] max-w-[360px]"
+                />
+              </button>
 
-      {/* Vertical line from orchestrator down */}
-      <div className="flex justify-center h-8" aria-hidden="true">
-        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
-      </div>
-
-      {/* Desktop: horizontal bar + columns grid */}
-      {/* Mobile: vertical list of topic groups */}
-
-      {/* Horizontal bar — hidden on mobile */}
-      <div className="mx-4 hidden md:block" aria-hidden="true">
-        <div className="border-t-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
-      </div>
-
-      {/* Desktop grid */}
-      <div
-        className="hidden md:grid gap-2"
-        style={{
-          gridTemplateColumns: `repeat(${Math.min(totalColumns, 6)}, minmax(0, 1fr))`,
-        }}
-      >
-        {config.standaloneAgents.map((agent) => (
-          <div key={agent.key} className="flex flex-col">
-            {/* Same vertical treatment as topic groups to align */}
-            <div className="flex justify-center h-8" aria-hidden="true">
-              <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
-            </div>
-            <div className="flex justify-center -mt-1 mb-1" aria-hidden="true">
-              <span className="w-5 h-5 rounded-full bg-white border text-[10px] font-semibold text-boost-muted flex items-center justify-center"
-                style={{ borderColor: "var(--color-boost-connector)" }}
-              >1</span>
-            </div>
-            <div className="flex justify-center h-4" aria-hidden="true">
-              <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
-            </div>
-            {/* Header matching topic group button exactly */}
-            <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-t-lg bg-boost-purple/90 text-white">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-xs font-semibold truncate">No group</span>
+              {/* Flash "Try it" button — corner of orchestrator card */}
+              <div className="absolute -top-3 -right-3 z-10 animate-modal-in">
+                <span className="absolute inset-0 rounded-full bg-boost-green/30 animate-ping" />
+                <button
+                  onClick={(e) => { e.stopPropagation(); setBuilderMode(true); }}
+                  className="relative bg-boost-green text-white text-[11px] font-semibold px-4 py-2 rounded-full shadow-lg hover:bg-boost-green-light transition-all flex items-center gap-1.5"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                  </svg>
+                  Try it
+                </button>
               </div>
             </div>
-            <div className="space-y-2 pt-2">
-              <AgentCard agent={agent} onClick={() => setSelectedAgent(agent)} />
-            </div>
           </div>
-        ))}
-        {config.topicGroups.map((group) => (
-          <TopicGroupColumn
-            key={group.key}
-            group={group}
-            onSelectAgent={setSelectedAgent}
-          />
-        ))}
-      </div>
 
-      {/* Mobile vertical list */}
-      <div className="md:hidden space-y-3">
-        {config.standaloneAgents.map((agent) => (
-          <MobileTopicGroup
-            key={agent.key}
-            group={{ key: agent.key, label: agent.name, icon: agent.icon, agents: [agent] }}
-            onSelectAgent={setSelectedAgent}
-          />
-        ))}
-        {config.topicGroups.map((group) => (
-          <MobileTopicGroup
-            key={group.key}
-            group={group}
-            onSelectAgent={setSelectedAgent}
-          />
-        ))}
-      </div>
+          {/* Vertical line from orchestrator down */}
+          <div className="flex justify-center h-8" aria-hidden="true">
+            <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
+          </div>
 
-      {/* Agent detail modal */}
+          {/* Horizontal bar — hidden on mobile */}
+          <div className="mx-4 hidden md:block" aria-hidden="true">
+            <div className="border-t-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
+          </div>
+
+          {/* Desktop grid */}
+          <div
+            className="hidden md:grid gap-2"
+            style={{
+              gridTemplateColumns: `repeat(${Math.min(totalColumns, 6)}, minmax(0, 1fr))`,
+            }}
+          >
+            {config.standaloneAgents.map((agent) => (
+              <div key={agent.key} className="flex flex-col">
+                <div className="flex justify-center h-8" aria-hidden="true">
+                  <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
+                </div>
+                <div className="flex justify-center -mt-1 mb-1" aria-hidden="true">
+                  <span className="w-5 h-5 rounded-full bg-white border text-[10px] font-semibold text-boost-muted flex items-center justify-center"
+                    style={{ borderColor: "var(--color-boost-connector)" }}
+                  >1</span>
+                </div>
+                <div className="flex justify-center h-4" aria-hidden="true">
+                  <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
+                </div>
+                <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-t-lg bg-boost-purple/90 text-white">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs font-semibold truncate">No group</span>
+                  </div>
+                </div>
+                <div className="space-y-2 pt-2">
+                  <AgentCard agent={agent} onClick={() => setSelectedAgent(agent)} />
+                </div>
+              </div>
+            ))}
+            {config.topicGroups.map((group) => (
+              <TopicGroupColumn
+                key={group.key}
+                group={group}
+                onSelectAgent={setSelectedAgent}
+              />
+            ))}
+          </div>
+
+          {/* Mobile vertical list */}
+          <div className="md:hidden space-y-3">
+            {config.standaloneAgents.map((agent) => (
+              <MobileTopicGroup
+                key={agent.key}
+                group={{ key: agent.key, label: agent.name, icon: agent.icon, agents: [agent] }}
+                onSelectAgent={setSelectedAgent}
+              />
+            ))}
+            {config.topicGroups.map((group) => (
+              <MobileTopicGroup
+                key={group.key}
+                group={group}
+                onSelectAgent={setSelectedAgent}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Agent detail modal (shared between normal + builder mode) */}
       {selectedAgent && (
         <AgentModal
           agent={selectedAgent}

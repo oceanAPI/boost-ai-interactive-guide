@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { SectionHeader, StatCounter } from "@/components/ui";
+import ExpandableCard from "@/components/ui/ExpandableCard";
 import { assetPath } from "@/lib/asset-path";
-import { useScrollReveal } from "@/hooks/useScrollReveal";
 import type { GuideData } from "@/lib/types";
 import type { TopicContentBlock } from "@/data/topics/_types";
 import ContentBlockRenderer from "@/components/sections/topics/ContentBlocks";
@@ -33,72 +33,7 @@ function BoostIcon({ name, size = 28 }: { name: string; size?: number }) {
   );
 }
 
-/* ─── Expandable card shell ─── */
-function SecurityCard({
-  title,
-  subtitle,
-  icon,
-  accentColor = "border-boost-purple",
-  defaultOpen = false,
-  children,
-}: {
-  title: string;
-  subtitle: string;
-  icon: React.ReactNode;
-  accentColor?: string;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  const { ref, isVisible } = useScrollReveal({ once: true });
-
-  return (
-    <div
-      ref={ref}
-      className={`rounded-xl border bg-white overflow-hidden transition-all duration-300 ${
-        open ? "shadow-lg border-boost-purple/20" : "shadow-sm border-boost-border hover:shadow-md"
-      } ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
-    >
-      {/* Accent top stripe */}
-      <div className={`h-[3px] ${accentColor.replace("border-", "bg-")}`} />
-
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 p-4 sm:p-5 text-left hover:bg-boost-surface/30 transition-colors"
-      >
-        <span className="flex-shrink-0">{icon}</span>
-        <div className="flex-1 min-w-0">
-          <span className="font-semibold text-boost-dark text-sm sm:text-base">{title}</span>
-          {!open && (
-            <p className="text-xs text-boost-muted mt-0.5 line-clamp-1">{subtitle}</p>
-          )}
-        </div>
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          className={`text-boost-muted flex-shrink-0 transition-transform duration-300 ${
-            open ? "rotate-180" : ""
-          }`}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-
-      <div
-        className="grid transition-[grid-template-rows] duration-400 ease-out"
-        style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
-      >
-        <div className="overflow-hidden">
-          <div className="px-4 sm:px-5 pb-5 pt-0">{children}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
+/* SecurityCard replaced by shared ExpandableCard from @/components/ui/ExpandableCard */
 
 /* ═══════════════════════════════════════════════════════════════
    Card 1 — Generative Action Flow
@@ -936,7 +871,7 @@ export default function SecurityComplianceSection({
       {/* Expandable card grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Card 1 — Generative Action Flow */}
-        <SecurityCard
+        <ExpandableCard
           title="Generative Action Flow"
           subtitle="How every interaction is secured end-to-end"
           icon={<BoostIcon name="shield-medal" />}
@@ -944,57 +879,58 @@ export default function SecurityComplianceSection({
           defaultOpen
         >
           <GenerativeActionFlow />
-        </SecurityCard>
+        </ExpandableCard>
 
         {/* Card 2 — PII Masking */}
-        <SecurityCard
+        <ExpandableCard
           title="PII Masking"
           subtitle="Real-time data protection in every conversation"
           icon={<BoostIcon name="lock-security" />}
           accentColor="border-boost-green"
+          defaultOpen
         >
           <PIIMaskingDemo />
-        </SecurityCard>
+        </ExpandableCard>
 
         {/* Card 3 — Certifications */}
-        <SecurityCard
+        <ExpandableCard
           title="Compliance Certifications"
           subtitle="ISO 27001, SOC 2, GDPR, and more"
           icon={<BoostIcon name="check-symbol-check" />}
           accentColor="border-boost-purple"
         >
           <ComplianceCertifications />
-        </SecurityCard>
+        </ExpandableCard>
 
         {/* Card 4 — Guardrail Configuration */}
-        <SecurityCard
+        <ExpandableCard
           title="Guardrail Configuration"
           subtitle="Six layers of configurable protection"
           icon={<BoostIcon name="check-robot" />}
           accentColor="border-boost-purple"
         >
           <GuardrailConfig />
-        </SecurityCard>
+        </ExpandableCard>
 
         {/* Card 5 — Data & Infrastructure */}
-        <SecurityCard
+        <ExpandableCard
           title="Data Handling & Infrastructure"
           subtitle="Encryption, access control, residency, and audit"
           icon={<BoostIcon name="lock-server" />}
           accentColor="border-boost-green"
         >
           <DataInfrastructure />
-        </SecurityCard>
+        </ExpandableCard>
 
         {/* Card 6 — Regulatory Readiness */}
-        <SecurityCard
+        <ExpandableCard
           title="Regulatory Readiness"
           subtitle="EU AI Act and DORA compliance mapped"
           icon={<BoostIcon name="hierarchy-document-3671708" />}
           accentColor="border-boost-purple"
         >
           <RegulatoryReadiness />
-        </SecurityCard>
+        </ExpandableCard>
       </div>
 
       {/* Bottom content blocks */}
