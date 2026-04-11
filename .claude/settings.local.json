@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(brew install:*)",
+      "Bash(pdftoppm -v)",
+      "Bash(pdftotext \"/Users/mikalmonslaup/Downloads/_financial services example.pdf\" -)",
+      "Bash(pdfinfo \"/Users/mikalmonslaup/Downloads/_financial services example.pdf\")",
+      "Bash(pdftoppm -png -r 150 -f 1 -l 8 \"/Users/mikalmonslaup/Downloads/_financial services example.pdf\" /tmp/pdf_page)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)"
+    ]
+  }
+}
