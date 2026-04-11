@@ -81,6 +81,86 @@ function CategoryColumn({
   );
 }
 
+/* ─── Custom Card Preview (mini chat) ─── */
+function CustomCardPreview({ card }: { card: NonNullable<FlowNode["customCardJson"]> }) {
+  return (
+    <div className="mt-4 rounded-xl border border-boost-border bg-gradient-to-b from-boost-surface/50 to-white overflow-hidden">
+      {/* Chat header */}
+      <div className="bg-boost-purple px-3 py-2 flex items-center gap-2">
+        <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+        </div>
+        <span className="text-[10px] text-white font-semibold">boost.ai</span>
+      </div>
+
+      <div className="p-3 space-y-2.5">
+        {/* User message */}
+        <div className="flex justify-end">
+          <div className="bg-boost-purple/10 rounded-xl rounded-tr-sm px-3 py-1.5 max-w-[75%]">
+            <p className="text-[10px] text-boost-dark">Show me my account overview</p>
+          </div>
+        </div>
+
+        {/* Bot response + card */}
+        <div className="flex justify-start">
+          <div className="max-w-[90%] space-y-1.5">
+            <div className="bg-boost-surface rounded-xl rounded-tl-sm px-3 py-1.5">
+              <p className="text-[10px] text-boost-dark">Here&apos;s your account overview:</p>
+            </div>
+
+            {/* Rendered custom card */}
+            <div className="rounded-xl border border-boost-green/30 bg-white shadow-sm overflow-hidden">
+              <div className="bg-boost-green/10 px-3 py-2 border-b border-boost-green/15">
+                <p className="text-xs font-bold text-boost-dark">{card.title}</p>
+                {card.subtitle && <p className="text-[10px] text-boost-muted">{card.subtitle}</p>}
+              </div>
+              {card.fields && card.fields.length > 0 && (
+                <div className="px-3 py-2 space-y-1.5">
+                  {card.fields.map((f) => (
+                    <div key={f.label} className="flex items-center justify-between">
+                      <span className="text-[10px] text-boost-muted">{f.label}</span>
+                      <span className="text-[10px] font-semibold text-boost-dark">{f.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {card.actions && card.actions.length > 0 && (
+                <div className="px-3 py-2 border-t border-boost-border flex gap-1.5">
+                  {card.actions.map((a) => (
+                    <div
+                      key={a.label}
+                      className={`flex-1 text-center py-1.5 rounded-md text-[9px] font-semibold ${
+                        a.type === "primary"
+                          ? "bg-boost-green text-white"
+                          : "border border-boost-border text-boost-dark"
+                      }`}
+                    >
+                      {a.label}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* JSON preview */}
+      <details className="group px-3 pb-3">
+        <summary className="text-[10px] text-boost-muted cursor-pointer hover:text-boost-dark transition-colors flex items-center gap-1">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="transition-transform group-open:rotate-90"><polyline points="9 18 15 12 9 6" /></svg>
+          View JSON
+        </summary>
+        <div className="mt-1.5 rounded-md border border-boost-border bg-[#1e1e2e] overflow-hidden">
+          <pre className="px-3 py-2 text-[10px] font-mono leading-relaxed text-[#cdd6f4] overflow-x-auto">
+            {JSON.stringify(card, null, 2)}
+          </pre>
+        </div>
+      </details>
+    </div>
+  );
+}
+
 /* ─── Node detail panel ─── */
 function NodeDetail({ node, onBack }: { node: FlowNode; onBack: () => void }) {
   return (
@@ -98,10 +178,14 @@ function NodeDetail({ node, onBack }: { node: FlowNode; onBack: () => void }) {
         <BoostIcon name={node.icon} variant="purple" size={20} />
         <div>
           <h4 className="text-sm font-bold text-boost-dark">{node.name}</h4>
-          <span className="text-[10px] text-boost-muted uppercase">{node.type}</span>
+          <span className="text-[10px] text-boost-muted uppercase">{node.type.replace(/_/g, " ")}</span>
         </div>
       </div>
       <p className="text-xs text-boost-muted leading-relaxed">{node.description}</p>
+
+      {/* Custom card preview for action hooks with content type */}
+      {node.customCardJson && <CustomCardPreview card={node.customCardJson} />}
+
       {node.elevioUrl && (
         <a
           href={node.elevioUrl}

@@ -592,6 +592,10 @@ export default function WaysOfWorkingSection({
   headerBlocks,
   contentBlocks,
 }: Props) {
+  /* Row-synced open state: expanding one card expands its row sibling */
+  const [row1Open, setRow1Open] = useState(true);  // Implementation + Team — both default open
+  const [row2Open, setRow2Open] = useState(false); // Hypercare + Partnership
+
   return (
     <section>
       <SectionHeader
@@ -624,7 +628,8 @@ export default function WaysOfWorkingSection({
           subtitle="12-week sprint-based delivery in 3 phases"
           icon={<BoostIcon name="clock-pass" />}
           accentColor="border-boost-purple"
-          defaultOpen
+          open={row1Open}
+          onToggle={() => setRow1Open(!row1Open)}
         >
           <ImplementationPlan />
         </ExpandableCard>
@@ -634,6 +639,8 @@ export default function WaysOfWorkingSection({
           subtitle="Who does what — your team and ours"
           icon={<BoostIcon name="users" />}
           accentColor="border-boost-green"
+          open={row1Open}
+          onToggle={() => setRow1Open(!row1Open)}
         >
           <TeamResponsibilities />
         </ExpandableCard>
@@ -643,6 +650,8 @@ export default function WaysOfWorkingSection({
           subtitle="What happens after go-live"
           icon={<BoostIcon name="hand-protection" />}
           accentColor="border-boost-purple"
+          open={row2Open}
+          onToggle={() => setRow2Open(!row2Open)}
         >
           <HypercareSupport />
         </ExpandableCard>
@@ -652,6 +661,8 @@ export default function WaysOfWorkingSection({
           subtitle="Continuous enablement and growth"
           icon={<BoostIcon name="handshake" />}
           accentColor="border-boost-green"
+          open={row2Open}
+          onToggle={() => setRow2Open(!row2Open)}
         >
           <PartnershipLifecycle />
         </ExpandableCard>

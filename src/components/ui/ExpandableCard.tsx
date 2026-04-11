@@ -27,6 +27,10 @@ interface ExpandableCardProps {
   /** Tailwind border-color class for the top accent stripe, e.g. "border-boost-purple" */
   accentColor?: string;
   defaultOpen?: boolean;
+  /** Controlled mode: external open state */
+  open?: boolean;
+  /** Controlled mode: toggle callback */
+  onToggle?: () => void;
   className?: string;
   children: React.ReactNode;
 }
@@ -37,10 +41,14 @@ export default function ExpandableCard({
   icon,
   accentColor = "border-boost-purple",
   defaultOpen = false,
+  open: controlledOpen,
+  onToggle,
   className = "",
   children,
 }: ExpandableCardProps) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const handleToggle = onToggle ?? (() => setInternalOpen(!internalOpen));
   const { ref, isVisible } = useScrollReveal({ once: true });
 
   return (
@@ -56,7 +64,7 @@ export default function ExpandableCard({
       <div className={`h-[3px] ${accentColor.replace("border-", "bg-")}`} />
 
       <button
-        onClick={() => setOpen(!open)}
+        onClick={handleToggle}
         className="w-full flex items-center gap-3 p-4 sm:p-5 text-left hover:bg-boost-surface/30 transition-colors"
       >
         {icon && <span className="flex-shrink-0">{icon}</span>}

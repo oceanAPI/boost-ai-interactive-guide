@@ -100,6 +100,10 @@ body {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+@keyframes loadProgress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
 
 /* Modal animation */
 .animate-modal-in {

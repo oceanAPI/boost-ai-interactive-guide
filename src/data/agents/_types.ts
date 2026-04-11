@@ -4,6 +4,15 @@
 
 // ─── Flow Architecture Types ───
 
+export interface CustomCardJson {
+  type: string;
+  title: string;
+  subtitle?: string;
+  image?: string | null;
+  fields?: { label: string; value: string }[];
+  actions?: { label: string; type: string }[];
+}
+
 export interface FlowNode {
   id: string;
   name: string;
@@ -11,6 +20,7 @@ export interface FlowNode {
   icon: string;             // BoostIcon name
   description: string;
   elevioUrl?: string;       // link to elev.io article for Level 3 (future)
+  customCardJson?: CustomCardJson;  // for action hooks with content → custom card
 }
 
 export interface AgentFlow {

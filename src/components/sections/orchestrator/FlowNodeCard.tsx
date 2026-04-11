@@ -135,6 +135,49 @@ export default function FlowNodeCard({
           )}
         </div>
       )}
+
+      {/* Mini custom card preview for action hooks with content cards */}
+      {node?.customCardJson && (
+        <div className="border-t border-boost-green/20 bg-boost-green/[0.03] px-2.5 py-2">
+          <div className="rounded-lg border border-boost-green/25 bg-white overflow-hidden shadow-xs">
+            <div className="bg-boost-green/10 px-2 py-1 border-b border-boost-green/10">
+              <p className="text-[9px] font-bold text-boost-dark truncate">{node.customCardJson.title}</p>
+              {node.customCardJson.subtitle && (
+                <p className="text-[8px] text-boost-muted truncate">{node.customCardJson.subtitle}</p>
+              )}
+            </div>
+            {node.customCardJson.fields && node.customCardJson.fields.length > 0 && (
+              <div className="px-2 py-1 space-y-0.5">
+                {node.customCardJson.fields.slice(0, 2).map((f) => (
+                  <div key={f.label} className="flex items-center justify-between">
+                    <span className="text-[8px] text-boost-muted">{f.label}</span>
+                    <span className="text-[8px] font-semibold text-boost-dark">{f.value}</span>
+                  </div>
+                ))}
+                {node.customCardJson.fields.length > 2 && (
+                  <p className="text-[7px] text-boost-muted">+{node.customCardJson.fields.length - 2} more</p>
+                )}
+              </div>
+            )}
+            {node.customCardJson.actions && node.customCardJson.actions.length > 0 && (
+              <div className="px-2 py-1 border-t border-boost-border/50 flex gap-1">
+                {node.customCardJson.actions.map((a) => (
+                  <div
+                    key={a.label}
+                    className={`flex-1 text-center py-0.5 rounded text-[7px] font-semibold ${
+                      a.type === "primary"
+                        ? "bg-boost-green text-white"
+                        : "border border-boost-border text-boost-dark"
+                    }`}
+                  >
+                    {a.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

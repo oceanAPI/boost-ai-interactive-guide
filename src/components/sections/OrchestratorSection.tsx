@@ -6,7 +6,7 @@ import { getOrchestratorConfig, getAgentsForGuide } from "@/data/agents";
 import type { SpecialistAgent, TopicGroup } from "@/data/agents";
 import BoostIcon from "@/components/BoostIcon";
 import { SectionHeader } from "@/components/ui";
-import { useScrollReveal } from "@/hooks/useScrollReveal";
+
 import FlowNodeCard from "./orchestrator/FlowNodeCard";
 import AgentModal from "./orchestrator/AgentModal";
 import OrchestratorBuilder from "./orchestrator/OrchestratorBuilder";
@@ -143,7 +143,6 @@ export default function OrchestratorSection({
   guide: GuideData;
   onRegisterOpenAgent?: (fn: (agentKey: string) => void) => void;
 }) {
-  const { ref, isVisible } = useScrollReveal({ once: true });
   const [selectedAgent, setSelectedAgent] = useState<SpecialistAgent | null>(null);
   const [cameFromOrchestrator, setCameFromOrchestrator] = useState(false);
   const [builderMode, setBuilderMode] = useState(false);
@@ -225,9 +224,7 @@ export default function OrchestratorSection({
         /* ─── Normal View ─── */
         <>
           {/* Orchestrator card — clickable, with flash button on corner */}
-          <div ref={ref} className={`flex justify-center mb-0 transition-all duration-700 ${
-            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-          }`}>
+          <div className="flex justify-center mb-0 animate-fade-in">
             <div className="relative">
               <button
                 onClick={() => setSelectedAgent(orchestratorAgent)}
