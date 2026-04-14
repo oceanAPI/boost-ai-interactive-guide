@@ -6,6 +6,9 @@ import { assetPath } from "@/lib/asset-path";
 import { INTEGRATION_CATEGORIES } from "@/data/integrations";
 import { INDUSTRIES, SUPPORTING_DEPARTMENTS } from "@/data/agents";
 import { encodeGuideData } from "@/lib/url-encoding";
+import SectionPickerModal from "@/components/SectionPickerModal";
+import { generateSOWPdf } from "@/lib/generate-sow-pdf";
+import SalesforceImportModal from "@/components/SalesforceImportModal";
 import type { GuideFormData, ChannelVolumes, IntegrationSelections, PricingModel, ResourceAllocation } from "@/lib/types";
 
 /* ─── Collapsible Section ─── */
@@ -193,6 +196,36 @@ export default function AdminPage() {
     router.push(`/guide?data=${encoded}`);
   };
 
+  /* ─── Salesforce import ─── */
+  const [showSalesforce, setShowSalesforce] = useState(false);
+
+  /* ─── Presentation mode ─── */
+  const [showPicker, setShowPicker] = useState(false);
+
+  const handleStartPresentation = (sectionIds: string[]) => {
+    if (!form.company_name.trim()) return;
+    const encoded = encodeGuideData(form);
+    const sections = sectionIds.join(",");
+    router.push(`/slides?data=${encoded}&sections=${sections}`);
+  };
+
+  /* ─── SOW PDF download ─── */
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  const handleDownloadSOW = async () => {
+    if (!form.company_name.trim()) return;
+    setGeneratingPdf(true);
+    try {
+      const encoded = encodeGuideData(form);
+      const guideUrl = `${window.location.origin}/guide?data=${encoded}`;
+      await generateSOWPdf(form, guideUrl);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
   const totalIntegrations = Object.values(form.integrations).reduce(
     (sum, arr) => sum + (arr?.length || 0),
     0,
@@ -236,13 +269,47 @@ export default function AdminPage() {
             />
             <span className="text-boost-muted text-xs sm:text-sm hidden sm:inline">Guide Builder</span>
           </div>
-          <button
-            onClick={handleSubmit}
-            disabled={!form.company_name.trim()}
-            className="px-4 py-2 text-sm sm:text-base bg-boost-green-light text-white font-semibold rounded-lg hover:bg-boost-green disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-          >
-            Generate →
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setShowSalesforce(true)}
+              className="px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface transition-colors flex-shrink-0 hidden sm:flex items-center gap-1.5"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00A1E0" strokeWidth="2">
+                <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" />
+              </svg>
+              Salesforce
+            </button>
+            <button
+              onClick={handleDownloadSOW}
+              disabled={!form.company_name.trim() || generatingPdf}
+              className="px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0 hidden sm:flex items-center gap-1.5"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+              </svg>
+              {generatingPdf ? "Generating..." : "SOW"}
+            </button>
+            <button
+              onClick={() => setShowPicker(true)}
+              disabled={!form.company_name.trim()}
+              className="px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0 hidden sm:flex items-center gap-1.5"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
+              </svg>
+              Guide
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={!form.company_name.trim()}
+              className="px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0 flex items-center gap-1.5"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Generate
+            </button>
+          </div>
         </div>
       </header>
 
@@ -676,17 +743,67 @@ export default function AdminPage() {
           />
         </CollapsibleSection>
 
-        {/* Generate Button */}
-        <div className="flex justify-center pb-8 pt-4">
+        {/* Action buttons */}
+        <div className="flex flex-col sm:flex-row justify-center gap-3 pb-8 pt-4">
+          <button
+            onClick={() => setShowSalesforce(true)}
+            className="px-6 py-3 border border-boost-border text-boost-dark font-bold rounded-xl text-base hover:bg-boost-surface transition-colors flex items-center justify-center gap-2"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00A1E0" strokeWidth="2">
+              <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" />
+            </svg>
+            Salesforce Data
+          </button>
+          <button
+            onClick={handleDownloadSOW}
+            disabled={!form.company_name.trim() || generatingPdf}
+            className="px-6 py-3 border border-boost-border text-boost-dark font-bold rounded-xl text-base hover:bg-boost-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+            </svg>
+            {generatingPdf ? "Generating..." : "Download SOW"}
+          </button>
+          <button
+            onClick={() => setShowPicker(true)}
+            disabled={!form.company_name.trim()}
+            className="px-6 py-3 border border-boost-border text-boost-dark font-bold rounded-xl text-base hover:bg-boost-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
+            </svg>
+            Generate Guide
+          </button>
           <button
             onClick={handleSubmit}
             disabled={!form.company_name.trim()}
-            className="px-8 py-3 bg-boost-green-light text-white font-bold rounded-xl text-lg hover:bg-boost-green disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-boost-green-light/25"
+            className="px-6 py-3 border border-boost-border text-boost-dark font-bold rounded-xl text-base hover:bg-boost-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
-            Generate Interactive Guide →
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Generate Interactive
           </button>
         </div>
       </main>
+
+      {/* Section picker modal for presentation mode */}
+      <SectionPickerModal
+        open={showPicker}
+        onClose={() => setShowPicker(false)}
+        onStart={(sectionIds) => {
+          setShowPicker(false);
+          handleStartPresentation(sectionIds);
+        }}
+      />
+
+      {/* Salesforce import modal */}
+      <SalesforceImportModal
+        open={showSalesforce}
+        onClose={() => setShowSalesforce(false)}
+        currentForm={form}
+        onApply={(merged) => setForm(merged)}
+      />
     </div>
   );
 }
