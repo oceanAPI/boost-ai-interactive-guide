@@ -244,7 +244,8 @@ export default function AdminPage() {
     setGeneratingPdf(true);
     try {
       const encoded = encodeGuideData(form);
-      const guideUrl = `${window.location.origin}/guide?data=${encoded}`;
+      const base = window.location.href.split('/admin')[0];
+      const guideUrl = `${base}/guide?data=${encoded}`;
       await generateSOWPdf(form, guideUrl);
     } catch (err) {
       console.error("PDF generation failed:", err);
