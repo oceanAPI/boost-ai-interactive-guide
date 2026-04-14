@@ -6,9 +6,9 @@ import { assetPath } from "@/lib/asset-path";
 import { INTEGRATION_CATEGORIES } from "@/data/integrations";
 import { INDUSTRIES, SUPPORTING_DEPARTMENTS } from "@/data/agents";
 import { encodeGuideData } from "@/lib/url-encoding";
-import SectionPickerModal from "@/components/SectionPickerModal";
 import { generateSOWPdf } from "@/lib/generate-sow-pdf";
 import SalesforceImportModal from "@/components/SalesforceImportModal";
+import { SLIDE_SECTIONS } from "@/lib/slide-sections";
 import type { GuideFormData, ChannelVolumes, IntegrationSelections, PricingModel, ResourceAllocation } from "@/lib/types";
 
 /* ─── Collapsible Section ─── */
@@ -191,29 +191,56 @@ export default function AdminPage() {
   };
 
   const handleSubmit = () => {
-    if (!form.company_name.trim()) return;
     const encoded = encodeGuideData(form);
-    router.push(`/guide?data=${encoded}`);
+    const sections = selectedSectionIds.join(",");
+    router.push(`/guide?data=${encoded}&sections=${sections}`);
+  };
+
+  const handleStartPresentation = () => {
+    const encoded = encodeGuideData(form);
+    const sections = selectedSectionIds.join(",");
+    router.push(`/slides?data=${encoded}&sections=${sections}`);
   };
 
   /* ─── Salesforce import ─── */
   const [showSalesforce, setShowSalesforce] = useState(false);
 
-  /* ─── Presentation mode ─── */
-  const [showPicker, setShowPicker] = useState(false);
+  /* ─── Guide sections (inline picker) ─── */
+  const [sectionItems, setSectionItems] = useState(() =>
+    SLIDE_SECTIONS.map((s) => ({ ...s, enabled: true })),
+  );
 
-  const handleStartPresentation = (sectionIds: string[]) => {
-    if (!form.company_name.trim()) return;
-    const encoded = encodeGuideData(form);
-    const sections = sectionIds.join(",");
-    router.push(`/slides?data=${encoded}&sections=${sections}`);
+  const toggleSection = (id: string) => {
+    setSectionItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, enabled: !item.enabled } : item)),
+    );
   };
+
+  const moveSectionUp = (index: number) => {
+    if (index <= 0) return;
+    setSectionItems((prev) => {
+      const next = [...prev];
+      [next[index - 1], next[index]] = [next[index], next[index - 1]];
+      return next;
+    });
+  };
+
+  const moveSectionDown = (index: number) => {
+    if (index >= sectionItems.length - 1) return;
+    setSectionItems((prev) => {
+      const next = [...prev];
+      [next[index], next[index + 1]] = [next[index + 1], next[index]];
+      return next;
+    });
+  };
+
+  const selectedSectionIds = sectionItems.filter((i) => i.enabled).map((i) => i.id);
+  const hasSectionChanges = sectionItems.some((item, i) => !item.enabled || item.id !== SLIDE_SECTIONS[i]?.id);
 
   /* ─── SOW PDF download ─── */
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
   const handleDownloadSOW = async () => {
-    if (!form.company_name.trim()) return;
     setGeneratingPdf(true);
     try {
       const encoded = encodeGuideData(form);
@@ -281,7 +308,7 @@ export default function AdminPage() {
             </button>
             <button
               onClick={handleDownloadSOW}
-              disabled={!form.company_name.trim() || generatingPdf}
+              disabled={generatingPdf}
               className="px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0 hidden sm:flex items-center gap-1.5"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -290,9 +317,8 @@ export default function AdminPage() {
               {generatingPdf ? "Generating..." : "SOW"}
             </button>
             <button
-              onClick={() => setShowPicker(true)}
-              disabled={!form.company_name.trim()}
-              className="px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0 hidden sm:flex items-center gap-1.5"
+              onClick={handleStartPresentation}
+              className="px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface transition-colors flex-shrink-0 hidden sm:flex items-center gap-1.5"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
@@ -301,8 +327,7 @@ export default function AdminPage() {
             </button>
             <button
               onClick={handleSubmit}
-              disabled={!form.company_name.trim()}
-              className="px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0 flex items-center gap-1.5"
+              className="px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface transition-colors flex-shrink-0 flex items-center gap-1.5"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 5v14M5 12h14" />
@@ -743,59 +768,108 @@ export default function AdminPage() {
           />
         </CollapsibleSection>
 
-        {/* Action buttons */}
-        <div className="flex flex-col sm:flex-row justify-center gap-3 pb-8 pt-4">
-          <button
-            onClick={() => setShowSalesforce(true)}
-            className="px-6 py-3 border border-boost-border text-boost-dark font-bold rounded-xl text-base hover:bg-boost-surface transition-colors flex items-center justify-center gap-2"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00A1E0" strokeWidth="2">
-              <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" />
-            </svg>
-            Salesforce Data
-          </button>
-          <button
-            onClick={handleDownloadSOW}
-            disabled={!form.company_name.trim() || generatingPdf}
-            className="px-6 py-3 border border-boost-border text-boost-dark font-bold rounded-xl text-base hover:bg-boost-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-            </svg>
-            {generatingPdf ? "Generating..." : "Download SOW"}
-          </button>
-          <button
-            onClick={() => setShowPicker(true)}
-            disabled={!form.company_name.trim()}
-            className="px-6 py-3 border border-boost-border text-boost-dark font-bold rounded-xl text-base hover:bg-boost-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
-            </svg>
-            Generate Guide
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!form.company_name.trim()}
-            className="px-6 py-3 border border-boost-border text-boost-dark font-bold rounded-xl text-base hover:bg-boost-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            Generate Interactive
-          </button>
-        </div>
-      </main>
+        {/* 8 — Guide Sections */}
+        <CollapsibleSection
+          number={8}
+          title="Guide Sections"
+          subtitle={
+            hasSectionChanges
+              ? `${selectedSectionIds.length} of ${sectionItems.length} sections selected`
+              : "All sections included in default order"
+          }
+          hasContent={hasSectionChanges}
+        >
+          <p className="text-boost-muted text-sm mb-3">
+            Toggle sections on/off and reorder them. Both Generate and Guide use this selection.
+          </p>
+          <div className="space-y-0.5">
+            {(() => {
+              let displayNum = 0;
+              return sectionItems.map((item, index) => {
+                if (item.enabled) displayNum++;
+                const num = item.enabled ? displayNum : null;
+                return (
+                  <div
+                    key={item.id}
+                    className={`flex items-center gap-3 py-2 px-2 rounded-lg transition-colors ${
+                      item.enabled ? "bg-white" : "bg-boost-surface/50"
+                    }`}
+                  >
+                    {/* Checkbox */}
+                    <button
+                      onClick={() => toggleSection(item.id)}
+                      className={`w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-all ${
+                        item.enabled
+                          ? "bg-boost-green-light border-boost-green-light"
+                          : "border-boost-border"
+                      }`}
+                    >
+                      {item.enabled && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </button>
 
-      {/* Section picker modal for presentation mode */}
-      <SectionPickerModal
-        open={showPicker}
-        onClose={() => setShowPicker(false)}
-        onStart={(sectionIds) => {
-          setShowPicker(false);
-          handleStartPresentation(sectionIds);
-        }}
-      />
+                    {/* Number badge */}
+                    <span
+                      className={`w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0 ${
+                        item.enabled
+                          ? "bg-boost-purple text-white"
+                          : "bg-boost-border text-boost-muted"
+                      }`}
+                    >
+                      {num ?? "\u2014"}
+                    </span>
+
+                    {/* Label */}
+                    <span
+                      className={`flex-1 text-sm ${
+                        item.enabled ? "text-boost-dark font-medium" : "text-boost-muted"
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+
+                    {/* Up / Down arrows */}
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                      <button
+                        onClick={() => moveSectionUp(index)}
+                        disabled={index === 0}
+                        className="w-7 h-7 rounded flex items-center justify-center text-boost-muted hover:bg-boost-surface hover:text-boost-dark transition-colors disabled:opacity-20 disabled:cursor-default"
+                        aria-label="Move up"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M12 19V5M5 12l7-7 7 7" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => moveSectionDown(index)}
+                        disabled={index === sectionItems.length - 1}
+                        className="w-7 h-7 rounded flex items-center justify-center text-boost-muted hover:bg-boost-surface hover:text-boost-dark transition-colors disabled:opacity-20 disabled:cursor-default"
+                        aria-label="Move down"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M12 5v14M19 12l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+          {hasSectionChanges && (
+            <button
+              onClick={() => setSectionItems(SLIDE_SECTIONS.map((s) => ({ ...s, enabled: true })))}
+              className="mt-3 text-xs text-boost-muted hover:text-boost-dark transition-colors"
+            >
+              Reset to defaults
+            </button>
+          )}
+        </CollapsibleSection>
+
+      </main>
 
       {/* Salesforce import modal */}
       <SalesforceImportModal

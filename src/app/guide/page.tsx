@@ -58,7 +58,10 @@ function GuideContent() {
     custom_notes: formData.custom_notes || "",
   };
 
-  return <GuideClient guide={guide} />;
+  const sectionsParam = searchParams.get("sections");
+  const sectionIds = sectionsParam ? sectionsParam.split(",") : undefined;
+
+  return <GuideClient guide={guide} sectionIds={sectionIds} />;
 }
 
 export default function GuidePage() {

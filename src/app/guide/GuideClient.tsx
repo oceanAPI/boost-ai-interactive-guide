@@ -32,7 +32,12 @@ const SECTIONS = [
   { id: "next-steps", label: "Next Steps", icon: "→" },
 ];
 
-export default function GuideClient({ guide }: { guide: GuideData }) {
+export default function GuideClient({ guide, sectionIds }: { guide: GuideData; sectionIds?: string[] }) {
+  /* Filter sections if sectionIds provided */
+  const activeSections = sectionIds
+    ? SECTIONS.filter((s) => sectionIds.includes(s.id))
+    : SECTIONS;
+  const activeSectionSet = sectionIds ? new Set(sectionIds) : null;
   const [activeSection, setActiveSection] = useState("hero");
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const isScrollingRef = useRef(false);
@@ -127,7 +132,7 @@ export default function GuideClient({ guide }: { guide: GuideData }) {
     <div className="min-h-screen bg-boost-bg">
       <a href="#main-content" className="skip-nav">Skip to main content</a>
       <GuideNav
-        sections={SECTIONS}
+        sections={activeSections}
         activeSection={activeSection}
         onNavigate={navigateTo}
         companyName={guide.company_name}
@@ -139,23 +144,30 @@ export default function GuideClient({ guide }: { guide: GuideData }) {
 
       <main id="main-content">
         <div className="max-w-5xl mx-auto px-4 sm:px-8 py-6 space-y-12 sm:space-y-16">
-          <div id="hero" ref={(el) => { sectionRefs.current["hero"] = el; }}>
-            <HeroSection guide={guide} />
-          </div>
+          {(!activeSectionSet || activeSectionSet.has("hero")) && (
+            <div id="hero" ref={(el) => { sectionRefs.current["hero"] = el; }}>
+              <HeroSection guide={guide} />
+            </div>
+          )}
 
-          <div id="orchestrator" ref={(el) => { sectionRefs.current["orchestrator"] = el; }}>
-            <OrchestratorSection
-              guide={guide}
-              onRegisterOpenAgent={handleRegisterOpenAgent}
-            />
-          </div>
+          {(!activeSectionSet || activeSectionSet.has("orchestrator")) && (
+            <div id="orchestrator" ref={(el) => { sectionRefs.current["orchestrator"] = el; }}>
+              <OrchestratorSection
+                guide={guide}
+                onRegisterOpenAgent={handleRegisterOpenAgent}
+              />
+            </div>
+          )}
 
-          <div id="topics" ref={(el) => { sectionRefs.current["topics"] = el; }}>
-            <TopicHubSection guide={guide} onNavigate={navigateTo} />
-          </div>
+          {(!activeSectionSet || activeSectionSet.has("topics")) && (
+            <div id="topics" ref={(el) => { sectionRefs.current["topics"] = el; }}>
+              <TopicHubSection guide={guide} onNavigate={navigateTo} />
+            </div>
+          )}
 
           {/* Topic sections (04-07) — rendered from registry or generic fallback */}
           {topicSections.map((topic, i) => {
+            if (activeSectionSet && !activeSectionSet.has(topic.sectionId)) return null;
             const SpecializedComponent = TOPIC_COMPONENTS[topic.key];
             return (
               <div
@@ -180,17 +192,23 @@ export default function GuideClient({ guide }: { guide: GuideData }) {
             );
           })}
 
-          <div id="demo" ref={(el) => { sectionRefs.current["demo"] = el; }}>
-            <DemoPreviewSection guide={guide} />
-          </div>
+          {(!activeSectionSet || activeSectionSet.has("demo")) && (
+            <div id="demo" ref={(el) => { sectionRefs.current["demo"] = el; }}>
+              <DemoPreviewSection guide={guide} />
+            </div>
+          )}
 
-          <div id="roi" ref={(el) => { sectionRefs.current["roi"] = el; }}>
-            <ROISection guide={guide} />
-          </div>
+          {(!activeSectionSet || activeSectionSet.has("roi")) && (
+            <div id="roi" ref={(el) => { sectionRefs.current["roi"] = el; }}>
+              <ROISection guide={guide} />
+            </div>
+          )}
 
-          <div id="next-steps" ref={(el) => { sectionRefs.current["next-steps"] = el; }}>
-            <NextStepsSection guide={guide} />
-          </div>
+          {(!activeSectionSet || activeSectionSet.has("next-steps")) && (
+            <div id="next-steps" ref={(el) => { sectionRefs.current["next-steps"] = el; }}>
+              <NextStepsSection guide={guide} />
+            </div>
+          )}
 
           <div className="h-8" />
         </div>
