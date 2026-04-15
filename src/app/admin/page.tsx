@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { assetPath } from "@/lib/asset-path";
 import { INTEGRATION_CATEGORIES } from "@/data/integrations";
-import { INDUSTRIES, SUPPORTING_DEPARTMENTS } from "@/data/agents";
+import { INDUSTRIES, SUPPORTING_DEPARTMENTS, INDUSTRY_VARIANTS } from "@/data/agents";
 import { encodeGuideData, decodeGuideData } from "@/lib/url-encoding";
 import { generateSOWPdf } from "@/lib/generate-sow-pdf";
 import SalesforceImportModal from "@/components/SalesforceImportModal";
@@ -134,6 +134,7 @@ export default function AdminPage() {
     integrations: {},
     custom_notes: "",
     selected_case_studies: [],
+    selected_variants: [],
   });
 
   const updateField = <K extends keyof GuideFormData>(key: K, value: GuideFormData[K]) => {
@@ -167,7 +168,24 @@ export default function AdminPage() {
       const areas = prev.areas_of_interest.includes(key)
         ? prev.areas_of_interest.filter((a) => a !== key)
         : [...prev.areas_of_interest, key];
-      return { ...prev, areas_of_interest: areas };
+      // If removing an industry, drop any of its variants too
+      const variantsForRemoved = !areas.includes(key)
+        ? (INDUSTRY_VARIANTS[key] || []).map((v) => v.key)
+        : [];
+      const nextVariants = (prev.selected_variants || []).filter(
+        (v) => !variantsForRemoved.includes(v),
+      );
+      return { ...prev, areas_of_interest: areas, selected_variants: nextVariants };
+    });
+  };
+
+  const toggleVariant = (key: string) => {
+    setForm((prev) => {
+      const current = prev.selected_variants || [];
+      const updated = current.includes(key)
+        ? current.filter((v) => v !== key)
+        : [...current, key];
+      return { ...prev, selected_variants: updated };
     });
   };
 
@@ -467,6 +485,77 @@ export default function AdminPage() {
               </button>
             ))}
           </div>
+
+          {/* ── Variant pickers — one per enabled industry that has variants ── */}
+          {form.areas_of_interest
+            .filter((areaKey) => INDUSTRY_VARIANTS[areaKey]?.length)
+            .map((areaKey) => {
+              const industry = INDUSTRIES.find((i) => i.key === areaKey);
+              const variants = INDUSTRY_VARIANTS[areaKey] || [];
+              const selectedForIndustry = (form.selected_variants || []).filter((v) =>
+                variants.some((iv) => iv.key === v),
+              );
+              return (
+                <div
+                  key={`variants-${areaKey}`}
+                  className="mt-5 pt-5 border-t border-boost-border"
+                >
+                  <div className="flex items-baseline justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-semibold text-boost-dark">
+                        {industry?.label} variant
+                      </p>
+                      <p className="text-xs text-boost-muted">
+                        {selectedForIndustry.length > 0
+                          ? `Filtering to ${selectedForIndustry.length} variant${selectedForIndustry.length > 1 ? "s" : ""} — agents tagged for these (plus universal ones) will show`
+                          : "Optional — narrows agents to a specific flavour of " + (industry?.label.toLowerCase() ?? "industry")}
+                      </p>
+                    </div>
+                    {selectedForIndustry.length > 0 && (
+                      <button
+                        onClick={() =>
+                          updateField(
+                            "selected_variants",
+                            (form.selected_variants || []).filter(
+                              (v) => !variants.some((iv) => iv.key === v),
+                            ),
+                          )
+                        }
+                        className="text-xs text-boost-muted hover:text-boost-dark transition-colors shrink-0"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {variants.map((v) => {
+                      const selected = (form.selected_variants || []).includes(v.key);
+                      return (
+                        <button
+                          key={v.key}
+                          type="button"
+                          onClick={() => toggleVariant(v.key)}
+                          className={`p-3 rounded-lg text-left transition-all border-2 ${
+                            selected
+                              ? "bg-boost-green-light/10 border-boost-green-light"
+                              : "bg-boost-surface/50 border-transparent hover:border-boost-border"
+                          }`}
+                        >
+                          <span className="text-xs font-semibold text-boost-dark block leading-tight">
+                            {v.label}
+                          </span>
+                          {v.description && (
+                            <p className="text-[11px] text-boost-muted mt-1 leading-snug">
+                              {v.description}
+                            </p>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
         </CollapsibleSection>
 
         {/* 3 — Pricing & Costs */}

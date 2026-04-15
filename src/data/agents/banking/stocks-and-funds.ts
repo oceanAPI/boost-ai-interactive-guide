@@ -9,6 +9,8 @@ const agent: SpecialistAgent = {
   capabilities: [],
   quickActions: [],
   flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] },
+  // Investment products — private wealth core; retail for mass-market investing.
+  variants: ["banking:private", "banking:retail"],
 };
 
 export default agent;

@@ -50,7 +50,10 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
   const openAgentRef = useRef<((agentKey: string) => void) | null>(null);
 
   /* Data for search index */
-  const agents = useMemo(() => getAgentsForGuide(guide.areas_of_interest), [guide.areas_of_interest]);
+  const agents = useMemo(
+    () => getAgentsForGuide(guide.areas_of_interest, guide.selected_variants),
+    [guide.areas_of_interest, guide.selected_variants],
+  );
   const topics = useMemo(() => getTopicsForGuide(), []);
   const demoScripts = useMemo(() => [
     getDemoScript(guide.company_name, guide.areas_of_interest),

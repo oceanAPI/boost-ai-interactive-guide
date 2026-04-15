@@ -9,6 +9,8 @@ const agent: SpecialistAgent = {
   capabilities: [],
   quickActions: [],
   flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] },
+  // Bundled / comprehensive insurance offered to retail customers and wealth clients.
+  variants: ["banking:retail", "banking:private"],
 };
 
 export default agent;

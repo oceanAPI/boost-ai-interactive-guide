@@ -43,6 +43,9 @@ export interface GuideData {
   custom_notes: string;
   /** Selected case study IDs — empty means show all (industry-sorted) */
   selected_case_studies?: string[];
+  /** Selected industry-variant keys (e.g. "insurance:mutual", "banking:retail")
+   *  — empty means no variant filter (all agents of the selected industries shown). */
+  selected_variants?: string[];
 }
 
 export interface GuideFormData {
@@ -62,4 +65,7 @@ export interface GuideFormData {
   custom_notes: string;
   /** Selected case study IDs — empty means show all (industry-sorted) */
   selected_case_studies?: string[];
+  /** Selected industry-variant keys (e.g. "insurance:mutual", "banking:retail")
+   *  — empty means no variant filter (all agents of the selected industries shown). */
+  selected_variants?: string[];
 }

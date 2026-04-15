@@ -369,8 +369,8 @@ class SOWBuilder {
     );
     this.spacer(4);
 
-    const config = getOrchestratorConfig(form.areas_of_interest);
-    const allAgents = getAgentsForGuide(form.areas_of_interest);
+    const config = getOrchestratorConfig(form.areas_of_interest, form.selected_variants);
+    const allAgents = getAgentsForGuide(form.areas_of_interest, form.selected_variants);
 
     // Summary stat boxes
     const boxW = (CONTENT_W - 8) / 3;
@@ -548,7 +548,7 @@ class SOWBuilder {
     this.sectionNumber("06");
     this.heading("ROI Projection");
 
-    const agents = getAgentsForGuide(form.areas_of_interest);
+    const agents = getAgentsForGuide(form.areas_of_interest, form.selected_variants);
     const avgAutomation = agents.length > 0
       ? Math.round(agents.reduce((s, a) => s + (a.automationRate || 0), 0) / agents.length)
       : 70;

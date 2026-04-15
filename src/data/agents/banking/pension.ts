@@ -9,6 +9,8 @@ const agent: SpecialistAgent = {
   capabilities: [],
   quickActions: [],
   flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] },
+  // Retirement planning is central to private wealth and a standard retail product.
+  variants: ["banking:private", "banking:retail"],
 };
 
 export default agent;

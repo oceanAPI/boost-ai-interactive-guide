@@ -9,6 +9,8 @@ const agent: SpecialistAgent = {
   capabilities: [],
   quickActions: [],
   flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] },
+  // Bundled consumer insurance is a retail-only play.
+  variants: ["banking:retail"],
 };
 
 export default agent;

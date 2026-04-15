@@ -24,8 +24,10 @@ export default function ROISection({
   const totalVolumeFromGuide = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0);
   const costFromGuide = parseFloat(guide.conversation_cost?.replace(/[^0-9.]/g, "") || "0");
 
-  const agents = getAgentsForGuide(guide.areas_of_interest);
-  const avgRate = Math.round(agents.reduce((s, a) => s + a.automationRate, 0) / agents.length);
+  const agents = getAgentsForGuide(guide.areas_of_interest, guide.selected_variants);
+  const avgRate = agents.length > 0
+    ? Math.round(agents.reduce((s, a) => s + a.automationRate, 0) / agents.length)
+    : 0;
 
   // Interactive slider state
   const [volume, setVolume] = useState(totalVolumeFromGuide || 10000);

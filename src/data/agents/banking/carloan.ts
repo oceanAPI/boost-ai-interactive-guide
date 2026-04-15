@@ -9,6 +9,8 @@ const agent: SpecialistAgent = {
   capabilities: [],
   quickActions: [],
   flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] },
+  // Retail consumer product.
+  variants: ["banking:retail"],
 };
 
 export default agent;

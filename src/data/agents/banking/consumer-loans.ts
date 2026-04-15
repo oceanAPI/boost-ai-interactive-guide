@@ -9,6 +9,8 @@ const agent: SpecialistAgent = {
   capabilities: [],
   quickActions: [],
   flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] },
+  // Personal unsecured loans — retail and neobank bread-and-butter.
+  variants: ["banking:retail", "banking:neobank"],
 };
 
 export default agent;

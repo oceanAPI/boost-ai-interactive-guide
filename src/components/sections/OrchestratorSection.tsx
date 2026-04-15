@@ -147,8 +147,14 @@ export default function OrchestratorSection({
   const [cameFromOrchestrator, setCameFromOrchestrator] = useState(false);
   const [builderMode, setBuilderMode] = useState(false);
 
-  const config = getOrchestratorConfig(guide.areas_of_interest);
-  const availableAgents = useMemo(() => getAgentsForGuide(guide.areas_of_interest), [guide.areas_of_interest]);
+  const config = useMemo(
+    () => getOrchestratorConfig(guide.areas_of_interest, guide.selected_variants),
+    [guide.areas_of_interest, guide.selected_variants],
+  );
+  const availableAgents = useMemo(
+    () => getAgentsForGuide(guide.areas_of_interest, guide.selected_variants),
+    [guide.areas_of_interest, guide.selected_variants],
+  );
 
   // Collect all agents for lookup by key
   const allAgents = useCallback(() => {

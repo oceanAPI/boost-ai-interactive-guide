@@ -9,6 +9,8 @@ const agent: SpecialistAgent = {
   capabilities: [],
   quickActions: [],
   flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] },
+  // Relationship banking is a corporate + private wealth concept; retail/neobank are self-serve.
+  variants: ["banking:corporate", "banking:private"],
 };
 
 export default agent;

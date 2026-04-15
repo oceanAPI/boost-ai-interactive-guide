@@ -46,6 +46,8 @@ const agent: SpecialistAgent = {
       { id: "ips-sr-needs-advisor", name: "Needs Licensed Advisor", type: "request", icon: "route", description: "Explains why the query requires a licensed human advisor" },
     ],
   },
+  // Only composite insurers (typically mutuals with Liv arms) offer pension & savings.
+  variants: ["insurance:mutual"],
 };
 
 export default agent;

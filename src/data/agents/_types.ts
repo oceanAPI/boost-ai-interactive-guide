@@ -49,6 +49,12 @@ export interface SpecialistAgent {
   capabilities: AgentCapability[];
   quickActions: string[];
   flow: AgentFlow;
+  /**
+   * Optional list of industry variant keys (e.g. "insurance:mutual", "banking:retail")
+   * for which this agent is particularly relevant. If omitted, the agent appears
+   * for every variant of its industry (universal agent).
+   */
+  variants?: string[];
 }
 
 // ─── Topic Groups & Orchestrator Config ───
@@ -79,6 +85,87 @@ export const INDUSTRIES = [
 ] as const;
 
 export type IndustryKey = (typeof INDUSTRIES)[number]["key"];
+
+// ─── Industry Variants ───
+//
+// Variants let us slice an industry into sub-flavours (e.g. Insurance →
+// Mutual, DTC, Broker-driven). Agents can be tagged with variants to indicate
+// which flavours they're most relevant for.
+//
+// Variant keys are namespaced as "<industry>:<variant>" to avoid collisions
+// across industries.
+//
+// Filter semantics (OR logic):
+//   - Agent WITHOUT `variants` → shown for every variant (universal)
+//   - Agent WITH `variants`    → shown only if at least one selected variant matches
+//   - No variants selected     → no filtering (all agents shown for the industry)
+
+export interface IndustryVariant {
+  key: string;
+  label: string;
+  description?: string;
+}
+
+export const INDUSTRY_VARIANTS: Record<string, IndustryVariant[]> = {
+  insurance: [
+    {
+      key: "insurance:mutual",
+      label: "Mutual / Member-owned",
+      description: "Members are owners; trust and transparency are core",
+    },
+    {
+      key: "insurance:dtc",
+      label: "Direct-to-Consumer",
+      description: "Digital-first, app-native challengers (Lemonade, Hedvig)",
+    },
+    {
+      key: "insurance:broker",
+      label: "Broker-driven",
+      description: "Policies sold via independent broker networks",
+    },
+  ],
+  banking: [
+    {
+      key: "banking:retail",
+      label: "Retail",
+      description: "Mass-market consumer banking",
+    },
+    {
+      key: "banking:corporate",
+      label: "Corporate / SME",
+      description: "Business customers, relationship banking",
+    },
+    {
+      key: "banking:private",
+      label: "Private / Wealth",
+      description: "HNWI, concierge service, investments-heavy",
+    },
+    {
+      key: "banking:neobank",
+      label: "Digital-first / Neobank",
+      description: "App-only, mobile-native, no legacy branches",
+    },
+  ],
+};
+
+/**
+ * Filter a list of agents against a set of selected variant keys.
+ * An agent passes the filter if:
+ *   - it has no `variants` field (universal), OR
+ *   - at least one of its variants matches the selection (OR logic)
+ *
+ * An empty `selectedVariants` array means "no filtering" — all agents pass.
+ */
+export function filterAgentsByVariants<T extends SpecialistAgent>(
+  agents: T[],
+  selectedVariants: string[] | undefined,
+): T[] {
+  if (!selectedVariants || selectedVariants.length === 0) return agents;
+  return agents.filter(
+    (a) => !a.variants || a.variants.length === 0 ||
+      a.variants.some((v) => selectedVariants.includes(v)),
+  );
+}
 
 // ─── Supporting Departments ───
 

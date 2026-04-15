@@ -48,6 +48,8 @@ const agent: SpecialistAgent = {
       { id: "ipo-sr-blocked", name: "Outreach Blocked", type: "request", icon: "route", description: "Explains why a message was suppressed (consent, cap, quiet hours)" },
     ],
   },
+  // Broker-driven insurers let brokers own customer comms; skipped for that variant.
+  variants: ["insurance:mutual", "insurance:dtc"],
 };
 
 export default agent;

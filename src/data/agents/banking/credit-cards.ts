@@ -9,6 +9,8 @@ const agent: SpecialistAgent = {
   capabilities: [],
   quickActions: [],
   flow: { knowledgeSources: [], guardrails: [], actionHooks: [], processes: [], standardResponses: [] },
+  // Consumer product — corporate banking typically uses commercial/purchasing cards instead.
+  variants: ["banking:retail", "banking:private", "banking:neobank"],
 };
 
 export default agent;
