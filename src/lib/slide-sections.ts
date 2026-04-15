@@ -10,7 +10,7 @@ export const SLIDE_SECTIONS: SlideSection[] = [
   { id: "topics", label: "Deep Dive" },
   { id: "topic-implementation", label: "Implementation & Roadmap" },
   { id: "topic-integrations", label: "Integrations & Architecture" },
-  { id: "topic-security-compliance", label: "Security & Compliance" },
+  { id: "topic-security", label: "Security & Compliance" },
   { id: "topic-ways-of-working", label: "Ways of Working" },
   { id: "core-components", label: "Platform Components" },
   { id: "demo", label: "Live Demo" },
