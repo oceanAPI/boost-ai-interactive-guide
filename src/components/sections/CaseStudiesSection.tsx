@@ -6,6 +6,7 @@ import type { GuideData } from "@/lib/types";
 import { CASE_STUDIES, type CaseStudy } from "@/data/case-studies";
 import { SectionHeader, Badge } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { assetPath } from "@/lib/asset-path";
 
 /* ─── Video modal ─── */
 function getVideoEmbed(url: string): string | null {
@@ -164,7 +165,7 @@ function CaseStudyCard({
       } ${isRelevant && !isActive ? "bg-boost-green-light/[0.03]" : ""}`}>
         {/* Thumbnail */}
         <div className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0">
-          <Image src={study.image} alt={study.companyDescription} fill className="object-cover" sizes="64px" />
+          <Image src={assetPath(study.image)} alt={study.companyDescription} fill className="object-cover" sizes="64px" />
           {isActive && <div className="absolute inset-0 ring-2 ring-inset ring-boost-green-light/40 rounded-lg" />}
         </div>
         <div className="flex-1 min-w-0">
@@ -211,8 +212,15 @@ function CaseStudyDetail({
       )}
 
       {/* ─── Hero image band ─── */}
-      <div className="relative h-56 sm:h-64 rounded-t-2xl overflow-hidden">
-        <Image src={study.image} alt={study.companyDescription} fill className="object-cover" sizes="900px" />
+      <div className="relative h-56 sm:h-64 rounded-t-2xl overflow-hidden bg-boost-dark">
+        <Image
+          src={assetPath(study.image)}
+          alt={study.companyDescription}
+          fill
+          className="object-cover object-center"
+          sizes="(max-width: 900px) 100vw, 900px"
+          priority={false}
+        />
         <div className="absolute inset-0" style={{
           background: "linear-gradient(90deg, rgba(35,21,40,0.93) 0%, rgba(35,21,40,0.7) 60%, rgba(35,21,40,0.4) 100%)",
         }} />
