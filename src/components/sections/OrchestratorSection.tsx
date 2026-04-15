@@ -11,6 +11,13 @@ import FlowNodeCard from "./orchestrator/FlowNodeCard";
 import AgentModal from "./orchestrator/AgentModal";
 import OrchestratorBuilder from "./orchestrator/OrchestratorBuilder";
 
+/* ─── Tier badge helper ─── */
+function tierBadgeLabel(agent: SpecialistAgent): string | null {
+  if (!agent.tier || agent.tier === "primary") return null;
+  if (agent.tier === "addon") return "Add-on";
+  return "Cross-sell";
+}
+
 /* ─── Agent card (clickable, opens modal) ─── */
 function AgentCard({
   agent,
@@ -19,13 +26,22 @@ function AgentCard({
   agent: SpecialistAgent;
   onClick: () => void;
 }) {
+  const badge = tierBadgeLabel(agent);
   return (
-    <button onClick={onClick} className="w-full text-left">
+    <button onClick={onClick} className="relative w-full text-left">
       <FlowNodeCard
         category="agentic"
         name={agent.name}
         className="w-full max-w-none cursor-pointer transition-shadow hover:shadow-md hover:border-boost-green-light/50"
       />
+      {badge && (
+        <span
+          className="absolute top-1.5 right-1.5 text-[9px] font-medium uppercase tracking-[0.06em] text-boost-muted bg-boost-surface/90 border border-boost-border rounded-full px-1.5 py-0.5 pointer-events-none"
+          aria-label={`Tier: ${badge}`}
+        >
+          {badge}
+        </span>
+      )}
     </button>
   );
 }

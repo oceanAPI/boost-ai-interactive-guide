@@ -220,7 +220,14 @@ export default function AgentModal({
             <div className="flex items-center gap-3">
               <BoostIcon name={agent.icon} variant="purple" size={24} />
               <div>
-                <h3 id="agent-modal-title" className="text-lg font-bold text-boost-dark">{agent.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 id="agent-modal-title" className="text-lg font-bold text-boost-dark">{agent.name}</h3>
+                  {agent.tier && agent.tier !== "primary" && (
+                    <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-boost-muted bg-boost-surface border border-boost-border rounded-full px-2 py-0.5">
+                      {agent.tier === "addon" ? "Add-on" : "Cross-sell"}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-boost-muted max-w-md">{agent.description}</p>
               </div>
             </div>

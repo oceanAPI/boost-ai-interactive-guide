@@ -38,6 +38,25 @@ export interface AgentCapability {
   description: string;
 }
 
+/**
+ * Agent depth tier.
+ *
+ * Drives content-depth convention + visual treatment:
+ *   - "primary" — Topic is core to this industry. Full depth (6 capabilities,
+ *     6 quick actions, 10+ flow nodes, avgResolutionTime + topTopic required).
+ *     No badge rendered on card.
+ *   - "addon"   — Topic is a significant cross-sell. Medium depth (3–4 caps,
+ *     4–5 quick actions, 5–7 flow nodes). Renders a muted "Add-on" badge.
+ *   - "light"   — Topic is a minor cross-sell. Minimal depth (1–2 caps,
+ *     2–3 quick actions, 3–4 flow nodes). Renders a muted "Cross-sell" badge.
+ *
+ * Tier also drives the 20-agent display cap prioritisation in
+ * getOrchestratorConfig(): primary → addon → light, lowest first.
+ *
+ * Omitted tier is treated as "primary" for sort/rendering purposes.
+ */
+export type AgentTier = "primary" | "addon" | "light";
+
 export interface SpecialistAgent {
   key: string;
   name: string;
@@ -55,6 +74,8 @@ export interface SpecialistAgent {
    * for every variant of its industry (universal agent).
    */
   variants?: string[];
+  /** Depth tier — see AgentTier docs. Defaults to "primary" when omitted. */
+  tier?: AgentTier;
 }
 
 // ─── Topic Groups & Orchestrator Config ───

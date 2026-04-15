@@ -14,6 +14,7 @@ export type {
   OrchestratorConfig,
   IndustryKey,
   IndustryVariant,
+  AgentTier,
 } from "./_types";
 
 export {
@@ -27,8 +28,90 @@ export {
 import { BANKING_AGENTS, BANKING_STANDALONE, BANKING_TOPIC_GROUPS } from "./banking";
 import { INSURANCE_AGENTS, INSURANCE_TOPIC_GROUPS } from "./insurance";
 
-import type { OrchestratorConfig, SpecialistAgent, TopicGroup } from "./_types";
+import type { AgentTier, OrchestratorConfig, SpecialistAgent, TopicGroup } from "./_types";
 import { filterAgentsByVariants } from "./_types";
+
+/* ─────────────────────────────────────────────
+ *  Display cap + tier-priority sort
+ *
+ *  A customer never sees more than MAX_AGENTS_DISPLAYED agents across all
+ *  selected industries. When the combined set would exceed the cap, we
+ *  drop lowest-tier agents first (light → addon → primary never dropped
+ *  unless primary alone exceeds the cap).
+ *
+ *  The sort prefers:
+ *    1. Lower tier weight (primary before addon before light)
+ *    2. Agents whose declared variants intersect the selection
+ *       (relevance boost when the customer picks specific variants)
+ *
+ *  This keeps the cap predictable and forces us to keep the "primary" set
+ *  tight: if one industry has 20+ primary agents, lower industries get
+ *  zero coverage. That's a deliberate constraint.
+ * ───────────────────────────────────────────── */
+
+export const MAX_AGENTS_DISPLAYED = 20;
+
+const TIER_WEIGHT: Record<AgentTier, number> = {
+  primary: 0,
+  addon: 1,
+  light: 2,
+};
+
+function tierOf(agent: SpecialistAgent): AgentTier {
+  return agent.tier ?? "primary";
+}
+
+/**
+ * Score an agent for display ordering — lower score = higher priority.
+ * Primary agents come first; within a tier, variant-matched agents rank above
+ * universal ones. Stable enough to not reshuffle between renders.
+ */
+function agentDisplayScore(
+  agent: SpecialistAgent,
+  selectedVariants: string[] | undefined,
+): number {
+  const tierScore = TIER_WEIGHT[tierOf(agent)] * 10;
+  const hasVariantMatch =
+    selectedVariants && selectedVariants.length > 0 &&
+    agent.variants?.some((v) => selectedVariants.includes(v));
+  const variantBoost = hasVariantMatch ? 0 : 1; // matched = 0, unmatched = 1
+  return tierScore + variantBoost;
+}
+
+/**
+ * Given an OrchestratorConfig and the selection context, return the set of
+ * agent keys allowed to render after applying the 20-agent cap. Lower-tier
+ * agents drop first.
+ */
+function computeAllowedKeys(
+  config: OrchestratorConfig,
+  selectedVariants: string[] | undefined,
+): Set<string> {
+  const seen = new Set<string>();
+  const flat: SpecialistAgent[] = [];
+  for (const a of config.standaloneAgents) {
+    if (!seen.has(a.key)) { seen.add(a.key); flat.push(a); }
+  }
+  for (const group of config.topicGroups) {
+    for (const a of group.agents) {
+      if (!seen.has(a.key)) { seen.add(a.key); flat.push(a); }
+    }
+  }
+  flat.sort((a, b) => agentDisplayScore(a, selectedVariants) - agentDisplayScore(b, selectedVariants));
+  return new Set(flat.slice(0, MAX_AGENTS_DISPLAYED).map((a) => a.key));
+}
+
+/**
+ * Prune an OrchestratorConfig down to only the allowed agent keys, preserving
+ * original topic-group structure. Groups that empty out are dropped.
+ */
+function pruneConfig(config: OrchestratorConfig, allowedKeys: Set<string>): OrchestratorConfig {
+  const standaloneAgents = config.standaloneAgents.filter((a) => allowedKeys.has(a.key));
+  const topicGroups: TopicGroup[] = config.topicGroups
+    .map((g) => ({ ...g, agents: g.agents.filter((a) => allowedKeys.has(a.key)) }))
+    .filter((g) => g.agents.length > 0);
+  return { standaloneAgents, topicGroups };
+}
 
 // ─── Orchestrator Config Registry ───
 
@@ -83,7 +166,10 @@ export function getOrchestratorConfig(
     }
   }
 
-  return merged;
+  // Apply tier-priority 20-agent cap so guide / slides / search / SOW
+  // render a consistent set.
+  const allowedKeys = computeAllowedKeys(merged, selectedVariants);
+  return pruneConfig(merged, allowedKeys);
 }
 
 // ─── Flat agent helpers (for other sections) ───
