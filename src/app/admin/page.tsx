@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { assetPath } from "@/lib/asset-path";
 import { INTEGRATION_CATEGORIES } from "@/data/integrations";
 import { INDUSTRIES, SUPPORTING_DEPARTMENTS } from "@/data/agents";
-import { encodeGuideData } from "@/lib/url-encoding";
+import { encodeGuideData, decodeGuideData } from "@/lib/url-encoding";
 import { generateSOWPdf } from "@/lib/generate-sow-pdf";
 import SalesforceImportModal from "@/components/SalesforceImportModal";
 import { SLIDE_SECTIONS } from "@/lib/slide-sections";
@@ -139,6 +139,21 @@ export default function AdminPage() {
   const updateField = <K extends keyof GuideFormData>(key: K, value: GuideFormData[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
+
+  /* ─── URL-based prefill (?prefill=<base64>) ─── */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const prefill = params.get("prefill");
+    if (!prefill) return;
+    const decoded = decodeGuideData(prefill);
+    if (decoded) {
+      setForm((prev) => ({ ...prev, ...decoded }));
+      // Clean the URL so reloads don't keep re-applying prefill
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, "", cleanUrl);
+    }
+  }, []);
 
   const updateResource = <K extends keyof ResourceAllocation>(key: K, value: ResourceAllocation[K]) => {
     setForm((prev) => ({
