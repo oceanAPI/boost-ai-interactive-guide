@@ -9,7 +9,7 @@ import { encodeGuideData, decodeGuideData } from "@/lib/url-encoding";
 import { generateSOWPdf } from "@/lib/generate-sow-pdf";
 import SalesforceImportModal from "@/components/SalesforceImportModal";
 import CompanySearch from "@/components/CompanySearch";
-import type { CompanyPattern } from "@/data/company-patterns";
+import type { DetectionResult } from "@/lib/company-detect";
 import { SLIDE_SECTIONS } from "@/lib/slide-sections";
 import { CASE_STUDIES } from "@/data/case-studies";
 import type { GuideFormData, ChannelVolumes, IntegrationSelections, PricingModel, ResourceAllocation } from "@/lib/types";
@@ -183,25 +183,29 @@ export default function AdminPage() {
 
   const [lastPrefilled, setLastPrefilled] = useState<string | null>(null);
 
-  const applyCompanyPattern = (pattern: CompanyPattern) => {
+  const applyCompanyPattern = (result: DetectionResult) => {
+    const prefill = result.prefill || {};
     setForm((prev) => ({
       ...prev,
-      ...pattern.prefill,
+      ...prefill,
       // Preserve nested objects sensibly
       channel_volumes: {
         ...prev.channel_volumes,
-        ...(pattern.prefill.channel_volumes || {}),
+        ...(prefill.channel_volumes || {}),
       },
       resources: {
         ...prev.resources,
-        ...(pattern.prefill.resources || {}),
+        ...(prefill.resources || {}),
       },
       integrations: {
         ...prev.integrations,
-        ...(pattern.prefill.integrations || {}),
+        ...(prefill.integrations || {}),
       },
     }));
-    setLastPrefilled(pattern.name);
+    const label = result.match?.name || "company";
+    setLastPrefilled(
+      result.source === "web" ? `${label} (web best-guess)` : label,
+    );
   };
 
   const toggleVariant = (key: string) => {
