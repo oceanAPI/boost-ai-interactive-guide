@@ -8,6 +8,8 @@ import { INDUSTRIES, SUPPORTING_DEPARTMENTS, INDUSTRY_VARIANTS } from "@/data/ag
 import { encodeGuideData, decodeGuideData } from "@/lib/url-encoding";
 import { generateSOWPdf } from "@/lib/generate-sow-pdf";
 import SalesforceImportModal from "@/components/SalesforceImportModal";
+import CompanySearch from "@/components/CompanySearch";
+import type { CompanyPattern } from "@/data/company-patterns";
 import { SLIDE_SECTIONS } from "@/lib/slide-sections";
 import { CASE_STUDIES } from "@/data/case-studies";
 import type { GuideFormData, ChannelVolumes, IntegrationSelections, PricingModel, ResourceAllocation } from "@/lib/types";
@@ -177,6 +179,29 @@ export default function AdminPage() {
       );
       return { ...prev, areas_of_interest: areas, selected_variants: nextVariants };
     });
+  };
+
+  const [lastPrefilled, setLastPrefilled] = useState<string | null>(null);
+
+  const applyCompanyPattern = (pattern: CompanyPattern) => {
+    setForm((prev) => ({
+      ...prev,
+      ...pattern.prefill,
+      // Preserve nested objects sensibly
+      channel_volumes: {
+        ...prev.channel_volumes,
+        ...(pattern.prefill.channel_volumes || {}),
+      },
+      resources: {
+        ...prev.resources,
+        ...(pattern.prefill.resources || {}),
+      },
+      integrations: {
+        ...prev.integrations,
+        ...(pattern.prefill.integrations || {}),
+      },
+    }));
+    setLastPrefilled(pattern.name);
   };
 
   const toggleVariant = (key: string) => {
@@ -394,6 +419,34 @@ export default function AdminPage() {
           hasContent={hasCompanyInfo}
           defaultOpen={true}
         >
+          {/* Pattern-library quick prefill */}
+          <div className="mb-5 pb-5 border-b border-boost-border">
+            <CompanySearch onApply={applyCompanyPattern} />
+            {lastPrefilled && (
+              <div className="mt-2 flex items-center gap-2 text-xs">
+                <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-boost-green-light/10 text-boost-green font-medium">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Prefilled from {lastPrefilled}
+                </span>
+                <span className="text-boost-muted">
+                  — edit any field below to override
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setLastPrefilled(null)}
+                  className="ml-auto text-boost-muted hover:text-boost-dark transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <FieldLabel>Company Name *</FieldLabel>
