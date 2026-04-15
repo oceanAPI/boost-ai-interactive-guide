@@ -3,7 +3,7 @@ import type { SpecialistAgent } from "../_types";
 /**
  * "My pages" / "Mina sidor" self-service agent. Handles the authenticated
  * account experience — identity, login help, profile, preferences, digital-mail.
- * This is where right-channelling deflects a huge volume of low-complexity calls.
+ * Deflects a huge volume of low-complexity account calls away from human agents.
  */
 const agent: SpecialistAgent = {
   key: "account_my_pages",

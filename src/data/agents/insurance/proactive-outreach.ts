@@ -1,10 +1,9 @@
 import type { SpecialistAgent } from "../_types";
 
 /**
- * Sits at the very top of the support funnel — the "Proactive activities"
- * stage in the Deloitte right-channelling model. Reduces downstream volume by
- * reaching customers via SMS, email, push and in-app notifications before they
- * call.
+ * The outbound / proactive agent. Reduces downstream contact volume by
+ * reaching customers via SMS, email, push and in-app notifications before
+ * they call — renewals, premium due, claim milestones, life events.
  */
 const agent: SpecialistAgent = {
   key: "proactive_outreach",

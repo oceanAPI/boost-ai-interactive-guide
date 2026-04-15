@@ -1,12 +1,14 @@
 import type { SpecialistAgent, TopicGroup } from "../_types";
 
-// Ordered by right-channelling funnel stage:
-//   1. Proactive activities   → proactive-outreach
-//   2. Self-service channels  → sales-and-quotes, account-and-my-pages,
-//                              claims, billing-and-payments, coverage-and-policy,
-//                              pension-and-savings
-//   (Manned digital / traditional channels are handled via handover action
-//    hooks inside each self-service agent.)
+// Ordered by customer-journey stage:
+//   1. Outbound / proactive     → proactive-outreach
+//   2. Acquisition              → sales-and-quotes
+//   3. Account management       → account-and-my-pages
+//   4. Core servicing           → claims, billing-and-payments, coverage-and-policy
+//   5. Specialty (life/pension) → pension-and-savings
+//
+// Handover to manned channels (chat, voice, physical meetings) is handled via
+// action hooks inside each self-service agent rather than as a separate stage.
 import proactiveOutreach from "./proactive-outreach";
 import salesAndQuotes from "./sales-and-quotes";
 import accountAndMyPages from "./account-and-my-pages";
