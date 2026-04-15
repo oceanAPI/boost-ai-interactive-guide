@@ -41,6 +41,8 @@ export interface GuideData {
   resources: ResourceAllocation;
   integrations: IntegrationSelections;
   custom_notes: string;
+  /** Selected case study IDs — empty means show all (industry-sorted) */
+  selected_case_studies?: string[];
 }
 
 export interface GuideFormData {
@@ -58,4 +60,6 @@ export interface GuideFormData {
   resources: ResourceAllocation;
   integrations: IntegrationSelections;
   custom_notes: string;
+  /** Selected case study IDs — empty means show all (industry-sorted) */
+  selected_case_studies?: string[];
 }

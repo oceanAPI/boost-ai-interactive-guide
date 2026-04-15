@@ -12,6 +12,8 @@ import HeroSection from "@/components/sections/HeroSection";
 import OrchestratorSection from "@/components/sections/OrchestratorSection";
 import TopicHubSection from "@/components/sections/TopicHubSection";
 import DemoPreviewSection from "@/components/sections/DemoPreviewSection";
+import CoreComponentsSection from "@/components/sections/CoreComponentsSection";
+import CaseStudiesSection from "@/components/sections/CaseStudiesSection";
 import ROISection from "@/components/sections/ROISection";
 import NextStepsSection from "@/components/sections/NextStepsSection";
 import TopicSection from "@/components/sections/topics/TopicSection";
@@ -130,8 +132,12 @@ export default function SlideshowClient({
         return <OrchestratorSection guide={guide} />;
       case "topics":
         return <TopicHubSection guide={guide} onNavigate={handleTopicNavigate} />;
+      case "core-components":
+        return <CoreComponentsSection guide={guide} />;
       case "demo":
         return <DemoPreviewSection guide={guide} />;
+      case "case-studies":
+        return <CaseStudiesSection guide={guide} />;
       case "roi":
         return <ROISection guide={guide} />;
       case "next-steps":

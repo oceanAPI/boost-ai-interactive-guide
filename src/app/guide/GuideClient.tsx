@@ -11,6 +11,8 @@ import OrchestratorSection from "@/components/sections/OrchestratorSection";
 import TopicHubSection from "@/components/sections/TopicHubSection";
 import TopicSection from "@/components/sections/topics/TopicSection";
 import DemoPreviewSection from "@/components/sections/DemoPreviewSection";
+import CoreComponentsSection from "@/components/sections/CoreComponentsSection";
+import CaseStudiesSection from "@/components/sections/CaseStudiesSection";
 import ROISection from "@/components/sections/ROISection";
 import NextStepsSection from "@/components/sections/NextStepsSection";
 import { TOPIC_COMPONENTS } from "@/data/topics/registry";
@@ -27,7 +29,9 @@ const SECTIONS = [
     label: t.name,
     icon: "·",
   })),
+  { id: "core-components", label: "Platform Components", icon: "⚙" },
   { id: "demo", label: "Live Demo", icon: "▶" },
+  { id: "case-studies", label: "Case Studies", icon: "★" },
   { id: "roi", label: "ROI Calculator", icon: "◇" },
   { id: "next-steps", label: "Next Steps", icon: "→" },
 ];
@@ -192,9 +196,21 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
             );
           })}
 
+          {(!activeSectionSet || activeSectionSet.has("core-components")) && (
+            <div id="core-components" ref={(el) => { sectionRefs.current["core-components"] = el; }}>
+              <CoreComponentsSection guide={guide} />
+            </div>
+          )}
+
           {(!activeSectionSet || activeSectionSet.has("demo")) && (
             <div id="demo" ref={(el) => { sectionRefs.current["demo"] = el; }}>
               <DemoPreviewSection guide={guide} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("case-studies")) && (
+            <div id="case-studies" ref={(el) => { sectionRefs.current["case-studies"] = el; }}>
+              <CaseStudiesSection guide={guide} />
             </div>
           )}
 

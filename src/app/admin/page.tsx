@@ -9,6 +9,7 @@ import { encodeGuideData } from "@/lib/url-encoding";
 import { generateSOWPdf } from "@/lib/generate-sow-pdf";
 import SalesforceImportModal from "@/components/SalesforceImportModal";
 import { SLIDE_SECTIONS } from "@/lib/slide-sections";
+import { CASE_STUDIES } from "@/data/case-studies";
 import type { GuideFormData, ChannelVolumes, IntegrationSelections, PricingModel, ResourceAllocation } from "@/lib/types";
 
 /* ─── Collapsible Section ─── */
@@ -132,6 +133,7 @@ export default function AdminPage() {
     },
     integrations: {},
     custom_notes: "",
+    selected_case_studies: [],
   });
 
   const updateField = <K extends keyof GuideFormData>(key: K, value: GuideFormData[K]) => {
@@ -233,6 +235,18 @@ export default function AdminPage() {
       return next;
     });
   };
+
+  const toggleCaseStudy = (id: string) => {
+    setForm((prev) => {
+      const current = prev.selected_case_studies || [];
+      const updated = current.includes(id)
+        ? current.filter((s) => s !== id)
+        : [...current, id];
+      return { ...prev, selected_case_studies: updated };
+    });
+  };
+
+  const hasCustomCaseStudies = (form.selected_case_studies?.length ?? 0) > 0;
 
   const selectedSectionIds = sectionItems.filter((i) => i.enabled).map((i) => i.id);
   const hasSectionChanges = sectionItems.some((item, i) => !item.enabled || item.id !== SLIDE_SECTIONS[i]?.id);
@@ -868,6 +882,86 @@ export default function AdminPage() {
               Reset to defaults
             </button>
           )}
+
+        </CollapsibleSection>
+
+        {/* 9 — Case Study Selection */}
+        <CollapsibleSection
+          number={9}
+          title="Case Study Selection"
+          subtitle={
+            hasCustomCaseStudies
+              ? `${form.selected_case_studies!.length} ${form.selected_case_studies!.length === 1 ? "story" : "stories"} selected`
+              : "None selected — all shown by industry relevance"
+          }
+          hasContent={hasCustomCaseStudies}
+        >
+          <p className="text-boost-muted text-sm mb-3">
+            Pick the customer stories to feature. Leave empty to show all, sorted by industry match.
+          </p>
+          {hasCustomCaseStudies && (
+            <button
+              onClick={() => updateField("selected_case_studies", [])}
+              className="text-xs text-boost-muted hover:text-boost-dark transition-colors mb-3"
+            >
+              Clear selection
+            </button>
+          )}
+          <div className="space-y-1.5">
+            {CASE_STUDIES.map((cs) => {
+              const isSelected = form.selected_case_studies?.includes(cs.id) ?? false;
+              const isRelevant = cs.relevantIndustries.some((ind) =>
+                form.areas_of_interest.includes(ind),
+              );
+              return (
+                <button
+                  key={cs.id}
+                  onClick={() => toggleCaseStudy(cs.id)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all ${
+                    isSelected
+                      ? "bg-boost-green-light/10 ring-1 ring-boost-green-light/30"
+                      : "bg-boost-surface/50 hover:bg-boost-surface"
+                  }`}
+                >
+                  {/* Checkbox */}
+                  <span
+                    className={`w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-all ${
+                      isSelected
+                        ? "bg-boost-green-light border-boost-green-light"
+                        : "border-boost-border"
+                    }`}
+                  >
+                    {isSelected && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </span>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-sm font-medium text-boost-dark">{cs.headline}</span>
+                      {isRelevant && (
+                        <span className="text-[9px] font-semibold text-boost-green-light bg-boost-green-light/10 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                          Match
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-boost-muted truncate">
+                      {cs.companyType} · {cs.companyDescription} · {cs.channel === "both" ? "Chat + Voice" : cs.channel}
+                    </p>
+                  </div>
+
+                  {/* Key stat */}
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-boost-green tabular-nums">{cs.results[0].value}</p>
+                    <p className="text-[10px] text-boost-muted">{cs.results[0].metric}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </CollapsibleSection>
 
       </main>
