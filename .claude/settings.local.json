@@ -52,7 +52,9 @@
       "WebFetch(domain:www.pensionbee.com)",
       "Bash(find '/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/public' -name *map* -o -name *world*)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(find /private/tmp/claude-501/ -name *.png -o -name *.jpg -o -name *.svg -newer '/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/package.json')"
+      "Bash(find /private/tmp/claude-501/ -name *.png -o -name *.jpg -o -name *.svg -newer '/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/package.json')",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/110m_cultural/ne_110m_admin_0_countries.svg\" -o \"/tmp/test_map.svg\")",
+      "Bash(curl -sL \"https://simplemaps.com/static/svg/country/all/world.svg\" -o \"/tmp/world_map.svg\")"
     ]
   }
 }

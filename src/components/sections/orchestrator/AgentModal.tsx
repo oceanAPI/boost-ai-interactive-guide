@@ -224,7 +224,7 @@ export default function AgentModal({
                   <h3 id="agent-modal-title" className="text-lg font-bold text-boost-dark">{agent.name}</h3>
                   {agent.tier && agent.tier !== "primary" && (
                     <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-boost-muted bg-boost-surface border border-boost-border rounded-full px-2 py-0.5">
-                      {agent.tier === "addon" ? "Add-on" : "Cross-sell"}
+                      Expandable
                     </span>
                   )}
                 </div>

@@ -687,15 +687,7 @@ export default function DemoPreviewSection({ guide }: { guide: GuideData }) {
           )}
         </div>
 
-        {/* CTA below */}
-        <div className="text-center mt-6">
-          <p className="text-sm text-boost-muted mb-3">
-            This is a simulated preview. Request a live demo with your real data.
-          </p>
-          <button className="px-6 py-2.5 bg-boost-purple text-white text-sm font-semibold rounded-xl hover:bg-boost-purple-dark transition-colors shadow-lg shadow-boost-purple/20">
-            Request Live Demo →
-          </button>
-        </div>
+        {/* CTA removed — no "simulated preview" disclaimer */}
       </div>
 
       {/* ─── Escalation Flow Popup ─── */}

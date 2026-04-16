@@ -14,8 +14,8 @@ import OrchestratorBuilder from "./orchestrator/OrchestratorBuilder";
 /* ─── Tier badge helper ─── */
 function tierBadgeLabel(agent: SpecialistAgent): string | null {
   if (!agent.tier || agent.tier === "primary") return null;
-  if (agent.tier === "addon") return "Add-on";
-  return "Cross-sell";
+  if (agent.tier === "addon") return "Expandable";
+  return "Expandable";
 }
 
 /* ─── Agent card (clickable, opens modal) ─── */

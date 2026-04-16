@@ -295,11 +295,11 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
         <div className="hero-fade-in" style={{ animationDelay: "0.3s" }}>
           <h1 className="text-center text-3xl sm:text-5xl md:text-6xl font-bold leading-[1.15] tracking-tight max-w-3xl mx-auto">
             <span className="text-white">
-              Your AI implementation
+              Your tailored implementation plan
             </span>
             <br />
             <span className="text-white/50">
-              with boost.ai
+              with us
             </span>
           </h1>
         </div>

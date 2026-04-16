@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import type { GuideData } from "@/lib/types";
 import type { PricingModel } from "@/lib/types";
 import { getAgentsForGuide } from "@/data/agents";
-import { calculateROI } from "@/lib/roi-calculator";
+import { calculateROI, detectCurrency, formatWithCurrency } from "@/lib/roi-calculator";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
@@ -126,11 +126,8 @@ export default function CommercialOfferSection({ guide }: { guide: GuideData }) 
     [totalVolume, costNum, selectedKey, avgRate, guide.deployment_markets],
   );
 
-  const formatCurrency = (n: number) => {
-    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
-    return `$${Math.round(n)}`;
-  };
+  const currency = detectCurrency(guide.conversation_cost);
+  const formatCurrency = (n: number) => formatWithCurrency(n, currency);
 
   return (
     <section>

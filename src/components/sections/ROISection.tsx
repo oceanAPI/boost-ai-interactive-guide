@@ -3,15 +3,9 @@
 import { useState, useMemo } from "react";
 import type { GuideData } from "@/lib/types";
 import { getAgentsForGuide } from "@/data/agents";
-import { calculateROI } from "@/lib/roi-calculator";
+import { calculateROI, detectCurrency, formatWithCurrency } from "@/lib/roi-calculator";
 import { SectionHeader, StatCounter } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-
-function formatCurrency(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toFixed(0)}`;
-}
 
 export default function ROISection({
   guide,
@@ -32,6 +26,8 @@ export default function ROISection({
   // Interactive slider state
   const [volume, setVolume] = useState(totalVolumeFromGuide || 10000);
   const [cost, setCost] = useState(costFromGuide || 8);
+  const currency = detectCurrency(guide.conversation_cost);
+  const fmt = (n: number) => formatWithCurrency(n, currency);
 
   const roi = useMemo(
     () => calculateROI({
@@ -104,7 +100,7 @@ export default function ROISection({
         <div className="text-center mb-8">
           <p className="text-xs text-boost-muted uppercase tracking-wider mb-2">Projected Annual Savings</p>
           <div className="text-3xl sm:text-5xl md:text-6xl font-bold text-boost-green tabular-nums">
-            {formatCurrency(roi.annualSavings)}
+            {fmt(roi.annualSavings)}
           </div>
           <p className="text-sm text-boost-muted mt-2">
             {roi.roiPercentage}% cost reduction · Break-even in {roi.breakEvenMonths} month{roi.breakEvenMonths > 1 ? "s" : ""}
@@ -127,7 +123,7 @@ export default function ROISection({
               </div>
               <div className="border-t border-boost-border pt-3 flex justify-between items-center">
                 <span className="text-sm font-medium text-boost-dark">Total monthly cost</span>
-                <span className="font-bold text-lg text-boost-dark">{formatCurrency(roi.currentMonthlyCost)}</span>
+                <span className="font-bold text-lg text-boost-dark">{fmt(roi.currentMonthlyCost)}</span>
               </div>
             </div>
           </div>
@@ -146,7 +142,7 @@ export default function ROISection({
               </div>
               <div className="border-t border-boost-green-light/20 pt-3 flex justify-between items-center">
                 <span className="text-sm font-medium text-boost-dark">New monthly cost</span>
-                <span className="font-bold text-lg text-boost-green">{formatCurrency(roi.newMonthlyCost)}</span>
+                <span className="font-bold text-lg text-boost-green">{fmt(roi.newMonthlyCost)}</span>
               </div>
             </div>
           </div>
@@ -161,7 +157,7 @@ export default function ROISection({
               style={{ width: `${100 - savingsBarWidth}%` }}
             >
               <span className="text-[10px] text-white font-medium px-2 truncate">
-                New cost: {formatCurrency(roi.newMonthlyCost)}
+                New cost: {fmt(roi.newMonthlyCost)}
               </span>
             </div>
             <div
@@ -169,7 +165,7 @@ export default function ROISection({
               style={{ width: `${savingsBarWidth}%` }}
             >
               <span className="text-[10px] text-white font-medium px-2 truncate">
-                Savings: {formatCurrency(roi.monthlySavings)}
+                Savings: {fmt(roi.monthlySavings)}
               </span>
             </div>
           </div>

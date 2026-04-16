@@ -21,12 +21,28 @@ export interface ROIResults {
   breakEvenMonths: number;
 }
 
-// Estimated platform cost per conversation by pricing model
-const PLATFORM_COSTS: Record<PricingModel, { perConversation: number; setupMonths: number }> = {
-  fixed: { perConversation: 0.35, setupMonths: 2 },
-  usage: { perConversation: 0.50, setupMonths: 1 },
-  outcome: { perConversation: 0.75, setupMonths: 1 },
+/**
+ * AI cost as a fraction of the customer's per-conversation cost.
+ * This ensures the calculation works regardless of currency and
+ * produces realistic savings — not "$0.35 vs 55 SEK" nonsense.
+ *
+ * The fraction represents: for every conversation the AI handles,
+ * how much does it cost relative to the human cost?
+ *   - fixed:   8% (cheapest per-unit, flat monthly fee amortised)
+ *   - usage:  12% (per-conversation billing, moderate)
+ *   - outcome: 18% (higher per-unit but pay-for-success model)
+ *
+ * Platform overhead (license, implementation, support) is modelled
+ * as a separate monthly fixed cost: ~15% of current monthly spend.
+ */
+const AI_COST_RATIO: Record<PricingModel, number> = {
+  fixed: 0.08,
+  usage: 0.12,
+  outcome: 0.18,
 };
+
+const PLATFORM_OVERHEAD_RATIO = 0.15; // 15% of current monthly cost as platform fee
+const IMPL_MONTHS = 2; // months of platform cost as implementation investment
 
 export function calculateROI(inputs: ROIInputs): ROIResults {
   const { monthlyConversations, costPerConversation, pricingModel, automationRate, markets } = inputs;
@@ -37,24 +53,28 @@ export function calculateROI(inputs: ROIInputs): ROIResults {
 
   const currentMonthlyCost = monthlyConversations * costPerConversation;
 
-  const platformCost = PLATFORM_COSTS[pricingModel];
-  const aiCostPerConversation = platformCost.perConversation;
+  // AI cost per conversation is a fraction of the human cost
+  const aiCostPerConversation = costPerConversation * AI_COST_RATIO[pricingModel];
 
-  // New cost: automated conversations at AI rate + remaining human conversations at full rate
-  const newMonthlyCost = (automatedConversations * aiCostPerConversation) + (humanConversations * costPerConversation);
+  // New cost: automated at AI rate + remaining humans at full rate + platform overhead
+  const platformMonthly = currentMonthlyCost * PLATFORM_OVERHEAD_RATIO;
+  const newMonthlyCost =
+    (automatedConversations * aiCostPerConversation) +
+    (humanConversations * costPerConversation) +
+    platformMonthly;
 
   const monthlySavings = currentMonthlyCost - newMonthlyCost;
   const annualSavings = monthlySavings * 12;
 
-  // Estimate implementation cost (rough: 3 months of platform cost as setup)
-  const implCost = automatedConversations * aiCostPerConversation * platformCost.setupMonths * markets;
+  // Implementation cost: platform overhead × setup months × markets
+  const implCost = platformMonthly * IMPL_MONTHS * markets;
   const breakEvenMonths = monthlySavings > 0 ? Math.ceil(implCost / monthlySavings) : 99;
 
   const roiPercentage = currentMonthlyCost > 0
-    ? Math.round(((monthlySavings) / currentMonthlyCost) * 100)
+    ? Math.round((monthlySavings / currentMonthlyCost) * 100)
     : 0;
 
-  // Assume 1 FTE handles ~1500 conversations/month
+  // 1 FTE handles ~1500 conversations/month
   const fteEquivalent = Math.round((automatedConversations / 1500) * 10) / 10;
 
   return {
@@ -69,4 +89,35 @@ export function calculateROI(inputs: ROIInputs): ROIResults {
     fteEquivalent,
     breakEvenMonths: Math.max(1, Math.min(breakEvenMonths, 24)),
   };
+}
+
+/**
+ * Extract currency symbol from a cost string like "~55 SEK", "$8.50", "€12".
+ * Falls back to "$" if nothing recognised.
+ */
+export function detectCurrency(costStr: string | undefined): string {
+  if (!costStr) return "$";
+  const str = costStr.trim();
+  if (str.includes("SEK")) return "SEK ";
+  if (str.includes("NOK")) return "NOK ";
+  if (str.includes("DKK")) return "DKK ";
+  if (str.includes("EUR") || str.includes("€")) return "€";
+  if (str.includes("£") || str.includes("GBP")) return "£";
+  if (str.includes("CHF")) return "CHF ";
+  if (str.includes("$")) return "$";
+  return "$";
+}
+
+/**
+ * Format a number with the detected currency.
+ */
+export function formatWithCurrency(n: number, currency: string): string {
+  const abs = Math.abs(n);
+  const prefix = currency.length > 1 && !currency.startsWith("$") && !currency.startsWith("€") && !currency.startsWith("£")
+    ? currency // "SEK ", "NOK " etc — prefix with space
+    : currency; // "$", "€", "£" — no space
+
+  if (abs >= 1_000_000) return `${prefix}${(n / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${prefix}${Math.round(n / 1_000)}K`;
+  return `${prefix}${Math.round(n)}`;
 }

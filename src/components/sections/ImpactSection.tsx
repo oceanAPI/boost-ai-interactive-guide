@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import type { GuideData } from "@/lib/types";
 import { getAgentsForGuide } from "@/data/agents";
-import { calculateROI } from "@/lib/roi-calculator";
+import { calculateROI, detectCurrency, formatWithCurrency } from "@/lib/roi-calculator";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
@@ -376,10 +376,11 @@ function MiniDashboard({ active }: { active: boolean }) {
  *  cumulative savings. Break-even marker pops in at the right month.
  * ═══════════════════════════════════════════════════════════════════ */
 
-function SavingsTimeline({ active, annualSavings, breakEvenMonths }: {
+function SavingsTimeline({ active, annualSavings, breakEvenMonths, currencySymbol }: {
   active: boolean;
   annualSavings: number;
   breakEvenMonths: number;
+  currencySymbol: string;
 }) {
   const ready = useTabActivation(active);
   const months = 12;
@@ -387,18 +388,14 @@ function SavingsTimeline({ active, annualSavings, breakEvenMonths }: {
 
   const savingsCount = useCountUp({ target: annualSavings, enabled: ready, duration: 1400 });
 
-  const formatCurrency = (n: number) => {
-    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
-    return `$${Math.round(n)}`;
-  };
+  const fmt = (n: number) => formatWithCurrency(n, currencySymbol);
 
   return (
     <div className="py-4">
       {/* Big number */}
       <div className="text-center mb-6">
         <p className="text-3xl font-bold text-boost-green tabular-nums">
-          {formatCurrency(savingsCount)}
+          {fmt(savingsCount)}
         </p>
         <p className="text-[11px] text-boost-muted mt-1">Estimated annual savings</p>
       </div>
@@ -453,7 +450,7 @@ function SavingsTimeline({ active, annualSavings, breakEvenMonths }: {
           <p className="text-[10px] text-boost-muted">Break-even</p>
         </div>
         <div className="text-center">
-          <p className="text-lg font-bold text-boost-dark tabular-nums">{formatCurrency(monthlySavings)}</p>
+          <p className="text-lg font-bold text-boost-dark tabular-nums">{fmt(monthlySavings)}</p>
           <p className="text-[10px] text-boost-muted">Monthly savings</p>
         </div>
       </div>
@@ -484,6 +481,9 @@ export default function ImpactSection({ guide }: { guide: GuideData }) {
     markets: guide.deployment_markets || 1,
   }), [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets]);
 
+  const currency = detectCurrency(guide.conversation_cost);
+  const fmt = (n: number) => formatWithCurrency(n, currency);
+
   // Tab descriptions
   const TAB_CONTENT: Record<TabId, { headline: string; sub: string }> = {
     csat: {
@@ -499,16 +499,12 @@ export default function ImpactSection({ guide }: { guide: GuideData }) {
       sub: "The analytics dashboard surfaces what your customers actually need \u2014 intents, sentiment, resolution rates, and volume patterns.",
     },
     commercial: {
-      headline: `Path to ${formatCurrency(roi.annualSavings)} in annual savings`,
+      headline: `Path to ${fmt(roi.annualSavings)} in annual savings`,
       sub: `Based on ${vol.toLocaleString()} monthly conversations at ${guide.conversation_cost || "$8"} per conversation.`,
     },
   };
 
-  function formatCurrency(n: number): string {
-    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
-    return `$${Math.round(n)}`;
-  }
+  // fmt is defined above via detectCurrency + formatWithCurrency
 
   return (
     <section>
@@ -561,6 +557,7 @@ export default function ImpactSection({ guide }: { guide: GuideData }) {
               active={activeTab === "commercial"}
               annualSavings={roi.annualSavings}
               breakEvenMonths={roi.breakEvenMonths}
+              currencySymbol={currency}
             />
           )}
         </div>
