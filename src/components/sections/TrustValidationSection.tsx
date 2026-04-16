@@ -112,12 +112,14 @@ function WorldMap({ visibleStep }: { visibleStep: number }) {
         return (
           <div
             key={`${marker.label}-${i}`}
-            className="absolute animate-modal-in"
+            className="absolute transition-opacity"
             style={{
               left: `${marker.x}%`,
               top: `${marker.y}%`,
               transform: "translate(-50%, -50%)",
-              animationDuration: "400ms",
+              opacity: 1,
+              transitionDuration: "600ms",
+              transitionTimingFunction: "ease-out",
             }}
           >
             {isLatest && (
