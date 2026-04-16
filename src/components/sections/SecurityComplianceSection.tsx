@@ -544,18 +544,14 @@ function DataInfrastructure() {
   ];
 
   return (
-    <div className="space-y-2">
+    <div className="divide-y divide-boost-border/50">
       {layers.map((layer, layerIdx) => {
         const isExpanded = expandedLayer === layerIdx;
         return (
           <div key={layer.label}>
             <button
               onClick={() => setExpandedLayer(isExpanded ? null : layerIdx)}
-              className={`w-full rounded-lg border-l-[3px] ${layer.color} p-3 text-left transition-all ${
-                isExpanded
-                  ? "bg-boost-surface/40"
-                  : "hover:bg-boost-surface/30"
-              }`}
+              className={`w-full border-l-[3px] ${layer.color} pl-3 pr-2 py-3 text-left transition-colors hover:bg-boost-surface/30`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -582,14 +578,11 @@ function DataInfrastructure() {
             </button>
 
             {isExpanded && (
-              <div className="mt-1 space-y-1.5 pl-3 animate-modal-in">
+              <div className="pl-6 pr-2 pb-3 pt-1 space-y-2.5 animate-modal-in">
                 {layer.items.map((item) => (
-                  <div
-                    key={item.name}
-                    className="bg-boost-surface/30 rounded-lg p-3"
-                  >
+                  <div key={item.name}>
                     <p className="text-xs font-semibold text-boost-dark">{item.name}</p>
-                    <p className="text-[10px] text-boost-text-secondary leading-relaxed mt-1">
+                    <p className="text-[11px] text-boost-text-secondary leading-relaxed mt-0.5">
                       {item.detail}
                     </p>
                   </div>
@@ -602,7 +595,7 @@ function DataInfrastructure() {
 
       <button
         onClick={() => setExpandedLayer(expandedLayer === 99 ? null : 99)}
-        className="w-full bg-boost-green/5 rounded-lg border border-boost-green/20 p-3 text-left transition-all hover:bg-boost-green/10"
+        className="w-full border-l-[3px] border-boost-green pl-3 pr-2 py-3 text-left transition-colors hover:bg-boost-green/5"
       >
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold text-boost-green">Zero data training</p>
@@ -758,8 +751,8 @@ function RegulatoryReadiness() {
 
       <p className="text-xs text-boost-muted">{active.subtitle}</p>
 
-      {/* Requirements list */}
-      <div className="space-y-2">
+      {/* Requirements list — flat rows, no nested cards */}
+      <div className="divide-y divide-boost-border/50">
         {active.items.map((item) => {
           const isExpanded = expandedItem === `${activeTab}-${item.requirement}`;
           return (
@@ -770,10 +763,8 @@ function RegulatoryReadiness() {
                   isExpanded ? null : `${activeTab}-${item.requirement}`
                 )
               }
-              className={`w-full text-left rounded-lg border p-3 transition-all ${
-                isExpanded
-                  ? "bg-boost-surface border-boost-purple/20 shadow-sm"
-                  : "bg-white border-boost-border hover:bg-boost-surface/50"
+              className={`w-full text-left px-0 py-3 transition-colors ${
+                isExpanded ? "" : "hover:bg-boost-surface/30"
               }`}
             >
               <div className="flex items-center justify-between">
@@ -801,7 +792,7 @@ function RegulatoryReadiness() {
                 <p className="text-[10px] text-boost-muted mt-0.5">{item.summary}</p>
               )}
               {isExpanded && (
-                <p className="text-[10px] text-boost-text-secondary leading-relaxed mt-2 animate-modal-in">
+                <p className="text-[11px] text-boost-text-secondary leading-relaxed mt-2 animate-modal-in">
                   {item.detail}
                 </p>
               )}
