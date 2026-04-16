@@ -34,6 +34,7 @@ const agent: SpecialistAgent = {
       { id: "icp-sr-confirmed", name: "Change Confirmed", type: "confirmation", icon: "thumbs-up", description: "Confirms policy change has been applied" },
     ],
   },
+  tier: "primary",
 };
 
 export default agent;

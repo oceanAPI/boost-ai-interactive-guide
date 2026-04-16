@@ -48,6 +48,7 @@ const agent: SpecialistAgent = {
   },
   // Only composite insurers (typically mutuals with Liv arms) offer pension & savings.
   variants: ["insurance:mutual"],
+  tier: "addon",
 };
 
 export default agent;

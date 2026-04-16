@@ -50,6 +50,7 @@ const agent: SpecialistAgent = {
   },
   // Broker-driven insurers let brokers own customer comms; skipped for that variant.
   variants: ["insurance:mutual", "insurance:dtc"],
+  tier: "primary",
 };
 
 export default agent;

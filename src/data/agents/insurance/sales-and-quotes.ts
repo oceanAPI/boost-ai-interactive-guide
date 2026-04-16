@@ -45,6 +45,7 @@ const agent: SpecialistAgent = {
       { id: "isq-sr-need-licensed", name: "Needs Licensed Advice", type: "request", icon: "route", description: "Politely explains why the query needs a licensed human sales agent" },
     ],
   },
+  tier: "primary",
 };
 
 export default agent;

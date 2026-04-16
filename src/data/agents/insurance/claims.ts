@@ -41,6 +41,7 @@ const agent: SpecialistAgent = {
       { id: "ic-sr-missing-info", name: "Missing Information", type: "request", icon: "route", description: "Requests additional documentation needed to process the claim" },
     ],
   },
+  tier: "primary",
 };
 
 export default agent;

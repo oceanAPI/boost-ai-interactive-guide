@@ -35,6 +35,7 @@ const agent: SpecialistAgent = {
       { id: "ib-sr-confirmed", name: "Payment Confirmed", type: "confirmation", icon: "thumbs-up", description: "Confirms successful payment or billing change" },
     ],
   },
+  tier: "primary",
 };
 
 export default agent;

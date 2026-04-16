@@ -47,6 +47,7 @@ const agent: SpecialistAgent = {
       { id: "iam-sr-verify-bankid", name: "Verify with BankID", type: "request", icon: "route", description: "Asks the customer to authenticate with BankID before proceeding" },
     ],
   },
+  tier: "primary",
 };
 
 export default agent;
