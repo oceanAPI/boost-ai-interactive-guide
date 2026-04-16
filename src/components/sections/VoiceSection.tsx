@@ -1,68 +1,132 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { GuideData } from "@/lib/types";
-import { SectionHeader } from "@/components/ui";
+import { SectionHeader, Badge } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 /* ─────────────────────────────────────────────────────────────────────
- *  Voice AI — "Outstanding CX doesn't start with Press 1"
+ *  Voice AI — conversation playback with under-the-hood analysis
  *
- *  Two distinct device UIs side by side:
- *    Left:  A KEYPAD + IVR MENU (grey, rigid, frustrating)
- *    Right: A CALL SCREEN with live waveform + transcript (warm, fast)
+ *  Mirrors the Demo chat section's architecture:
+ *    - Script-driven playback (swappable later for real recordings)
+ *    - Play / pause / reset controls
+ *    - "Analyze" button after completion → slides in analysis panel
+ *    - Call-screen UI instead of chat bubbles
+ *    - Waveform instead of typing indicators
  *
- *  Each side is a self-contained "device mockup" with its own visual
- *  language — the contrast makes the case without metric cards.
+ *  SCAFFOLDING: the script data is placeholder. The user will later
+ *  provide actual voice recordings and we'll swap the data source.
  * ───────────────────────────────────────────────────────────────────── */
 
-/* ─── IVR menu steps ─── */
-const IVR_STEPS = [
-  { text: "Welcome to Acme Insurance. Your call is important to us.", type: "system" as const, delay: 800 },
-  { text: "For English, press 1.", type: "system" as const, delay: 600 },
-  { text: "1", type: "keypress" as const, delay: 1200 },
-  { text: "Press 1 for Claims. Press 2 for Billing. Press 3 for Policy changes. Press 4 for All other inquiries.", type: "system" as const, delay: 600 },
-  { text: "1", type: "keypress" as const, delay: 1400 },
-  { text: "Press 1 for Auto. Press 2 for Home. Press 3 to hear these options again.", type: "system" as const, delay: 600 },
-  { text: "1", type: "keypress" as const, delay: 1200 },
-  { text: "All agents are currently busy. Your estimated wait time is 12 minutes.", type: "system" as const, delay: 600 },
-  { text: "♪  Your call is important to us. Please stay on the line…", type: "hold" as const, delay: 0 },
+/* ─── Voice script type ─── */
+interface VoiceMessage {
+  speaker: "caller" | "agent" | "system";
+  text: string;
+  time: string;
+  /** Intent detected — shown as badge on agent responses */
+  intent?: string;
+  /** Under-the-hood detail for analysis panel */
+  analysis?: {
+    sttConfidence?: number;
+    detectedIntent?: string;
+    sentiment?: "positive" | "neutral" | "frustrated";
+    action?: string;
+  };
+}
+
+/* ─── Default voice script (placeholder — will be replaced with real recording data) ─── */
+const VOICE_SCRIPT: VoiceMessage[] = [
+  {
+    speaker: "caller", text: "Hi, I was in a fender bender yesterday and I need to file a claim.", time: "0:00",
+    analysis: { sttConfidence: 0.97, detectedIntent: "FNOL — First Notice of Loss", sentiment: "neutral" },
+  },
+  {
+    speaker: "agent", text: "I'm sorry to hear that. Let me help you get that claim started right away. Can you confirm your name and policy number?", time: "0:04",
+    intent: "FNOL intake",
+    analysis: { action: "Requesting identity verification" },
+  },
+  {
+    speaker: "caller", text: "It's Sarah Chen, policy number HM-4482.", time: "0:12",
+    analysis: { sttConfidence: 0.99, detectedIntent: "Identity — providing credentials", sentiment: "neutral" },
+  },
+  {
+    speaker: "agent", text: "Thank you, Sarah. I can see your auto policy is active. I'll need a few details about the incident — where did it happen?", time: "0:16",
+    intent: "Identity verified",
+    analysis: { action: "Policy lookup → HM-4482 confirmed active" },
+  },
+  {
+    speaker: "caller", text: "Corner of Main and 5th, around 3pm yesterday. The other driver ran a red light.", time: "0:22",
+    analysis: { sttConfidence: 0.95, detectedIntent: "Incident details — location + cause", sentiment: "neutral" },
+  },
+  {
+    speaker: "agent", text: "Got it. I've opened claim number CL-2026-8891 for you. A claims adjuster will contact you within 2 hours. I'm also sending our approved repair network — would you like me to book an inspection?", time: "0:28",
+    intent: "Claim filed",
+    analysis: { action: "Claim #CL-2026-8891 created → adjuster notified → repair network sent" },
+  },
+  {
+    speaker: "caller", text: "Yes please, as soon as possible.", time: "0:38",
+    analysis: { sttConfidence: 0.98, detectedIntent: "Affirmative — requesting repair booking", sentiment: "positive" },
+  },
+  {
+    speaker: "agent", text: "Done — you're booked at Metro Auto Body tomorrow at 10am. They'll send a confirmation text. Anything else I can help with?", time: "0:42",
+    intent: "Repair booked",
+    analysis: { action: "Metro Auto Body → 10am tomorrow → confirmation SMS queued" },
+  },
 ];
 
-/* ─── Voice transcript lines ─── */
-const VOICE_LINES = [
-  { speaker: "caller" as const, text: "Hi, I was in a fender bender yesterday and need to file a claim.", time: "0:00", intent: null },
-  { speaker: "agent" as const, text: "I'm sorry to hear that, let me help you right away. Can you confirm your name and policy number?", time: "0:04", intent: "FNOL intake" },
-  { speaker: "caller" as const, text: "Sarah Chen, policy HM-4482.", time: "0:12", intent: null },
-  { speaker: "agent" as const, text: "Thank you Sarah. Your auto policy is active. Where did the incident happen?", time: "0:16", intent: "Identity verified" },
-  { speaker: "caller" as const, text: "Corner of Main and 5th, around 3pm. Other driver ran a red light.", time: "0:22", intent: null },
-  { speaker: "agent" as const, text: "Claim #CL-2026-8891 is now open. I'm booking you at Metro Auto Body tomorrow at 10am for inspection.", time: "0:28", intent: "Claim filed" },
-  { speaker: "caller" as const, text: "That's perfect, thanks.", time: "0:38", intent: null },
-  { speaker: "agent" as const, text: "All set. You'll get a confirmation text shortly. Anything else I can help with?", time: "0:42", intent: "Repair booked" },
+/* ─── Analysis categories (for the "under the hood" panel) ─── */
+const ANALYSIS_CATEGORIES = [
+  {
+    key: "stt",
+    label: "Speech-to-Text",
+    description: "Real-time transcription with speaker diarization. No keywords — full natural language.",
+    metric: "97% avg confidence",
+    color: "text-boost-green",
+  },
+  {
+    key: "nlu",
+    label: "Intent Detection",
+    description: "Understands what the caller wants within the first sentence. Maps to specialist agent flows.",
+    metric: "4 intents detected",
+    color: "text-boost-green",
+  },
+  {
+    key: "sentiment",
+    label: "Sentiment Analysis",
+    description: "Monitors frustration and urgency in real-time. Adjusts tone or escalates before the caller asks.",
+    metric: "Neutral → Positive",
+    color: "text-boost-green",
+  },
+  {
+    key: "actions",
+    label: "Actions Taken",
+    description: "Every API call, database lookup, and workflow trigger — fully auditable.",
+    metric: "5 actions",
+    color: "text-boost-green",
+  },
 ];
 
-/* ─── Waveform bars — purely decorative CSS animation ─── */
-function Waveform({ active }: { active: boolean }) {
+/* ─── Waveform bars ─── */
+function Waveform({ active, small }: { active: boolean; small?: boolean }) {
+  const count = small ? 16 : 24;
+  const maxH = small ? 16 : 28;
   return (
-    <div className="flex items-center justify-center gap-[3px] h-10 my-3">
-      {Array.from({ length: 24 }).map((_, i) => {
-        // Deterministic "random" height per bar
+    <div className={`flex items-center justify-center gap-[3px] ${small ? "h-5" : "h-8"}`}>
+      {Array.from({ length: count }).map((_, i) => {
         const seed = ((i * 7 + 13) % 17) / 17;
-        const minH = 4;
-        const maxH = active ? 28 : 6;
-        const baseH = minH + seed * (maxH - minH);
+        const h = active ? 4 + seed * (maxH - 4) : 3;
         return (
           <div
             key={i}
             className="rounded-full transition-all"
             style={{
-              width: "2.5px",
-              height: active ? `${baseH}px` : "4px",
+              width: small ? "2px" : "2.5px",
+              height: `${h}px`,
               backgroundColor: active
                 ? `rgba(54, 181, 149, ${0.4 + seed * 0.5})`
-                : "rgba(255,255,255,0.15)",
+                : "rgba(255,255,255,0.12)",
               transitionDuration: `${300 + seed * 400}ms`,
-              transitionTimingFunction: "cubic-bezier(0.34, 1.56, 0.64, 1)",
               animation: active ? `voice-wave ${0.8 + seed * 0.7}s ease-in-out ${seed * 0.3}s infinite alternate` : "none",
             }}
           />
@@ -72,235 +136,80 @@ function Waveform({ active }: { active: boolean }) {
   );
 }
 
-/* ─── IVR Keypad visual ─── */
-function Keypad() {
-  const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "✱", "0", "#"];
-  return (
-    <div className="grid grid-cols-3 gap-1.5 w-fit mx-auto mb-4">
-      {keys.map((k) => (
-        <div
-          key={k}
-          className="w-10 h-10 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-white/30 text-sm font-medium"
-        >
-          {k}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ─── IVR Device ─── */
-function IVRDevice({ visible }: { visible: boolean }) {
-  const [visibleSteps, setVisibleSteps] = useState(0);
-  const [elapsed, setElapsed] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const elapsedRef = useRef<ReturnType<typeof setInterval>>(undefined);
-
-  useEffect(() => {
-    if (!visible) return;
-
-    // Start the elapsed timer
-    elapsedRef.current = setInterval(() => {
-      setElapsed((e) => e + 1);
-    }, 1000);
-
-    // Reveal IVR steps one by one
-    let step = 0;
-    const showNext = () => {
-      if (step >= IVR_STEPS.length) return;
-      step++;
-      setVisibleSteps(step);
-      if (step < IVR_STEPS.length) {
-        timerRef.current = setTimeout(showNext, IVR_STEPS[step]?.delay || 1000);
-      }
-    };
-    timerRef.current = setTimeout(showNext, IVR_STEPS[0].delay);
-
-    return () => {
-      clearTimeout(timerRef.current);
-      clearInterval(elapsedRef.current);
-    };
-  }, [visible]);
-
-  const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-
-  return (
-    <div className="rounded-[1.75rem] bg-[#1a1a1e] border border-white/[0.06] p-3 shadow-2xl flex flex-col h-full">
-      {/* Call header */}
-      <div className="text-center pt-4 pb-2">
-        <p className="text-white/30 text-[10px] uppercase tracking-widest mb-1">Incoming call</p>
-        <p className="text-white/80 text-base font-semibold">Acme Insurance</p>
-        <p className="text-white/30 text-xs mt-0.5">+1 (800) 555-0199</p>
-        <p className="text-white/20 text-xs mt-1 tabular-nums">{formatTime(elapsed)}</p>
-      </div>
-
-      {/* Keypad */}
-      <Keypad />
-
-      {/* IVR transcript */}
-      <div className="flex-1 overflow-hidden px-2 space-y-1.5 mb-3">
-        {IVR_STEPS.slice(0, visibleSteps).map((step, i) => (
-          <div
-            key={i}
-            className="animate-modal-in"
-            style={{ animationDuration: "300ms" }}
-          >
-            {step.type === "keypress" ? (
-              <div className="flex justify-end">
-                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white/10 text-white/60 text-xs font-bold">
-                  {step.text}
-                </span>
-              </div>
-            ) : (
-              <p className={`text-[11px] leading-relaxed ${
-                step.type === "hold"
-                  ? "text-white/20 italic"
-                  : "text-white/40"
-              }`}>
-                {step.text}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Call controls */}
-      <div className="flex items-center justify-center gap-5 pb-3">
-        <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeOpacity="0.3"><path d="M1 1l22 22M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6"/><path d="M17 16.95A7 7 0 015 12v-2m14 0v2c0 .76-.12 1.5-.34 2.18"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-        </div>
-        <div className="w-12 h-12 rounded-full bg-red-500/80 flex items-center justify-center">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
-        </div>
-        <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeOpacity="0.3"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Voice AI Call Screen ─── */
-function VoiceCallScreen({ visible }: { visible: boolean }) {
-  const [visibleLines, setVisibleLines] = useState(0);
-  const [callActive, setCallActive] = useState(false);
-  const [resolved, setResolved] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
-
-  useEffect(() => {
-    if (!visible) return;
-    setCallActive(true);
-
-    timerRef.current = setInterval(() => {
-      setVisibleLines((c) => {
-        if (c >= VOICE_LINES.length) {
-          clearInterval(timerRef.current);
-          setCallActive(false);
-          setResolved(true);
-          return c;
-        }
-        return c + 1;
-      });
-    }, 1600);
-
-    return () => clearInterval(timerRef.current);
-  }, [visible]);
-
-  return (
-    <div className="rounded-[1.75rem] bg-[#0f1117] border border-boost-green-light/10 p-3 shadow-2xl flex flex-col h-full">
-      {/* Call header */}
-      <div className="text-center pt-4 pb-1">
-        <div className="flex items-center justify-center gap-1.5 mb-1.5">
-          <span className={`w-1.5 h-1.5 rounded-full ${callActive ? "bg-boost-green-light animate-pulse" : resolved ? "bg-boost-green-light" : "bg-white/20"}`} />
-          <p className="text-[10px] uppercase tracking-widest text-boost-green-light/70 font-medium">
-            {resolved ? "Resolved" : callActive ? "Connected" : "Connecting"}
-          </p>
-        </div>
-        <p className="text-white/90 text-base font-semibold">Sarah Chen</p>
-        <p className="text-white/30 text-xs mt-0.5">Policy HM-4482</p>
-      </div>
-
-      {/* Waveform */}
-      <Waveform active={callActive} />
-
-      {/* Live transcript */}
-      <div className="flex-1 overflow-hidden px-2 space-y-2 mb-3">
-        {VOICE_LINES.slice(0, visibleLines).map((line, i) => (
-          <div
-            key={i}
-            className="animate-modal-in"
-            style={{ animationDuration: "350ms" }}
-          >
-            <div className="flex items-start gap-2">
-              <span className="text-[9px] text-white/20 tabular-nums mt-0.5 w-6 shrink-0 text-right">
-                {line.time}
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className={`text-[11px] leading-relaxed ${
-                  line.speaker === "caller" ? "text-white/60" : "text-white/90"
-                }`}>
-                  <span className={`text-[9px] font-semibold uppercase tracking-wider mr-1.5 ${
-                    line.speaker === "caller" ? "text-white/25" : "text-boost-green-light/60"
-                  }`}>
-                    {line.speaker === "caller" ? "Caller" : "AI"}
-                  </span>
-                  {line.text}
-                </p>
-                {line.intent && (
-                  <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wider bg-boost-green-light/10 text-boost-green-light/80 border border-boost-green-light/10">
-                    <span className="w-1 h-1 rounded-full bg-boost-green-light/60" />
-                    {line.intent}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Resolution banner */}
-        {resolved && (
-          <div className="mt-2 pt-2 border-t border-white/[0.06] animate-modal-in">
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] text-boost-green-light font-medium">
-                Resolved in 0:48 · No transfers
-              </p>
-              <div className="flex gap-1">
-                <span className="text-[8px] px-1.5 py-0.5 rounded bg-boost-green-light/10 text-boost-green-light/70 uppercase tracking-wider font-semibold">Claim filed</span>
-                <span className="text-[8px] px-1.5 py-0.5 rounded bg-boost-green-light/10 text-boost-green-light/70 uppercase tracking-wider font-semibold">Repair booked</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Call controls */}
-      <div className="flex items-center justify-center gap-5 pb-3">
-        <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeOpacity="0.4"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/></svg>
-        </div>
-        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${resolved ? "bg-boost-green-light/20" : "bg-boost-green-light/80"}`}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
-        </div>
-        <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeOpacity="0.4"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Capabilities ─── */
-const CAPABILITIES = [
-  { label: "Real-time Intent", detail: "Understands what the caller wants within the first sentence — no menu trees, no waiting." },
-  { label: "Natural Conversation", detail: "Full-duplex dialogue with barge-in support. Callers speak naturally, not in keywords." },
-  { label: "Warm Handover", detail: "When human expertise is needed, the agent transfers with full context — no repeating." },
-  { label: "Sentiment Detection", detail: "Monitors frustration and urgency in real-time. Adjusts tone or escalates before the caller asks." },
-];
+/* ─── Analyze step type ─── */
+type AnalyzeStep = "idle" | "panel-open" | "reviewing" | "review-done";
 
 /* ─── Main section ─── */
 export default function VoiceSection({ guide }: { guide: GuideData }) {
-  const { ref: devicesRef, isVisible: devicesVisible } = useScrollReveal({ once: true, threshold: 0.15 });
-  const { ref: capsRef, isVisible: capsVisible } = useScrollReveal({ once: true });
+  const { ref, isVisible } = useScrollReveal({ once: true });
+
+  const [visibleMessages, setVisibleMessages] = useState(1);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playComplete, setPlayComplete] = useState(false);
+  const [analyzeStep, setAnalyzeStep] = useState<AnalyzeStep>("idle");
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const playGenRef = useRef(0);
+  const transcriptRef = useRef<HTMLDivElement>(null);
+
+  const allShown = visibleMessages >= VOICE_SCRIPT.length;
+  const isAnalyzing = analyzeStep !== "idle";
+
+  // Scroll transcript to bottom
+  useEffect(() => {
+    if (transcriptRef.current) {
+      transcriptRef.current.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: "smooth" });
+    }
+  }, [visibleMessages]);
+
+  // Play next message
+  const playNext = useCallback(() => {
+    const gen = playGenRef.current;
+    setVisibleMessages((v) => {
+      if (gen !== playGenRef.current) return v;
+      const next = v + 1;
+      if (next >= VOICE_SCRIPT.length) {
+        setIsPlaying(false);
+        setPlayComplete(true);
+        return VOICE_SCRIPT.length;
+      }
+      const delay = VOICE_SCRIPT[next]?.speaker === "caller" ? 1800 : 2400;
+      timerRef.current = setTimeout(playNext, delay);
+      return next;
+    });
+  }, []);
+
+  const startPlayback = () => {
+    playGenRef.current += 1;
+    setIsPlaying(true);
+    setPlayComplete(false);
+    setAnalyzeStep("idle");
+    timerRef.current = setTimeout(playNext, 1400);
+  };
+
+  const pausePlayback = () => {
+    playGenRef.current += 1;
+    clearTimeout(timerRef.current);
+    setIsPlaying(false);
+  };
+
+  const reset = () => {
+    playGenRef.current += 1;
+    clearTimeout(timerRef.current);
+    setVisibleMessages(1);
+    setIsPlaying(false);
+    setPlayComplete(false);
+    setAnalyzeStep("idle");
+  };
+
+  const openAnalyze = () => {
+    setAnalyzeStep("panel-open");
+    setTimeout(() => setAnalyzeStep("reviewing"), 600);
+    setTimeout(() => setAnalyzeStep("review-done"), 2000);
+  };
+
+  // Next message speaker for typing indicator
+  const nextMsg = VOICE_SCRIPT[visibleMessages];
+  const showWaveform = isPlaying && !allShown && nextMsg;
 
   return (
     <section>
@@ -310,83 +219,260 @@ export default function VoiceSection({ guide }: { guide: GuideData }) {
         subtitle="Outstanding CX doesn't start with Press 1"
       />
 
-      <p className="text-boost-dark text-lg leading-relaxed max-w-2xl mb-10">
-        The IVR tree was designed for rotary phones. Your customers have moved on.
-        Conversational voice replaces rigid menus with a{" "}
-        <span className="font-semibold">natural front door</span> — callers say what
-        they need, and the AI resolves it in real time.
-      </p>
-
-      {/* ── Side-by-side device mockups ── */}
-      <div ref={devicesRef} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-14">
-        {/* Left: IVR — intentionally grey and frustrating */}
+      <div
+        ref={ref}
+        className={`transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+      >
+        {/* Main layout — call screen + optional analysis panel */}
         <div
-          className="transition-all"
-          style={{
-            opacity: devicesVisible ? 1 : 0,
-            transform: devicesVisible ? "translateY(0)" : "translateY(20px)",
-            transitionDuration: "700ms",
-          }}
+          className={`flex flex-col sm:flex-row justify-center items-center sm:items-start gap-6 transition-all duration-700 ease-out ${
+            isAnalyzing ? "max-w-3xl mx-auto" : "max-w-md mx-auto"
+          }`}
         >
-          <p className="text-[10px] font-bold text-boost-muted/50 uppercase tracking-[0.15em] mb-3 text-center">
-            Traditional IVR
-          </p>
-          <div className="max-w-[320px] mx-auto" style={{ minHeight: "520px" }}>
-            <IVRDevice visible={devicesVisible} />
-          </div>
-        </div>
+          {/* Call screen frame */}
+          <div
+            className={`relative flex-shrink-0 transition-all duration-700 ease-out ${
+              isAnalyzing ? "w-[280px]" : "w-full max-w-md"
+            }`}
+          >
+            {/* Analyze button */}
+            {playComplete && analyzeStep === "idle" && (
+              <div className="absolute -top-3 -right-3 z-10 animate-modal-in">
+                <span className="absolute inset-0 rounded-full bg-boost-green/40 animate-ping" />
+                <button
+                  onClick={openAnalyze}
+                  className="relative bg-boost-green text-white text-[11px] font-semibold px-4 py-2 rounded-full shadow-lg hover:bg-boost-green-light transition-all flex items-center gap-1.5"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /><path d="M11 8v6M8 11h6" />
+                  </svg>
+                  Analyze
+                </button>
+              </div>
+            )}
 
-        {/* Right: Conversational Voice — warm and efficient */}
-        <div
-          className="transition-all"
-          style={{
-            opacity: devicesVisible ? 1 : 0,
-            transform: devicesVisible ? "translateY(0)" : "translateY(20px)",
-            transitionDuration: "700ms",
-            transitionDelay: "200ms",
-          }}
-        >
-          <p className="text-[10px] font-bold text-boost-green uppercase tracking-[0.15em] mb-3 text-center">
-            Conversational Voice AI
-          </p>
-          <div className="max-w-[320px] mx-auto" style={{ minHeight: "520px" }}>
-            <VoiceCallScreen visible={devicesVisible} />
-          </div>
-        </div>
-      </div>
+            {/* Phone bezel */}
+            <div className="rounded-[2rem] border-4 border-boost-dark bg-boost-dark p-2 shadow-2xl">
+              {/* Call header */}
+              <div className="bg-[#0f1117] rounded-t-[1.5rem] px-4 pt-4 pb-2 text-center">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    isPlaying ? "bg-boost-green-light animate-pulse" : playComplete ? "bg-boost-green-light" : "bg-white/20"
+                  }`} />
+                  <p className="text-[9px] uppercase tracking-widest text-boost-green-light/70 font-medium">
+                    {playComplete ? "Call ended" : isPlaying ? "Connected" : "Ready"}
+                  </p>
+                </div>
+                <p className={`text-white/90 font-semibold ${isAnalyzing ? "text-xs" : "text-sm"}`}>
+                  {guide.company_name || "Customer"}
+                </p>
+                <p className="text-white/30 text-[10px] mt-0.5">Voice AI Agent</p>
 
-      {/* ── Capabilities ── */}
-      <div ref={capsRef}>
-        <p className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.15em] mb-5">
-          How it works
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {CAPABILITIES.map((cap, i) => (
-            <div
-              key={cap.label}
-              className="transition-all"
-              style={{
-                opacity: capsVisible ? 1 : 0,
-                transform: capsVisible ? "translateY(0)" : "translateY(12px)",
-                transitionDuration: "500ms",
-                transitionDelay: `${200 + i * 100}ms`,
-              }}
-            >
-              <p className="text-sm font-semibold text-boost-dark mb-1.5">{cap.label}</p>
-              <p className="text-[12px] text-boost-muted leading-relaxed">{cap.detail}</p>
+                {/* Waveform */}
+                <div className="mt-2">
+                  <Waveform active={isPlaying && !allShown} small={isAnalyzing} />
+                </div>
+              </div>
+
+              {/* Transcript area */}
+              <div
+                ref={transcriptRef}
+                className={`bg-[#0f1117] overflow-y-auto px-3 py-2 space-y-2.5 scrollbar-hide transition-all duration-700 ${
+                  isAnalyzing ? "h-[300px]" : "h-[380px]"
+                }`}
+              >
+                {VOICE_SCRIPT.slice(0, visibleMessages).map((msg, i) => (
+                  <div
+                    key={i}
+                    className={i === visibleMessages - 1 && visibleMessages > 1 ? "animate-modal-in" : ""}
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className="text-[9px] text-white/20 tabular-nums mt-0.5 w-7 shrink-0 text-right">
+                        {msg.time}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className={`leading-relaxed ${isAnalyzing ? "text-[10px]" : "text-[11px]"} ${
+                          msg.speaker === "caller" ? "text-white/60" : "text-white/90"
+                        }`}>
+                          <span className={`text-[8px] font-semibold uppercase tracking-wider mr-1.5 ${
+                            msg.speaker === "caller" ? "text-white/25" : "text-boost-green-light/60"
+                          }`}>
+                            {msg.speaker === "caller" ? "Caller" : "AI"}
+                          </span>
+                          {msg.text}
+                        </p>
+                        {msg.intent && (
+                          <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[7px] font-semibold uppercase tracking-wider bg-boost-green-light/10 text-boost-green-light/80 border border-boost-green-light/10">
+                            <span className="w-1 h-1 rounded-full bg-boost-green-light/60" />
+                            {msg.intent}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Waveform typing indicator */}
+                {showWaveform && (
+                  <div className="flex items-center gap-2 animate-modal-in">
+                    <span className="w-7" />
+                    <div className="flex gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light/40 animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light/40 animate-pulse" style={{ animationDelay: "150ms" }} />
+                      <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light/40 animate-pulse" style={{ animationDelay: "300ms" }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Resolution banner */}
+                {playComplete && (
+                  <div className="pt-2 border-t border-white/[0.06] animate-modal-in">
+                    <p className="text-[10px] text-boost-green-light font-medium">
+                      Resolved in 0:48 · No transfers · Claim filed + repair booked
+                    </p>
+                  </div>
+                )}
+
+                <div style={{ height: 1 }} />
+              </div>
+
+              {/* Controls bar */}
+              <div className="bg-[#0f1117] rounded-b-[1.5rem] px-4 py-3 flex items-center justify-between">
+                <Badge variant="green" size="sm">Voice</Badge>
+                <div className="flex items-center gap-2">
+                  {!isPlaying && !playComplete && (
+                    <button
+                      onClick={startPlayback}
+                      className="flex items-center gap-1.5 text-[10px] font-semibold text-white/70 hover:text-white transition-colors"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                      Play
+                    </button>
+                  )}
+                  {isPlaying && (
+                    <button
+                      onClick={pausePlayback}
+                      className="flex items-center gap-1.5 text-[10px] font-semibold text-white/70 hover:text-white transition-colors"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
+                      Pause
+                    </button>
+                  )}
+                  {(playComplete || visibleMessages > 1) && !isPlaying && (
+                    <button
+                      onClick={reset}
+                      className="flex items-center gap-1.5 text-[10px] font-semibold text-white/40 hover:text-white/70 transition-colors"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
+          </div>
 
-        <p className="text-sm text-boost-muted mt-10 max-w-xl leading-relaxed">
-          Organisations that deploy conversational voice see{" "}
-          <span className="font-semibold text-boost-dark">40% fewer escalations</span> and{" "}
-          <span className="font-semibold text-boost-dark">3× higher caller satisfaction</span>{" "}
-          compared to traditional IVR trees.
-        </p>
+          {/* ── Analysis panel — slides in after "Analyze" ── */}
+          {isAnalyzing && (
+            <div
+              className="flex-1 min-w-0 animate-modal-in"
+              style={{ animationDuration: "500ms" }}
+            >
+              <div className="bg-white rounded-xl border border-boost-border p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-xs font-bold text-boost-dark">Under the Hood</p>
+                    <p className="text-[10px] text-boost-muted">What the AI processed during this call</p>
+                  </div>
+                  {analyzeStep === "reviewing" && (
+                    <div className="flex items-center gap-1.5 text-[10px] text-boost-muted">
+                      <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" strokeOpacity="0.2" />
+                        <path d="M22 12a10 10 0 01-10 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                      </svg>
+                      Analyzing…
+                    </div>
+                  )}
+                  {analyzeStep === "review-done" && (
+                    <Badge variant="green" size="sm">Complete</Badge>
+                  )}
+                </div>
+
+                {/* Analysis categories */}
+                <div className="space-y-3">
+                  {ANALYSIS_CATEGORIES.map((cat, i) => (
+                    <div
+                      key={cat.key}
+                      className="transition-all"
+                      style={{
+                        opacity: analyzeStep === "review-done" ? 1 : analyzeStep === "reviewing" ? 0.4 : 0,
+                        transform: analyzeStep === "review-done" ? "translateY(0)" : "translateY(8px)",
+                        transitionDuration: "400ms",
+                        transitionDelay: analyzeStep === "review-done" ? `${i * 100}ms` : "0ms",
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <p className="text-[11px] font-semibold text-boost-dark">{cat.label}</p>
+                          <p className="text-[10px] text-boost-muted leading-relaxed mt-0.5">{cat.description}</p>
+                        </div>
+                        <span className={`text-[10px] font-bold shrink-0 tabular-nums ${cat.color}`}>
+                          {cat.metric}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Per-message analysis log */}
+                {analyzeStep === "review-done" && (
+                  <div className="mt-5 pt-4 border-t border-boost-border">
+                    <p className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.12em] mb-3">
+                      Message-level detail
+                    </p>
+                    <div className="space-y-2 max-h-[280px] overflow-y-auto">
+                      {VOICE_SCRIPT.filter((m) => m.analysis).map((msg, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <span className="text-[9px] text-boost-muted tabular-nums w-7 shrink-0 text-right mt-0.5">
+                            {msg.time}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            {msg.speaker === "caller" && msg.analysis?.sttConfidence && (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-boost-surface text-boost-muted font-medium">
+                                  STT {Math.round(msg.analysis.sttConfidence * 100)}%
+                                </span>
+                                {msg.analysis.detectedIntent && (
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-boost-green-light/8 text-boost-green font-medium">
+                                    {msg.analysis.detectedIntent}
+                                  </span>
+                                )}
+                                {msg.analysis.sentiment && (
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-boost-surface text-boost-muted font-medium capitalize">
+                                    {msg.analysis.sentiment}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {msg.speaker === "agent" && msg.analysis?.action && (
+                              <p className="text-[9px] text-boost-dark/70">
+                                <span className="text-boost-purple font-semibold mr-1">Action:</span>
+                                {msg.analysis.action}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Waveform animation keyframes */}
+      {/* Waveform animation */}
       <style jsx>{`
         @keyframes voice-wave {
           0% { transform: scaleY(1); }
