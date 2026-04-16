@@ -288,7 +288,7 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
                   <img
                     src={companyLogoUrl}
                     alt=""
-                    className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
+                    className="w-6 h-6 sm:w-7 sm:h-7 object-contain"
                   />
                 </div>
               ) : !logoLoading ? (
