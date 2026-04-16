@@ -28,6 +28,7 @@ export {
 import { BANKING_AGENTS, BANKING_STANDALONE, BANKING_TOPIC_GROUPS } from "./banking";
 import { INSURANCE_AGENTS, INSURANCE_TOPIC_GROUPS } from "./insurance";
 import { PENSION_AGENTS, PENSION_TOPIC_GROUPS } from "./pension";
+import { WEALTH_MANAGEMENT_AGENTS, WEALTH_MANAGEMENT_TOPIC_GROUPS } from "./wealth_management";
 
 import type { AgentTier, OrchestratorConfig, SpecialistAgent, TopicGroup } from "./_types";
 import { filterAgentsByVariants } from "./_types";
@@ -129,6 +130,10 @@ export const ORCHESTRATOR_BY_INDUSTRY: Record<string, OrchestratorConfig> = {
     standaloneAgents: [],
     topicGroups: PENSION_TOPIC_GROUPS,
   },
+  wealth_management: {
+    standaloneAgents: [],
+    topicGroups: WEALTH_MANAGEMENT_TOPIC_GROUPS,
+  },
 };
 
 /**
@@ -197,4 +202,4 @@ export function getAgentsForGuide(
   });
 }
 
-export const SPECIALIST_AGENTS = [...INSURANCE_AGENTS, ...BANKING_AGENTS, ...PENSION_AGENTS];
+export const SPECIALIST_AGENTS = [...INSURANCE_AGENTS, ...BANKING_AGENTS, ...PENSION_AGENTS, ...WEALTH_MANAGEMENT_AGENTS];
