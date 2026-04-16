@@ -148,8 +148,8 @@ export const DEFAULTS: SectionContentMap = {
     ],
   },
 
-  // ─── Core Components ───
-  "core-components": {
+  // ─── Platform & Vision (was Core Components) ───
+  "platform-vision": {
     sectionTitle: "Platform Components",
     sectionSubtitle: "The building blocks that power your AI customer experience",
     components: [

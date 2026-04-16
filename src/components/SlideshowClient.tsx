@@ -12,7 +12,7 @@ import HeroSection from "@/components/sections/HeroSection";
 import OrchestratorSection from "@/components/sections/OrchestratorSection";
 import TopicHubSection from "@/components/sections/TopicHubSection";
 import DemoPreviewSection from "@/components/sections/DemoPreviewSection";
-import CoreComponentsSection from "@/components/sections/CoreComponentsSection";
+import PlatformVisionSection from "@/components/sections/PlatformVisionSection";
 import VoiceSection from "@/components/sections/VoiceSection";
 import ImpactSection from "@/components/sections/ImpactSection";
 import TrustValidationSection from "@/components/sections/TrustValidationSection";
@@ -136,8 +136,8 @@ export default function SlideshowClient({
         return <OrchestratorSection guide={guide} />;
       case "topics":
         return <TopicHubSection guide={guide} onNavigate={handleTopicNavigate} />;
-      case "core-components":
-        return <CoreComponentsSection guide={guide} />;
+      case "platform-vision":
+        return <PlatformVisionSection guide={guide} />;
       case "voice":
         return <VoiceSection guide={guide} />;
       case "demo":

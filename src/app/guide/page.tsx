@@ -59,7 +59,10 @@ function GuideContent() {
   };
 
   const sectionsParam = searchParams.get("sections");
-  const sectionIds = sectionsParam ? sectionsParam.split(",") : undefined;
+  // Backwards-compat shim: old URLs reference "core-components" — rewrite to new id.
+  const sectionIds = sectionsParam
+    ? sectionsParam.split(",").map((id) => (id === "core-components" ? "platform-vision" : id))
+    : undefined;
 
   return <GuideClient guide={guide} sectionIds={sectionIds} />;
 }

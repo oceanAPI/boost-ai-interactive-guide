@@ -203,7 +203,7 @@ export interface SectionContentMap {
   "case-studies": CaseStudyContent;
   "trust-validation": TrustValidationContent;
   voice: VoiceContent;
-  "core-components": CoreComponentsContent;
+  "platform-vision": CoreComponentsContent;
   "impact-csat": ImpactContent;
   "impact-automation": ImpactContent;
   "impact-data": ImpactContent;

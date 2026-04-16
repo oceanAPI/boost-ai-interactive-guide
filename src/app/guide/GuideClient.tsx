@@ -11,7 +11,7 @@ import OrchestratorSection from "@/components/sections/OrchestratorSection";
 import TopicHubSection from "@/components/sections/TopicHubSection";
 import TopicSection from "@/components/sections/topics/TopicSection";
 import DemoPreviewSection from "@/components/sections/DemoPreviewSection";
-import CoreComponentsSection from "@/components/sections/CoreComponentsSection";
+import PlatformVisionSection from "@/components/sections/PlatformVisionSection";
 import VoiceSection from "@/components/sections/VoiceSection";
 import ImpactSection from "@/components/sections/ImpactSection";
 import TrustValidationSection from "@/components/sections/TrustValidationSection";
@@ -36,7 +36,7 @@ const SECTIONS = [
     label: t.name,
     icon: "·",
   })),
-  { id: "core-components", label: "Platform Components", icon: "⚙" },
+  { id: "platform-vision", label: "Platform & Vision", icon: "⚙" },
   { id: "voice", label: "Voice Preview", icon: "◉" },
   { id: "demo", label: "Chat Preview", icon: "▶" },
   { id: "impact", label: "Business Impact", icon: "△" },
@@ -213,9 +213,9 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
             );
           })}
 
-          {(!activeSectionSet || activeSectionSet.has("core-components")) && (
-            <div id="core-components" ref={(el) => { sectionRefs.current["core-components"] = el; }}>
-              <CoreComponentsSection guide={guide} />
+          {(!activeSectionSet || activeSectionSet.has("platform-vision")) && (
+            <div id="platform-vision" ref={(el) => { sectionRefs.current["platform-vision"] = el; }}>
+              <PlatformVisionSection guide={guide} />
             </div>
           )}
 

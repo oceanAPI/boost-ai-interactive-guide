@@ -59,7 +59,11 @@ function SlidesContent() {
     custom_notes: formData.custom_notes || "",
   };
 
-  const sectionIds = sectionsParam.split(",").filter(Boolean);
+  // Backwards-compat shim: old URLs reference "core-components" — rewrite to new id.
+  const sectionIds = sectionsParam
+    .split(",")
+    .filter(Boolean)
+    .map((id) => (id === "core-components" ? "platform-vision" : id));
 
   return <SlideshowClient guide={guide} sectionIds={sectionIds} />;
 }
