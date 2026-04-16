@@ -5,6 +5,7 @@ import type { GuideData } from "@/lib/types";
 import { assetPath } from "@/lib/asset-path";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
+import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 
 function computeDynamicStats(guide: GuideData) {
   const totalVolume = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0);
@@ -202,6 +203,7 @@ function ConstellationField() {
 export default function HeroSection({ guide }: { guide: GuideData }) {
   const { ref: statsRef, isVisible: statsVisible } = useScrollReveal({ once: true });
   const stats = computeDynamicStats(guide);
+  const { logoUrl: companyLogoUrl, loading: logoLoading } = useCompanyLogo(guide.company_url);
 
   return (
     <section className="relative overflow-hidden rounded-2xl hero-section">
@@ -257,8 +259,9 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
 
       {/* Content */}
       <div className="relative z-10 px-5 sm:px-8 max-w-4xl mx-auto pt-14 sm:pt-20 pb-8 sm:pb-12">
-        {/* Logo with glow */}
-        <div className="flex justify-center mb-8 sm:mb-10 hero-fade-in" style={{ animationDelay: "0.1s" }}>
+        {/* Co-branded logo bar */}
+        <div className="flex items-center justify-center gap-4 sm:gap-5 mb-8 sm:mb-10 hero-fade-in" style={{ animationDelay: "0.1s" }}>
+          {/* boost.ai logo */}
           <div className="relative">
             <div className="absolute inset-0 blur-2xl opacity-30 pointer-events-none"
               style={{ background: "radial-gradient(circle, rgba(54,181,149,0.4) 0%, transparent 70%)" }}
@@ -270,6 +273,35 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
               className="relative h-6 sm:h-7 w-auto opacity-80"
             />
           </div>
+
+          {/* Connector */}
+          {guide.company_name && (
+            <span className="text-white/15 text-[10px] font-light tracking-[0.2em] uppercase select-none">for</span>
+          )}
+
+          {/* Company mark — favicon or monogram fallback */}
+          {guide.company_name && (
+            <div className="flex items-center gap-2.5">
+              {companyLogoUrl ? (
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/[0.08] backdrop-blur-sm border border-white/[0.06] flex items-center justify-center overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={companyLogoUrl}
+                    alt=""
+                    className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
+                  />
+                </div>
+              ) : !logoLoading ? (
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/[0.08] backdrop-blur-sm border border-white/[0.06] flex items-center justify-center">
+                  <span className="text-white/60 text-sm sm:text-base font-semibold leading-none">
+                    {guide.company_name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              ) : (
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/[0.04] animate-pulse" />
+              )}
+            </div>
+          )}
         </div>
 
         {/* Accent line */}
