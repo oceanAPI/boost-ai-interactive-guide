@@ -243,7 +243,20 @@ export default function SalesforceImportModal({ open, onClose, currentForm, onAp
           {!selectedAccount ? (
             /* ─── Account picker ─── */
             <div className="p-5 space-y-2">
-              <p className="text-xs font-semibold text-boost-muted uppercase tracking-wider mb-3">Accounts</p>
+              {/* Placeholder disclaimer banner */}
+              <div className="mb-4 p-3 rounded-lg border border-[#00A1E0]/20 bg-[#00A1E0]/5">
+                <p className="text-xs text-boost-dark leading-relaxed">
+                  <span className="font-semibold">⚡ Fun fact —</span>{" "}
+                  <span className="text-boost-text-secondary">
+                    this Salesforce flow was scaffolded in under an hour.
+                    Real integration is literally just: your API key, a field
+                    mapping config, and a handshake. We&apos;ve done the hard part
+                    (the pretty UI). Plug-and-play when you&apos;re ready.
+                  </span>
+                </p>
+              </div>
+
+              <p className="text-xs font-semibold text-boost-muted uppercase tracking-wider mb-3">Demo Accounts</p>
               {SF_ACCOUNTS.map((account) => (
                 <button
                   key={account.id}
