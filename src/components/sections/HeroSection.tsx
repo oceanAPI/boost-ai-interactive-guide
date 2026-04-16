@@ -283,7 +283,7 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
           {guide.company_name && (
             <div className="flex items-center gap-2.5">
               {companyLogoUrl ? (
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white flex items-center justify-center overflow-hidden">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-md bg-white flex items-center justify-center overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={companyLogoUrl}
@@ -292,13 +292,13 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
                   />
                 </div>
               ) : !logoLoading ? (
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white flex items-center justify-center">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-md bg-white flex items-center justify-center">
                   <span className="text-boost-dark text-sm sm:text-base font-semibold leading-none">
                     {guide.company_name.charAt(0).toUpperCase()}
                   </span>
                 </div>
               ) : (
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white/20 animate-pulse" />
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-md bg-white/20 animate-pulse" />
               )}
             </div>
           )}

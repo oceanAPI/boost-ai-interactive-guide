@@ -22,8 +22,8 @@ interface CompanySearchProps {
  * Two-tier behaviour:
  *  1. On every keystroke → synchronous curated-library lookup (instant)
  *  2. If no curated match and query has been idle for 600ms → async web
- *     fallback (DuckDuckGo) returns a best-guess with a visible "guess"
- *     badge so the AE knows they should review before applying.
+ *     fallback (DuckDuckGo). Web results are visually de-emphasised with
+ *     an unobtrusive source label so AEs know to verify before applying.
  *
  * Every apply + every "no match" query is logged to localStorage for
  * later curation review.
@@ -55,22 +55,18 @@ export default function CompanySearch({ onApply }: CompanySearchProps) {
     const curated = detectCompanyFast(query);
     setResults(curated);
 
-    // Clear previous timers before scheduling new ones
     if (webTimerRef.current) clearTimeout(webTimerRef.current);
     if (missLogTimerRef.current) clearTimeout(missLogTimerRef.current);
 
-    // Schedule web fallback only if curated empty
     if (curated.length === 0) {
       setWebLoading(true);
       webTimerRef.current = setTimeout(async () => {
         const q = query;
         const webResults = await detectCompany(q);
-        // Ignore if the user has moved on to a new query
         if (currentQueryRef.current !== q) return;
         setResults(webResults);
         setWebLoading(false);
 
-        // After the async round, if still no results, log the miss
         if (webResults.length === 0) {
           missLogTimerRef.current = setTimeout(() => {
             if (currentQueryRef.current === q) logSearch(q, null);
@@ -99,12 +95,10 @@ export default function CompanySearch({ onApply }: CompanySearchProps) {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  /* ── Reset active index when results change ── */
   useEffect(() => {
     setActiveIdx(0);
   }, [results]);
 
-  /* ── Apply a detection result ── */
   const applyResult = useCallback(
     (result: DetectionResult) => {
       const key =
@@ -120,7 +114,6 @@ export default function CompanySearch({ onApply }: CompanySearchProps) {
     [query, onApply],
   );
 
-  /* ── Keyboard navigation ── */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!open || results.length === 0) {
       if (e.key === "Escape") setOpen(false);
@@ -140,23 +133,6 @@ export default function CompanySearch({ onApply }: CompanySearchProps) {
     }
   };
 
-  /* ── Shared badge colours per source ── */
-  const sourceBadge = (result: DetectionResult) => {
-    if (result.source === "curated") {
-      return {
-        text: result.match?.country || "",
-        className:
-          "w-8 h-8 rounded-md bg-boost-surface border border-boost-border flex items-center justify-center text-[10px] font-bold text-boost-muted shrink-0",
-      };
-    }
-    // web = best-guess
-    return {
-      text: "✨",
-      className:
-        "w-8 h-8 rounded-md bg-amber-50 border border-amber-200 flex items-center justify-center text-[14px] shrink-0",
-    };
-  };
-
   return (
     <div ref={wrapperRef} className="relative">
       <label className="block text-sm font-medium text-boost-text-secondary mb-1">
@@ -164,16 +140,18 @@ export default function CompanySearch({ onApply }: CompanySearchProps) {
         <span className="text-boost-muted font-normal ml-1">(optional)</span>
       </label>
 
-      {/* Input with search icon */}
+      {/* Input */}
       <div className="relative">
         <svg
-          width="16"
-          height="16"
+          width="15"
+          height="15"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-boost-muted pointer-events-none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-boost-muted pointer-events-none"
         >
           <circle cx="11" cy="11" r="7" />
           <path d="M21 21l-4.35-4.35" />
@@ -187,98 +165,114 @@ export default function CompanySearch({ onApply }: CompanySearchProps) {
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Search company name or paste URL…"
-          className="w-full pl-9 pr-3 py-2 bg-white border border-boost-border rounded-lg text-boost-dark placeholder-boost-lavender focus:outline-none focus:ring-2 focus:ring-boost-green-light focus:border-transparent transition-colors text-sm"
+          placeholder="Search company or paste URL"
+          className="w-full pl-10 pr-3 py-2.5 bg-white border border-boost-border rounded-lg text-boost-dark placeholder-boost-muted/70 focus:outline-none focus-visible:outline-none focus:border-boost-muted/50 transition-colors text-[13px] tracking-tight"
+          style={{ outline: "none", outlineColor: "transparent" }}
           autoComplete="off"
         />
       </div>
 
       {/* Helper text */}
       {!query && (
-        <p className="text-xs text-boost-muted mt-1">
-          Curated Nordic financial-services library · web fallback for unknowns
+        <p className="text-[11px] text-boost-muted mt-1.5 tracking-tight">
+          Curated library · web fallback when nothing matches
         </p>
       )}
 
       {/* Results dropdown */}
       {open && query.length >= 1 && (
-        <div className="absolute z-20 mt-1 w-full bg-white rounded-lg border border-boost-border shadow-lg overflow-hidden">
+        <div className="absolute z-20 mt-1.5 w-full bg-white rounded-xl border border-boost-border overflow-hidden" style={{
+          boxShadow: "0 1px 2px rgba(35,21,40,0.04), 0 8px 24px -8px rgba(35,21,40,0.12)",
+        }}>
           {results.length === 0 ? (
-            <div className="px-3 py-3 text-sm text-boost-muted">
+            <div className="px-4 py-3.5 text-[13px] text-boost-muted">
               {query.length < 2 ? (
-                "Keep typing…"
+                <span>Keep typing…</span>
               ) : webLoading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="w-3.5 h-3.5 animate-spin text-boost-green-light" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.2" />
-                    <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                <span className="flex items-center gap-2.5">
+                  <svg className="w-3.5 h-3.5 animate-spin text-boost-muted" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" strokeOpacity="0.2" />
+                    <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
                   </svg>
-                  Searching the web for <span className="text-boost-dark font-medium">{query}</span>…
+                  <span>Searching for <span className="text-boost-dark">{query}</span></span>
                 </span>
               ) : (
-                <>
-                  <span className="block">
-                    No match for <span className="text-boost-dark font-medium">{query}</span>
-                  </span>
-                  <span className="text-xs">
-                    We&apos;ve noted it so we can add it to the library later.
-                  </span>
-                </>
+                <div className="space-y-0.5">
+                  <p>
+                    No match for <span className="text-boost-dark">{query}</span>
+                  </p>
+                  <p className="text-[11px] text-boost-muted/80">
+                    Noted — we&apos;ll add it to the library.
+                  </p>
+                </div>
               )}
             </div>
           ) : (
             <ul className="py-1 max-h-80 overflow-y-auto">
               {results.map((r, i) => {
-                const badge = sourceBadge(r);
+                const active = i === activeIdx;
+                const isWeb = r.source === "web";
                 return (
                   <li key={`${r.source}-${r.match?.name || i}`}>
                     <button
                       type="button"
                       onClick={() => applyResult(r)}
                       onMouseEnter={() => setActiveIdx(i)}
-                      className={`w-full flex items-start gap-3 px-3 py-2.5 text-left transition-colors ${
-                        i === activeIdx
-                          ? r.source === "web"
-                            ? "bg-amber-50/60"
-                            : "bg-boost-green-light/10"
-                          : "hover:bg-boost-surface"
+                      className={`group w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors ${
+                        active ? "bg-boost-surface" : "hover:bg-boost-surface/60"
                       }`}
                     >
-                      <span className={badge.className}>{badge.text}</span>
+                      {/* Source glyph */}
+                      <span className="shrink-0 w-8 h-8 rounded-md bg-white border border-boost-border flex items-center justify-center">
+                        {isWeb ? (
+                          <svg className="w-3.5 h-3.5 text-boost-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18" />
+                          </svg>
+                        ) : (
+                          <span className="text-[10px] font-semibold text-boost-dark/70 tracking-wider">
+                            {r.match?.country}
+                          </span>
+                        )}
+                      </span>
+
+                      {/* Text column */}
                       <div className="flex-1 min-w-0 py-0.5">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className="text-sm font-semibold text-boost-dark truncate">
+                        <div className="flex items-baseline gap-2 mb-0.5">
+                          <p className="text-[13px] font-semibold text-boost-dark truncate tracking-tight">
                             {r.match?.name}
                           </p>
-                          {r.source === "web" && (
-                            <span className="text-[9px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
-                              Best guess
+                          {isWeb && (
+                            <span className="text-[10px] font-medium text-boost-muted/80 uppercase tracking-[0.08em] shrink-0">
+                              Web
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-boost-muted truncate">
+                        <p className="text-[11.5px] text-boost-muted truncate">
                           {r.match?.category}
-                          {r.match?.domain && ` · ${r.match.domain}`}
+                          {r.match?.domain && (
+                            <span className="text-boost-muted/60">  ·  {r.match.domain}</span>
+                          )}
                         </p>
-                        {r.source === "web" && r.match?.summary && (
-                          <p className="text-[11px] text-boost-muted/80 mt-1 line-clamp-2">
+                        {isWeb && r.match?.summary && (
+                          <p className="text-[11px] text-boost-muted/80 mt-1 line-clamp-2 leading-relaxed">
                             {r.match.summary}
                           </p>
                         )}
                       </div>
+
+                      {/* Chevron */}
                       <svg
-                        width="14"
-                        height="14"
+                        width="12"
+                        height="12"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="2"
-                        className={`shrink-0 mt-1.5 transition-colors ${
-                          i === activeIdx
-                            ? r.source === "web"
-                              ? "text-amber-600"
-                              : "text-boost-green-light"
-                            : "text-boost-muted/40"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className={`shrink-0 mt-2 transition-opacity ${
+                          active ? "text-boost-muted opacity-100" : "text-boost-muted/30 opacity-0 group-hover:opacity-100"
                         }`}
                       >
                         <path d="M9 5l7 7-7 7" />
@@ -289,6 +283,7 @@ export default function CompanySearch({ onApply }: CompanySearchProps) {
               })}
             </ul>
           )}
+
         </div>
       )}
     </div>
