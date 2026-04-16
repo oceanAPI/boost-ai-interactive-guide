@@ -276,14 +276,14 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
 
           {/* Connector */}
           {guide.company_name && (
-            <span className="text-white/40 text-[10px] font-medium tracking-[0.2em] uppercase select-none">for</span>
+            <span className="text-white text-[10px] font-medium tracking-[0.2em] uppercase select-none opacity-80">for</span>
           )}
 
           {/* Company mark — favicon or monogram fallback */}
           {guide.company_name && (
             <div className="flex items-center gap-2.5">
               {companyLogoUrl ? (
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/10 backdrop-blur-sm border border-white/15 flex items-center justify-center overflow-hidden">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/10 backdrop-blur-sm border-2 border-white/40 flex items-center justify-center overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={companyLogoUrl}
@@ -292,8 +292,8 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
                   />
                 </div>
               ) : !logoLoading ? (
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/10 backdrop-blur-sm border border-white/15 flex items-center justify-center">
-                  <span className="text-white/80 text-sm sm:text-base font-semibold leading-none">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/10 backdrop-blur-sm border-2 border-white/40 flex items-center justify-center">
+                  <span className="text-white text-sm sm:text-base font-semibold leading-none">
                     {guide.company_name.charAt(0).toUpperCase()}
                   </span>
                 </div>
