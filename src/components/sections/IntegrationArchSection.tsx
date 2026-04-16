@@ -122,6 +122,8 @@ function IconBlock({ node, size = "md", delay, visible }: {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  const isYourPick = !node.isStatic;
+
   return (
     <div ref={ref} className="relative">
       <button
@@ -140,16 +142,25 @@ function IconBlock({ node, size = "md", delay, visible }: {
       >
         <div
           className={`
-            ${dims[size]} rounded-xl bg-white border-2 flex items-center justify-center shadow-sm
+            ${dims[size]} relative rounded-xl bg-white flex items-center justify-center
+            border border-boost-border/50
+            shadow-[0_1px_2px_rgba(35,21,40,0.04)]
             transition-all duration-200
             ${open
-              ? "border-boost-green ring-2 ring-boost-green/20 shadow-md scale-110"
-              : "border-boost-purple/20 group-hover:border-boost-purple/40 group-hover:shadow-md"
+              ? "ring-2 ring-boost-green/30 shadow-md scale-110 border-boost-green/60"
+              : "group-hover:border-boost-purple/30 group-hover:shadow-md group-hover:-translate-y-0.5"
             }
           `}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={assetPath(`/icons/purple/${node.icon}.svg`)} alt="" className={iconDims[size]} />
+          {/* Tiny green dot signalling "selected in admin" */}
+          {isYourPick && (
+            <span
+              className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-boost-green-light border-2 border-white"
+              aria-label="Selected in admin"
+            />
+          )}
         </div>
         <span className={`
           text-[9px] font-semibold text-center leading-tight max-w-[72px]
@@ -162,16 +173,22 @@ function IconBlock({ node, size = "md", delay, visible }: {
       {/* Popover — floats above the icon */}
       {open && (
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 animate-modal-in">
-          <div className="bg-white rounded-xl border border-boost-border shadow-xl p-3 w-[240px]">
-            <div className="flex items-start gap-2">
+          <div className="bg-white rounded-xl border border-boost-border shadow-xl p-3 w-[260px]">
+            <div className="flex items-start gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-boost-purple/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={assetPath(`/icons/purple/${node.icon}.svg`)} alt="" className="w-4 h-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h4 className="text-xs font-semibold text-boost-dark">{node.label}</h4>
-                  {node.category && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h4 className="text-[13px] font-semibold text-boost-dark">{node.label}</h4>
+                  {isYourPick && (
+                    <span className="inline-flex items-center gap-1 text-[8px] uppercase tracking-[0.1em] font-bold text-boost-green bg-boost-green/10 px-1.5 py-0.5 rounded-full">
+                      <span className="w-1 h-1 rounded-full bg-boost-green-light" />
+                      Your pick
+                    </span>
+                  )}
+                  {node.category && !isYourPick && (
                     <span className="text-[7px] uppercase tracking-widest font-bold text-boost-muted bg-boost-surface px-1 py-0.5 rounded">
                       {node.category.replace(/_/g, " ")}
                     </span>
@@ -189,63 +206,66 @@ function IconBlock({ node, size = "md", delay, visible }: {
   );
 }
 
-/* ─── Vertical connector arrow ─── */
-function ZoneConnector({ label, delay, visible, color = "#59195d" }: {
+// Orchestrator-matching connector color
+const IA_CONNECTOR_COLOR = "rgba(89,25,93,0.18)";
+
+/* ─── Vertical connector — thin solid line, matches orchestrator ─── */
+function ZoneConnector({ delay, visible }: {
   label?: string; delay: number; visible: boolean; color?: string;
 }) {
   return (
     <div
-      className={`flex flex-col items-center py-2 transition-all duration-600 ${visible ? "opacity-100" : "opacity-0"}`}
+      className={`flex justify-center py-2 transition-all duration-500 ${visible ? "opacity-100" : "opacity-0"}`}
       style={{ transitionDelay: `${delay}ms` }}
+      aria-hidden="true"
     >
-      {label && (
-        <span className="text-[8px] font-medium uppercase tracking-widest mb-0.5" style={{ color, opacity: 0.5 }}>
-          {label}
-        </span>
-      )}
-      <svg width="24" height="28" viewBox="0 0 24 28" fill="none">
-        <line x1="12" y1="0" x2="12" y2="22" stroke={color} strokeWidth="1.5" opacity="0.35" />
-        <polygon points="8,20 12,28 16,20" fill={color} opacity="0.4" />
-      </svg>
+      <div className="w-px h-8" style={{ backgroundColor: IA_CONNECTOR_COLOR }} />
     </div>
   );
 }
 
-/* ─── Zone container ─── */
-function Zone({ label, bg, border, children, delay, visible, className = "" }: {
-  label: string; bg: string; border: string; children: React.ReactNode;
-  delay: number; visible: boolean; className?: string;
+/* ─── Zone container — label above, soft backdrop, no floating border label ─── */
+function Zone({ label, children, delay, visible, className = "", compact = false }: {
+  label: string; bg?: string; border?: string; children: React.ReactNode;
+  delay: number; visible: boolean; className?: string; compact?: boolean;
 }) {
   return (
     <div
-      className={`
-        relative rounded-xl border px-4 py-4 transition-all duration-700
-        ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}
-        ${className}
-      `}
-      style={{ background: bg, borderColor: border, transitionDelay: `${delay}ms` }}
+      className={`flex flex-col items-stretch transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"} ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
     >
-      <div
-        className="absolute -top-2.5 left-4 px-2 text-[9px] font-bold uppercase tracking-[0.15em]"
-        style={{ color: border, background: "white" }}
-      >
-        {label}
+      {/* Small caps label above */}
+      <div className="text-center mb-2">
+        <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-boost-muted/70">
+          {label}
+        </span>
       </div>
-      {children}
+
+      {/* Soft backdrop — airy, no heavy border */}
+      <div
+        className={`rounded-xl ${compact ? "px-3 py-3" : "px-4 py-4"}`}
+        style={{
+          background: "rgba(255,255,255,0.5)",
+          border: "1px solid rgba(89,25,93,0.08)",
+          boxShadow: "0 1px 2px rgba(35,21,40,0.02)",
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }
 
-/* ─── Horizontal arrow ─── */
-function HArrow({ delay, visible, color = "#59195d" }: { delay: number; visible: boolean; color?: string }) {
+/* ─── Horizontal arrow — subtle chevron ─── */
+function HArrow({ delay, visible }: { delay: number; visible: boolean; color?: string }) {
   return (
     <div
-      className={`flex items-center px-0.5 transition-all duration-500 ${visible ? "opacity-100" : "opacity-0"}`}
+      className={`flex items-center px-1 transition-all duration-500 ${visible ? "opacity-100" : "opacity-0"}`}
       style={{ transitionDelay: `${delay}ms` }}
+      aria-hidden="true"
     >
-      <svg width="24" height="12" viewBox="0 0 24 12" fill="none">
-        <line x1="0" y1="6" x2="18" y2="6" stroke={color} strokeWidth="1.5" opacity="0.3" />
-        <polygon points="16,3 24,6 16,9" fill={color} opacity="0.35" />
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(89,25,93,0.35)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="9 6 15 12 9 18" />
       </svg>
     </div>
   );
@@ -279,155 +299,158 @@ function DesktopDiagram({ channels, handover, utility, auth, voiceNodes, visible
     <div className="flex flex-col items-center gap-0">
 
       {/* Zone 1: End Users */}
-      <Zone label="End Users" bg="rgba(122,107,128,0.04)" border="#b8a9be" delay={300} visible={visible}>
+      <Zone label="End Users" delay={300} visible={visible}>
         <div className="flex justify-center gap-8 pt-1">
           <IconBlock node={{ label: "Chat User", icon: "chat", description: "Web and messaging users interacting through text-based channels.", isStatic: true }} delay={400} visible={visible} />
           <IconBlock node={{ label: "Voice User", icon: "phone", description: "Users calling in via IVR, WebRTC, or SIP-based voice channels.", isStatic: true }} delay={450} visible={visible} />
         </div>
       </Zone>
 
-      <ZoneConnector label="WebRTC / HTTPS" delay={500} visible={visible} color="#7a6b80" />
+      <ZoneConnector delay={500} visible={visible} />
 
       {/* Zone 2: Channels (dynamic) */}
-      <Zone label="Your Channels" bg="rgba(122,107,128,0.04)" border="#b8a9be" delay={500} visible={visible}>
+      <Zone label="Your Channels" delay={500} visible={visible}>
         <div className="flex flex-wrap justify-center gap-4 pt-1">
           {allChannels.slice(0, 6).map((node, i) => (
-            <IconBlock key={node.label} node={node} size="sm" delay={550 + i * 50} visible={visible}
-              />
+            <IconBlock key={node.label} node={node} size="sm" delay={550 + i * 50} visible={visible} />
           ))}
         </div>
       </Zone>
 
-      <ZoneConnector label="HTTPS" delay={700} visible={visible} />
+      <ZoneConnector delay={700} visible={visible} />
 
-      {/* Zone 3: boost.ai Platform */}
+      {/* Zone 3: boost.ai Platform — flattened (sub-sections use subtle dividers, not rectangles) */}
       <Zone
         label="boost.ai Enterprise Conversational AI Platform"
-        bg="rgba(89,25,93,0.03)"
-        border="rgba(89,25,93,0.25)"
         delay={700}
         visible={visible}
-        className="w-full max-w-[700px]"
+        className="w-full max-w-[720px]"
       >
-        <div className="flex flex-col items-center gap-3 pt-2">
+        <div className="flex flex-col items-stretch gap-5 pt-1">
 
-          {/* Core Services */}
+          {/* Core Services — no rectangle, just a label + row */}
           <div
-            className={`w-full rounded-lg border border-boost-green/20 bg-boost-green/[0.04] p-3 transition-all duration-600 ${visible ? "opacity-100" : "opacity-0"}`}
+            className={`transition-all duration-600 ${visible ? "opacity-100" : "opacity-0"}`}
             style={{ transitionDelay: "850ms" }}
           >
-            <div className="text-[8px] font-bold uppercase tracking-[0.15em] text-boost-green/60 text-center mb-3">
+            <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-boost-muted/70 text-center mb-3">
               Core Services
             </div>
             <div className="flex items-center justify-center gap-1 flex-wrap">
               {PLATFORM_CORE.map((node, i) => (
                 <div key={node.label} className="flex items-center gap-0">
-                  <IconBlock node={node} size="md" delay={900 + i * 80} visible={visible}
-                    />
-                  {i < PLATFORM_CORE.length - 1 && <HArrow delay={950 + i * 80} visible={visible} color="#208269" />}
+                  <IconBlock node={node} size="md" delay={900 + i * 80} visible={visible} />
+                  {i < PLATFORM_CORE.length - 1 && <HArrow delay={950 + i * 80} visible={visible} />}
                 </div>
               ))}
             </div>
           </div>
 
-          <ZoneConnector delay={1100} visible={visible} />
+          {/* Subtle divider */}
+          <div className="h-px mx-4" style={{ backgroundColor: "rgba(89,25,93,0.08)" }} aria-hidden="true" />
 
-          {/* Processing + Handover (dynamic) */}
+          {/* Processing + Handover */}
           <div
-            className={`w-full rounded-lg border border-boost-purple/15 bg-boost-purple/[0.03] p-3 transition-all duration-600 ${visible ? "opacity-100" : "opacity-0"}`}
+            className={`transition-all duration-600 ${visible ? "opacity-100" : "opacity-0"}`}
             style={{ transitionDelay: "1050ms" }}
           >
-            <div className="text-[8px] font-bold uppercase tracking-[0.15em] text-boost-purple/50 text-center mb-3">
+            <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-boost-muted/70 text-center mb-3">
               Processing &amp; Handover
             </div>
             <div className="flex items-center justify-center gap-1 flex-wrap">
               {processingNodes.slice(0, 5).map((node, i) => (
                 <div key={node.label} className="flex items-center gap-0">
-                  <IconBlock node={node} size="md" delay={1100 + i * 70} visible={visible}
-                    />
+                  <IconBlock node={node} size="md" delay={1100 + i * 70} visible={visible} />
                   {i < processingNodes.length - 1 && i < 4 && <HArrow delay={1130 + i * 70} visible={visible} />}
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Auth row (dynamic) */}
+          {/* Auth row */}
           {authRow.length > 0 && (
-            <div
-              className={`w-full rounded-lg border border-boost-purple/10 bg-white p-2.5 transition-all duration-600 ${visible ? "opacity-100" : "opacity-0"}`}
-              style={{ transitionDelay: "1200ms" }}
-            >
-              <div className="text-[8px] font-bold uppercase tracking-[0.15em] text-boost-purple/40 text-center mb-2">
-                Authentication
+            <>
+              <div className="h-px mx-4" style={{ backgroundColor: "rgba(89,25,93,0.08)" }} aria-hidden="true" />
+              <div
+                className={`transition-all duration-600 ${visible ? "opacity-100" : "opacity-0"}`}
+                style={{ transitionDelay: "1200ms" }}
+              >
+                <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-boost-muted/70 text-center mb-3">
+                  Authentication
+                </div>
+                <div className="flex items-center justify-center gap-4 flex-wrap">
+                  {authRow.map((node, i) => (
+                    <IconBlock key={node.label} node={node} size="sm" delay={1250 + i * 60} visible={visible} />
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center justify-center gap-3 flex-wrap">
-                {authRow.map((node, i) => (
-                  <IconBlock key={node.label} node={node} size="sm" delay={1250 + i * 60} visible={visible}
-                    />
-                ))}
-              </div>
-            </div>
+            </>
           )}
 
-          {/* Guardrails bar */}
+          {/* Guardrails banner — soft pill, not a bordered card */}
           <div
-            className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-boost-purple/15 bg-white transition-all duration-600 ${visible ? "opacity-100" : "opacity-0"}`}
+            className={`transition-all duration-600 ${visible ? "opacity-100" : "opacity-0"}`}
             style={{ transitionDelay: "1300ms" }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={assetPath("/icons/purple/shield-medal.svg")} alt="" className="w-4 h-4" />
-            <span className="text-[9px] uppercase tracking-[0.12em] font-bold text-boost-purple/60">
-              Guardrails &amp; Compliance Layer
-            </span>
+            <div
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-full mx-auto max-w-max"
+              style={{
+                background: "linear-gradient(90deg, rgba(89,25,93,0.08), rgba(54,181,149,0.06))",
+                border: "1px solid rgba(89,25,93,0.1)",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={assetPath("/icons/purple/shield-medal.svg")} alt="" className="w-3.5 h-3.5" />
+              <span className="text-[9px] uppercase tracking-[0.15em] font-semibold text-boost-purple/70">
+                Guardrails &amp; Compliance Layer
+              </span>
+            </div>
           </div>
         </div>
       </Zone>
 
-      {/* Connectors fanning out */}
-      <div
-        className={`flex items-start justify-center gap-16 xl:gap-24 transition-all duration-700 ${visible ? "opacity-100" : "opacity-0"}`}
-        style={{ transitionDelay: "1350ms" }}
-      >
-        <ZoneConnector delay={1400} visible={visible} color="#59195d" />
-        <ZoneConnector label="HTTPS" delay={1450} visible={visible} color="#208269" />
-        <ZoneConnector delay={1500} visible={visible} color="#ef8b00" />
-      </div>
+      <ZoneConnector delay={1400} visible={visible} />
 
-      {/* Zone 4: External systems (3 groups) */}
-      <div className="grid grid-cols-3 gap-3 w-full max-w-[700px]">
-        {/* Data Layer */}
-        <Zone label="Data Layer" bg="rgba(89,25,93,0.03)" border="rgba(89,25,93,0.2)" delay={1450} visible={visible}>
+      {/* Zone 4: External systems (3 groups, flat) */}
+      <div className="grid grid-cols-3 gap-4 w-full max-w-[720px]">
+        <Zone label="Data Layer" delay={1450} visible={visible} compact>
           <div className="flex flex-col items-center gap-3 pt-1">
             <IconBlock node={{ label: "PostgreSQL", icon: "cloud-network-3671763", description: "Primary relational database for conversation logs, analytics, and configuration.", isStatic: true }} size="sm" delay={1550} visible={visible} />
             <IconBlock node={{ label: "File Storage", icon: "books", description: "Document and model storage for knowledge base files and ML training artifacts.", isStatic: true }} size="sm" delay={1600} visible={visible} />
           </div>
         </Zone>
 
-        {/* LLM Providers */}
-        <Zone label="LLM Providers" bg="rgba(32,130,105,0.04)" border="rgba(32,130,105,0.25)" delay={1500} visible={visible}>
+        <Zone label="LLM Providers" delay={1500} visible={visible} compact>
           <div className="flex flex-col items-center gap-3 pt-1">
             <IconBlock node={{ label: "Boost LLM", icon: "brain-integration", description: "boost.ai's own fine-tuned language models, optimized for enterprise conversations and compliance.", isStatic: true }} size="sm" delay={1600} visible={visible} />
             <IconBlock node={{ label: "Bring Your Own", icon: "brain-setting", description: "Connect your preferred LLM — Azure OpenAI, AWS Bedrock, Google Vertex AI, or any OpenAI-compatible endpoint.", isStatic: true }} size="sm" delay={1650} visible={visible} />
           </div>
         </Zone>
 
-        {/* Your Systems (dynamic) */}
-        <Zone label="Your Systems" bg="rgba(239,139,0,0.04)" border="rgba(239,139,0,0.25)" delay={1550} visible={visible}>
+        <Zone label="Your Systems" delay={1550} visible={visible} compact>
           <div className="flex flex-col items-center gap-3 pt-1">
             {utility.slice(0, 4).map((node, i) => (
-              <IconBlock key={node.label} node={node} size="sm" delay={1650 + i * 50} visible={visible}
-                />
+              <IconBlock key={node.label} node={node} size="sm" delay={1650 + i * 50} visible={visible} />
             ))}
           </div>
         </Zone>
       </div>
 
-      {/* External API */}
-      <ZoneConnector label="REST / Webhooks" delay={1750} visible={visible} color="#ef8b00" />
+      <ZoneConnector delay={1750} visible={visible} />
+
+      {/* Small REST / Webhooks chip */}
+      <div
+        className={`transition-opacity duration-500 ${visible ? "opacity-100" : "opacity-0"}`}
+        style={{ transitionDelay: "1780ms" }}
+      >
+        <span className="inline-block text-[8px] font-semibold uppercase tracking-[0.18em] text-boost-muted/60 px-2 py-0.5 rounded-full bg-white/60 border border-boost-border/40 mb-1">
+          REST / Webhooks
+        </span>
+      </div>
+
       <IconBlock
         node={{ label: "External APIs", icon: "computer-api-3671765", description: "Any REST, SOAP, or webhook-based API your organization exposes. boost.ai's API connector handles authentication, retries, and response mapping.", isStatic: true }}
         size="lg" delay={1800} visible={visible}
-       
       />
     </div>
   );
@@ -465,21 +488,18 @@ function MobileDiagram({ channels, handover, utility, auth, voiceNodes, visible 
         <div key={zone.label} className="w-full flex flex-col items-center">
           <Zone
             label={zone.label}
-            bg={`${zone.color}08`}
-            border={`${zone.color}40`}
             delay={300 + zIdx * 120}
             visible={visible}
             className="w-full"
           >
             <div className="flex flex-wrap justify-center gap-4 pt-1">
               {zone.nodes.map((node, i) => (
-                <IconBlock key={node.label} node={node} size="sm" delay={400 + zIdx * 120 + i * 40} visible={visible}
-                  />
+                <IconBlock key={node.label} node={node} size="sm" delay={400 + zIdx * 120 + i * 40} visible={visible} />
               ))}
             </div>
           </Zone>
           {zIdx < zones.length - 1 && (
-            <ZoneConnector delay={450 + zIdx * 120} visible={visible} color={zones[zIdx + 1].color} />
+            <ZoneConnector delay={450 + zIdx * 120} visible={visible} />
           )}
         </div>
       ))}
@@ -554,8 +574,12 @@ export default function IntegrationArchSection({
       {/* Desktop */}
       <div className="mt-10 hidden md:block">
         <div
-          className={`rounded-2xl border border-boost-border bg-white/80 p-5 xl:p-6 transition-all duration-700 ${visible ? "opacity-100" : "opacity-0"}`}
-          style={{ transitionDelay: "200ms" }}
+          className={`rounded-2xl p-5 xl:p-6 transition-all duration-700 ${visible ? "opacity-100" : "opacity-0"}`}
+          style={{
+            transitionDelay: "200ms",
+            background:
+              "radial-gradient(ellipse at 20% 0%, rgba(89,25,93,0.08), transparent 60%), radial-gradient(ellipse at 80% 100%, rgba(54,181,149,0.06), transparent 55%), linear-gradient(135deg, #f4eef5 0%, #eef5f2 100%)",
+          }}
         >
           <DesktopDiagram channels={channels} handover={handover} utility={utility} auth={auth} voiceNodes={voiceNodes} visible={visible} />
         </div>
@@ -563,7 +587,13 @@ export default function IntegrationArchSection({
 
       {/* Mobile */}
       <div className="mt-8 md:hidden">
-        <div className="rounded-2xl border border-boost-border bg-white/80 p-4">
+        <div
+          className="rounded-2xl p-4"
+          style={{
+            background:
+              "radial-gradient(ellipse at 20% 0%, rgba(89,25,93,0.08), transparent 60%), radial-gradient(ellipse at 80% 100%, rgba(54,181,149,0.06), transparent 55%), linear-gradient(135deg, #f4eef5 0%, #eef5f2 100%)",
+          }}
+        >
           <MobileDiagram channels={channels} handover={handover} utility={utility} auth={auth} voiceNodes={voiceNodes} visible={visible} />
         </div>
       </div>
