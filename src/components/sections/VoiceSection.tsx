@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { GuideData } from "@/lib/types";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -8,249 +8,298 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 /* ─────────────────────────────────────────────────────────────────────
  *  Voice AI — "Outstanding CX doesn't start with Press 1"
  *
- *  The design thesis: show, don't tell. The left side renders a
- *  traditional IVR tree (grey, numbered, rigid, visually frustrating).
- *  The right side renders a natural voice conversation (flowing
- *  transcript with real-time intent badges). The contrast makes the
- *  case without a single metric card.
+ *  Two distinct device UIs side by side:
+ *    Left:  A KEYPAD + IVR MENU (grey, rigid, frustrating)
+ *    Right: A CALL SCREEN with live waveform + transcript (warm, fast)
  *
- *  The voice transcript animates line-by-line on scroll, like the
- *  demo chat section — but with a waveform visual and speaker labels
- *  instead of chat bubbles.
+ *  Each side is a self-contained "device mockup" with its own visual
+ *  language — the contrast makes the case without metric cards.
  * ───────────────────────────────────────────────────────────────────── */
 
-/* ─── IVR Tree data ─── */
-const IVR_TREE = [
-  { level: 0, label: "Welcome to Acme Insurance", type: "system" as const },
-  { level: 0, label: "For English, press 1. Para español, oprima 2.", type: "system" as const },
-  { level: 1, label: "Press 1 for Claims", type: "option" as const },
-  { level: 1, label: "Press 2 for Billing", type: "option" as const },
-  { level: 1, label: "Press 3 for Policy changes", type: "option" as const },
-  { level: 1, label: "Press 4 for All other inquiries", type: "option" as const },
-  { level: 2, label: "You selected: Claims", type: "system" as const },
-  { level: 2, label: "Press 1 for Auto claims", type: "option" as const },
-  { level: 2, label: "Press 2 for Home claims", type: "option" as const },
-  { level: 2, label: "Press 3 to hear these options again", type: "option" as const },
-  { level: 3, label: "Your estimated wait time is 12 minutes.", type: "system" as const },
-  { level: 3, label: "Your call is important to us. Please stay on the line.", type: "hold" as const },
+/* ─── IVR menu steps ─── */
+const IVR_STEPS = [
+  { text: "Welcome to Acme Insurance. Your call is important to us.", type: "system" as const, delay: 800 },
+  { text: "For English, press 1.", type: "system" as const, delay: 600 },
+  { text: "1", type: "keypress" as const, delay: 1200 },
+  { text: "Press 1 for Claims. Press 2 for Billing. Press 3 for Policy changes. Press 4 for All other inquiries.", type: "system" as const, delay: 600 },
+  { text: "1", type: "keypress" as const, delay: 1400 },
+  { text: "Press 1 for Auto. Press 2 for Home. Press 3 to hear these options again.", type: "system" as const, delay: 600 },
+  { text: "1", type: "keypress" as const, delay: 1200 },
+  { text: "All agents are currently busy. Your estimated wait time is 12 minutes.", type: "system" as const, delay: 600 },
+  { text: "♪  Your call is important to us. Please stay on the line…", type: "hold" as const, delay: 0 },
 ];
 
-/* ─── Voice transcript data ─── */
-const VOICE_TRANSCRIPT = [
-  { speaker: "caller" as const, text: "Hi, I was in a fender bender yesterday and need to file a claim.", intent: null },
-  { speaker: "agent" as const, text: "I'm sorry to hear that. Let me help you get that claim started right away. Can you confirm your name and policy number?", intent: "FNOL intake" },
-  { speaker: "caller" as const, text: "It's Sarah Chen, policy number HM-4482.", intent: null },
-  { speaker: "agent" as const, text: "Thank you, Sarah. I can see your auto policy is active. I'll need a few details about the incident — where did it happen?", intent: "Identity verified" },
-  { speaker: "caller" as const, text: "Corner of Main and 5th, around 3pm. The other driver ran a red light.", intent: null },
-  { speaker: "agent" as const, text: "Got it. I've opened claim #CL-2026-8891 for you. A claims adjuster will contact you within 2 hours. I'm also sending you our approved repair network — would you like me to book an inspection?", intent: "Claim filed" },
-  { speaker: "caller" as const, text: "Yes please, as soon as possible.", intent: null },
-  { speaker: "agent" as const, text: "Done — you're booked for tomorrow at 10am at Metro Auto Body. They'll send a confirmation text. Anything else I can help with?", intent: "Repair booked" },
+/* ─── Voice transcript lines ─── */
+const VOICE_LINES = [
+  { speaker: "caller" as const, text: "Hi, I was in a fender bender yesterday and need to file a claim.", time: "0:00", intent: null },
+  { speaker: "agent" as const, text: "I'm sorry to hear that, let me help you right away. Can you confirm your name and policy number?", time: "0:04", intent: "FNOL intake" },
+  { speaker: "caller" as const, text: "Sarah Chen, policy HM-4482.", time: "0:12", intent: null },
+  { speaker: "agent" as const, text: "Thank you Sarah. Your auto policy is active. Where did the incident happen?", time: "0:16", intent: "Identity verified" },
+  { speaker: "caller" as const, text: "Corner of Main and 5th, around 3pm. Other driver ran a red light.", time: "0:22", intent: null },
+  { speaker: "agent" as const, text: "Claim #CL-2026-8891 is now open. I'm booking you at Metro Auto Body tomorrow at 10am for inspection.", time: "0:28", intent: "Claim filed" },
+  { speaker: "caller" as const, text: "That's perfect, thanks.", time: "0:38", intent: null },
+  { speaker: "agent" as const, text: "All set. You'll get a confirmation text shortly. Anything else I can help with?", time: "0:42", intent: "Repair booked" },
 ];
 
-/* ─── IVR Tree visual ─── */
-function IVRTree({ visible }: { visible: boolean }) {
+/* ─── Waveform bars — purely decorative CSS animation ─── */
+function Waveform({ active }: { active: boolean }) {
   return (
-    <div className="space-y-0">
-      {IVR_TREE.map((node, i) => {
-        const delay = 200 + i * 120;
-        const indent = node.level * 20;
-
+    <div className="flex items-center justify-center gap-[3px] h-10 my-3">
+      {Array.from({ length: 24 }).map((_, i) => {
+        // Deterministic "random" height per bar
+        const seed = ((i * 7 + 13) % 17) / 17;
+        const minH = 4;
+        const maxH = active ? 28 : 6;
+        const baseH = minH + seed * (maxH - minH);
         return (
           <div
             key={i}
-            className="transition-all"
+            className="rounded-full transition-all"
             style={{
-              opacity: visible ? 1 : 0,
-              transform: visible ? "translateX(0)" : "translateX(-8px)",
-              transitionDuration: "400ms",
-              transitionDelay: `${delay}ms`,
-              paddingLeft: `${indent}px`,
+              width: "2.5px",
+              height: active ? `${baseH}px` : "4px",
+              backgroundColor: active
+                ? `rgba(54, 181, 149, ${0.4 + seed * 0.5})`
+                : "rgba(255,255,255,0.15)",
+              transitionDuration: `${300 + seed * 400}ms`,
+              transitionTimingFunction: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+              animation: active ? `voice-wave ${0.8 + seed * 0.7}s ease-in-out ${seed * 0.3}s infinite alternate` : "none",
             }}
-          >
-            {node.level > 0 && (
-              <span className="inline-block w-3 h-px bg-boost-border mr-2 align-middle" />
-            )}
-            <span
-              className={`inline-block text-[12px] leading-relaxed py-1 ${
-                node.type === "system"
-                  ? "text-boost-muted/70 italic"
-                  : node.type === "hold"
-                    ? "text-boost-muted/50 italic"
-                    : "text-boost-muted"
-              }`}
-            >
-              {node.type === "option" && (
-                <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-boost-border/60 text-[9px] font-bold text-boost-muted/70 mr-1.5 align-text-bottom">
-                  {node.label.match(/Press (\d)/)?.[1]}
-                </span>
-              )}
-              {node.type === "hold" && (
-                <span className="inline-block mr-1.5 text-boost-muted/30">♪</span>
-              )}
-              {node.label}
-            </span>
-          </div>
+          />
         );
       })}
+    </div>
+  );
+}
 
-      {/* Frustration indicator */}
-      <div
-        className="mt-4 pt-3 border-t border-dashed border-boost-border/50 transition-all"
-        style={{
-          opacity: visible ? 1 : 0,
-          transitionDuration: "500ms",
-          transitionDelay: `${200 + IVR_TREE.length * 120 + 300}ms`,
-        }}
-      >
-        <p className="text-[11px] text-boost-muted/60 italic">
-          Average time to reach an agent: 4 min 22 sec
-        </p>
-        <p className="text-[11px] text-boost-muted/40 italic mt-0.5">
-          Caller abandonment rate: 23%
-        </p>
+/* ─── IVR Keypad visual ─── */
+function Keypad() {
+  const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "✱", "0", "#"];
+  return (
+    <div className="grid grid-cols-3 gap-1.5 w-fit mx-auto mb-4">
+      {keys.map((k) => (
+        <div
+          key={k}
+          className="w-10 h-10 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-white/30 text-sm font-medium"
+        >
+          {k}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── IVR Device ─── */
+function IVRDevice({ visible }: { visible: boolean }) {
+  const [visibleSteps, setVisibleSteps] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const elapsedRef = useRef<ReturnType<typeof setInterval>>(undefined);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    // Start the elapsed timer
+    elapsedRef.current = setInterval(() => {
+      setElapsed((e) => e + 1);
+    }, 1000);
+
+    // Reveal IVR steps one by one
+    let step = 0;
+    const showNext = () => {
+      if (step >= IVR_STEPS.length) return;
+      step++;
+      setVisibleSteps(step);
+      if (step < IVR_STEPS.length) {
+        timerRef.current = setTimeout(showNext, IVR_STEPS[step]?.delay || 1000);
+      }
+    };
+    timerRef.current = setTimeout(showNext, IVR_STEPS[0].delay);
+
+    return () => {
+      clearTimeout(timerRef.current);
+      clearInterval(elapsedRef.current);
+    };
+  }, [visible]);
+
+  const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+  return (
+    <div className="rounded-[1.75rem] bg-[#1a1a1e] border border-white/[0.06] p-3 shadow-2xl flex flex-col h-full">
+      {/* Call header */}
+      <div className="text-center pt-4 pb-2">
+        <p className="text-white/30 text-[10px] uppercase tracking-widest mb-1">Incoming call</p>
+        <p className="text-white/80 text-base font-semibold">Acme Insurance</p>
+        <p className="text-white/30 text-xs mt-0.5">+1 (800) 555-0199</p>
+        <p className="text-white/20 text-xs mt-1 tabular-nums">{formatTime(elapsed)}</p>
+      </div>
+
+      {/* Keypad */}
+      <Keypad />
+
+      {/* IVR transcript */}
+      <div className="flex-1 overflow-hidden px-2 space-y-1.5 mb-3">
+        {IVR_STEPS.slice(0, visibleSteps).map((step, i) => (
+          <div
+            key={i}
+            className="animate-modal-in"
+            style={{ animationDuration: "300ms" }}
+          >
+            {step.type === "keypress" ? (
+              <div className="flex justify-end">
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white/10 text-white/60 text-xs font-bold">
+                  {step.text}
+                </span>
+              </div>
+            ) : (
+              <p className={`text-[11px] leading-relaxed ${
+                step.type === "hold"
+                  ? "text-white/20 italic"
+                  : "text-white/40"
+              }`}>
+                {step.text}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Call controls */}
+      <div className="flex items-center justify-center gap-5 pb-3">
+        <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeOpacity="0.3"><path d="M1 1l22 22M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6"/><path d="M17 16.95A7 7 0 015 12v-2m14 0v2c0 .76-.12 1.5-.34 2.18"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </div>
+        <div className="w-12 h-12 rounded-full bg-red-500/80 flex items-center justify-center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+        </div>
+        <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeOpacity="0.3"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
       </div>
     </div>
   );
 }
 
-/* ─── Voice transcript visual ─── */
-function VoiceTranscript({ visible }: { visible: boolean }) {
-  const [visibleCount, setVisibleCount] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
+/* ─── Voice AI Call Screen ─── */
+function VoiceCallScreen({ visible }: { visible: boolean }) {
+  const [visibleLines, setVisibleLines] = useState(0);
+  const [callActive, setCallActive] = useState(false);
+  const [resolved, setResolved] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   useEffect(() => {
-    if (visible && visibleCount < VOICE_TRANSCRIPT.length) {
-      intervalRef.current = setInterval(() => {
-        setVisibleCount((c) => {
-          if (c >= VOICE_TRANSCRIPT.length) {
-            clearInterval(intervalRef.current);
-            return c;
-          }
-          return c + 1;
-        });
-      }, 1400);
-    }
-    return () => clearInterval(intervalRef.current);
-  }, [visible, visibleCount]);
+    if (!visible) return;
+    setCallActive(true);
+
+    timerRef.current = setInterval(() => {
+      setVisibleLines((c) => {
+        if (c >= VOICE_LINES.length) {
+          clearInterval(timerRef.current);
+          setCallActive(false);
+          setResolved(true);
+          return c;
+        }
+        return c + 1;
+      });
+    }, 1600);
+
+    return () => clearInterval(timerRef.current);
+  }, [visible]);
 
   return (
-    <div className="space-y-3">
-      {VOICE_TRANSCRIPT.map((line, i) => {
-        const isVisible = i < visibleCount;
-        const isCaller = line.speaker === "caller";
+    <div className="rounded-[1.75rem] bg-[#0f1117] border border-boost-green-light/10 p-3 shadow-2xl flex flex-col h-full">
+      {/* Call header */}
+      <div className="text-center pt-4 pb-1">
+        <div className="flex items-center justify-center gap-1.5 mb-1.5">
+          <span className={`w-1.5 h-1.5 rounded-full ${callActive ? "bg-boost-green-light animate-pulse" : resolved ? "bg-boost-green-light" : "bg-white/20"}`} />
+          <p className="text-[10px] uppercase tracking-widest text-boost-green-light/70 font-medium">
+            {resolved ? "Resolved" : callActive ? "Connected" : "Connecting"}
+          </p>
+        </div>
+        <p className="text-white/90 text-base font-semibold">Sarah Chen</p>
+        <p className="text-white/30 text-xs mt-0.5">Policy HM-4482</p>
+      </div>
 
-        return (
+      {/* Waveform */}
+      <Waveform active={callActive} />
+
+      {/* Live transcript */}
+      <div className="flex-1 overflow-hidden px-2 space-y-2 mb-3">
+        {VOICE_LINES.slice(0, visibleLines).map((line, i) => (
           <div
             key={i}
-            className="transition-all"
-            style={{
-              opacity: isVisible ? 1 : 0,
-              transform: isVisible ? "translateY(0)" : "translateY(6px)",
-              transitionDuration: "400ms",
-            }}
+            className="animate-modal-in"
+            style={{ animationDuration: "350ms" }}
           >
-            <div className={`flex gap-3 ${isCaller ? "" : ""}`}>
-              {/* Speaker indicator */}
-              <div className="flex-shrink-0 mt-0.5">
-                {isCaller ? (
-                  <div className="w-6 h-6 rounded-full bg-boost-surface border border-boost-border flex items-center justify-center">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-boost-muted">
-                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
-                    </svg>
-                  </div>
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-boost-green-light/10 border border-boost-green-light/20 flex items-center justify-center">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-boost-green-light">
-                      <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" /><path d="M19 10v2a7 7 0 01-14 0v-2" />
-                    </svg>
-                  </div>
-                )}
-              </div>
-
-              {/* Content */}
+            <div className="flex items-start gap-2">
+              <span className="text-[9px] text-white/20 tabular-nums mt-0.5 w-6 shrink-0 text-right">
+                {line.time}
+              </span>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-medium text-boost-muted/60 uppercase tracking-wider mb-0.5">
-                  {isCaller ? "Caller" : "Voice Agent"}
-                </p>
-                <p className={`text-[13px] leading-relaxed ${
-                  isCaller ? "text-boost-dark" : "text-boost-dark/90"
+                <p className={`text-[11px] leading-relaxed ${
+                  line.speaker === "caller" ? "text-white/60" : "text-white/90"
                 }`}>
+                  <span className={`text-[9px] font-semibold uppercase tracking-wider mr-1.5 ${
+                    line.speaker === "caller" ? "text-white/25" : "text-boost-green-light/60"
+                  }`}>
+                    {line.speaker === "caller" ? "Caller" : "AI"}
+                  </span>
                   {line.text}
                 </p>
-
-                {/* Intent badge — only on agent responses */}
                 {line.intent && (
-                  <span
-                    className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wider bg-boost-green-light/8 text-boost-green border border-boost-green-light/15"
-                  >
-                    <span className="w-1 h-1 rounded-full bg-boost-green-light" />
+                  <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wider bg-boost-green-light/10 text-boost-green-light/80 border border-boost-green-light/10">
+                    <span className="w-1 h-1 rounded-full bg-boost-green-light/60" />
                     {line.intent}
                   </span>
                 )}
               </div>
             </div>
           </div>
-        );
-      })}
+        ))}
 
-      {/* Typing indicator when not all visible */}
-      {visibleCount > 0 && visibleCount < VOICE_TRANSCRIPT.length && (
-        <div className="flex gap-3 items-center">
-          <div className="w-6 h-6 rounded-full bg-boost-green-light/10 border border-boost-green-light/20 flex items-center justify-center">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-boost-green-light">
-              <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" /><path d="M19 10v2a7 7 0 01-14 0v-2" />
-            </svg>
+        {/* Resolution banner */}
+        {resolved && (
+          <div className="mt-2 pt-2 border-t border-white/[0.06] animate-modal-in">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] text-boost-green-light font-medium">
+                Resolved in 0:48 · No transfers
+              </p>
+              <div className="flex gap-1">
+                <span className="text-[8px] px-1.5 py-0.5 rounded bg-boost-green-light/10 text-boost-green-light/70 uppercase tracking-wider font-semibold">Claim filed</span>
+                <span className="text-[8px] px-1.5 py-0.5 rounded bg-boost-green-light/10 text-boost-green-light/70 uppercase tracking-wider font-semibold">Repair booked</span>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light/40 animate-pulse" />
-            <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light/40 animate-pulse" style={{ animationDelay: "150ms" }} />
-            <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light/40 animate-pulse" style={{ animationDelay: "300ms" }} />
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Resolution stats — appear after conversation completes */}
-      {visibleCount >= VOICE_TRANSCRIPT.length && (
-        <div
-          className="mt-4 pt-3 border-t border-boost-green-light/10 transition-all"
-          style={{
-            opacity: visibleCount >= VOICE_TRANSCRIPT.length ? 1 : 0,
-            transitionDuration: "500ms",
-            transitionDelay: "300ms",
-          }}
-        >
-          <p className="text-[11px] text-boost-green font-medium">
-            Resolved in 1 min 48 sec · No transfers · Claim filed + repair booked
-          </p>
+      {/* Call controls */}
+      <div className="flex items-center justify-center gap-5 pb-3">
+        <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeOpacity="0.4"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/></svg>
         </div>
-      )}
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${resolved ? "bg-boost-green-light/20" : "bg-boost-green-light/80"}`}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+        </div>
+        <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeOpacity="0.4"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+        </div>
+      </div>
     </div>
   );
 }
 
-/* ─── Capability strip ─── */
+/* ─── Capabilities ─── */
 const CAPABILITIES = [
-  {
-    label: "Real-time Intent",
-    detail: "Understands what the caller wants within the first sentence — no menu trees, no waiting.",
-  },
-  {
-    label: "Natural Conversation",
-    detail: "Full-duplex dialogue with barge-in support. Callers speak naturally, not in keywords.",
-  },
-  {
-    label: "Warm Handover",
-    detail: "When human expertise is needed, the agent transfers with full context — the customer never repeats themselves.",
-  },
-  {
-    label: "Sentiment Detection",
-    detail: "Monitors frustration and urgency in real-time. Adjusts tone or escalates before the caller asks.",
-  },
+  { label: "Real-time Intent", detail: "Understands what the caller wants within the first sentence — no menu trees, no waiting." },
+  { label: "Natural Conversation", detail: "Full-duplex dialogue with barge-in support. Callers speak naturally, not in keywords." },
+  { label: "Warm Handover", detail: "When human expertise is needed, the agent transfers with full context — no repeating." },
+  { label: "Sentiment Detection", detail: "Monitors frustration and urgency in real-time. Adjusts tone or escalates before the caller asks." },
 ];
 
 /* ─── Main section ─── */
 export default function VoiceSection({ guide }: { guide: GuideData }) {
-  const { ref: comparisonRef, isVisible: comparisonVisible } = useScrollReveal({ once: true, threshold: 0.15 });
+  const { ref: devicesRef, isVisible: devicesVisible } = useScrollReveal({ once: true, threshold: 0.15 });
   const { ref: capsRef, isVisible: capsVisible } = useScrollReveal({ once: true });
 
   return (
@@ -261,7 +310,6 @@ export default function VoiceSection({ guide }: { guide: GuideData }) {
         subtitle="Outstanding CX doesn't start with Press 1"
       />
 
-      {/* Editorial opening */}
       <p className="text-boost-dark text-lg leading-relaxed max-w-2xl mb-10">
         The IVR tree was designed for rotary phones. Your customers have moved on.
         Conversational voice replaces rigid menus with a{" "}
@@ -269,28 +317,41 @@ export default function VoiceSection({ guide }: { guide: GuideData }) {
         they need, and the AI resolves it in real time.
       </p>
 
-      {/* ── Side-by-side comparison ── */}
-      <div ref={comparisonRef} className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-14">
-        {/* Left: Traditional IVR (intentionally grey and frustrating) */}
-        <div className="rounded-xl bg-boost-surface/70 p-5 sm:p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="w-2 h-2 rounded-full bg-boost-muted/30" />
-            <p className="text-[10px] font-bold text-boost-muted/60 uppercase tracking-[0.15em]">
-              Traditional IVR
-            </p>
+      {/* ── Side-by-side device mockups ── */}
+      <div ref={devicesRef} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-14">
+        {/* Left: IVR — intentionally grey and frustrating */}
+        <div
+          className="transition-all"
+          style={{
+            opacity: devicesVisible ? 1 : 0,
+            transform: devicesVisible ? "translateY(0)" : "translateY(20px)",
+            transitionDuration: "700ms",
+          }}
+        >
+          <p className="text-[10px] font-bold text-boost-muted/50 uppercase tracking-[0.15em] mb-3 text-center">
+            Traditional IVR
+          </p>
+          <div className="max-w-[320px] mx-auto" style={{ minHeight: "520px" }}>
+            <IVRDevice visible={devicesVisible} />
           </div>
-          <IVRTree visible={comparisonVisible} />
         </div>
 
-        {/* Right: Conversational Voice (warm, flowing, green accents) */}
-        <div className="rounded-xl bg-white border border-boost-border p-5 sm:p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="w-2 h-2 rounded-full bg-boost-green-light" />
-            <p className="text-[10px] font-bold text-boost-green uppercase tracking-[0.15em]">
-              Conversational Voice AI
-            </p>
+        {/* Right: Conversational Voice — warm and efficient */}
+        <div
+          className="transition-all"
+          style={{
+            opacity: devicesVisible ? 1 : 0,
+            transform: devicesVisible ? "translateY(0)" : "translateY(20px)",
+            transitionDuration: "700ms",
+            transitionDelay: "200ms",
+          }}
+        >
+          <p className="text-[10px] font-bold text-boost-green uppercase tracking-[0.15em] mb-3 text-center">
+            Conversational Voice AI
+          </p>
+          <div className="max-w-[320px] mx-auto" style={{ minHeight: "520px" }}>
+            <VoiceCallScreen visible={devicesVisible} />
           </div>
-          <VoiceTranscript visible={comparisonVisible} />
         </div>
       </div>
 
@@ -311,17 +372,12 @@ export default function VoiceSection({ guide }: { guide: GuideData }) {
                 transitionDelay: `${200 + i * 100}ms`,
               }}
             >
-              <p className="text-sm font-semibold text-boost-dark mb-1.5">
-                {cap.label}
-              </p>
-              <p className="text-[12px] text-boost-muted leading-relaxed">
-                {cap.detail}
-              </p>
+              <p className="text-sm font-semibold text-boost-dark mb-1.5">{cap.label}</p>
+              <p className="text-[12px] text-boost-muted leading-relaxed">{cap.detail}</p>
             </div>
           ))}
         </div>
 
-        {/* Closing editorial stat */}
         <p className="text-sm text-boost-muted mt-10 max-w-xl leading-relaxed">
           Organisations that deploy conversational voice see{" "}
           <span className="font-semibold text-boost-dark">40% fewer escalations</span> and{" "}
@@ -329,6 +385,14 @@ export default function VoiceSection({ guide }: { guide: GuideData }) {
           compared to traditional IVR trees.
         </p>
       </div>
+
+      {/* Waveform animation keyframes */}
+      <style jsx>{`
+        @keyframes voice-wave {
+          0% { transform: scaleY(1); }
+          100% { transform: scaleY(0.3); }
+        }
+      `}</style>
     </section>
   );
 }
