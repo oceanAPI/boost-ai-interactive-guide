@@ -250,7 +250,7 @@ export default function OrchestratorSection({
     }
   }, [onRegisterOpenAgent, allAgents]);
 
-  const totalColumns = config.standaloneAgents.length + config.topicGroups.length;
+  const totalColumns = config.topicGroups.length;
 
   const orchestratorAgent: SpecialistAgent = {
     key: "orchestrator",
@@ -369,22 +369,13 @@ export default function OrchestratorSection({
             <div className="h-px" style={{ backgroundColor: CONNECTOR_COLOR }} />
           </div>
 
-          {/* Desktop grid */}
+          {/* Desktop grid — only topic groups, standalones go below */}
           <div
             className="hidden md:grid gap-3"
             style={{
-              gridTemplateColumns: `repeat(${Math.min(totalColumns, 10)}, minmax(0, 1fr))`,
+              gridTemplateColumns: `repeat(${config.topicGroups.length}, minmax(0, 1fr))`,
             }}
           >
-            {config.standaloneAgents.map((agent) => (
-              <div key={agent.key} className="flex flex-col">
-                <div className="flex justify-center h-6" aria-hidden="true">
-                  <div className="w-px" style={{ backgroundColor: CONNECTOR_COLOR }} />
-                </div>
-                {/* Standalone agent — no group header, card connects directly */}
-                <AgentCard agent={agent} onClick={() => setSelectedAgent(agent)} />
-              </div>
-            ))}
             {config.topicGroups.map((group) => (
               <TopicGroupColumn
                 key={group.key}
@@ -393,6 +384,32 @@ export default function OrchestratorSection({
               />
             ))}
           </div>
+
+          {/* Ungrouped agents — below the main grid */}
+          {config.standaloneAgents.length > 0 && (
+            <div className="hidden md:block mt-4">
+              <div className="rounded-xl overflow-hidden" style={{ background: "rgba(89,25,93,0.3)" }}>
+                {/* Group header */}
+                <div className="flex items-center justify-between px-4 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                    </svg>
+                    <span className="text-white/90 text-xs font-semibold">Ungrouped</span>
+                  </div>
+                  <span className="text-white/40 text-[10px]">{config.standaloneAgents.length}</span>
+                </div>
+                {/* Cards in a row */}
+                <div className="px-2 pb-2 flex flex-wrap gap-2">
+                  {config.standaloneAgents.map((agent) => (
+                    <div key={agent.key} className="w-[200px]">
+                      <AgentCard agent={agent} onClick={() => setSelectedAgent(agent)} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Mobile vertical list */}
           <div className="md:hidden space-y-3">
