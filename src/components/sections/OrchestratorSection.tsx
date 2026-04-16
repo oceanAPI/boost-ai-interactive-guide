@@ -29,9 +29,11 @@ function tierBadgeLabel(agent: SpecialistAgent): string | null {
 function AgentCard({
   agent,
   onClick,
+  compact = false,
 }: {
   agent: SpecialistAgent;
   onClick: () => void;
+  compact?: boolean;
 }) {
   const badge = tierBadgeLabel(agent);
   const [expanded, setExpanded] = useState(false);
@@ -46,12 +48,12 @@ function AgentCard({
       {/* Top section — clickable, opens modal */}
       <button
         onClick={onClick}
-        className="w-full text-left px-4 pt-3.5 pb-2.5 flex flex-col gap-1.5"
+        className={`w-full text-left flex flex-col gap-1.5 ${compact ? "px-3 pt-2.5 pb-2" : "px-4 pt-3.5 pb-2.5"}`}
       >
         {/* Active badge + tier */}
         <div className="flex items-center justify-between">
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/10 text-[9px] font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light" />
+          <span className={`inline-flex items-center gap-1.5 rounded-full bg-white/10 font-semibold ${compact ? "px-1.5 py-0.5 text-[8px]" : "px-2 py-0.5 text-[9px]"}`}>
+            <span className={`rounded-full bg-boost-green-light ${compact ? "w-1 h-1" : "w-1.5 h-1.5"}`} />
             <span className="text-white/80">Active</span>
           </span>
           {badge && (
@@ -62,7 +64,7 @@ function AgentCard({
         </div>
 
         {/* Agent name */}
-        <p className="text-sm font-semibold text-white leading-snug truncate">
+        <p className={`font-semibold text-white leading-snug truncate ${compact ? "text-xs" : "text-sm"}`}>
           {agent.name}
         </p>
 
@@ -75,31 +77,31 @@ function AgentCard({
       </button>
 
       {/* Bottom section — darker purple band with outline icons (matches platform) */}
-      <div className="px-3.5 pb-2.5 pt-2 flex items-center justify-between rounded-b-xl" style={{ background: "rgba(0,0,0,0.15)" }}>
+      <div className={`flex items-center justify-between rounded-b-xl ${compact ? "px-2.5 pb-2 pt-1.5" : "px-3.5 pb-2.5 pt-2"}`} style={{ background: "rgba(0,0,0,0.15)" }}>
         {/* Left: shield-check, globe, webhook */}
-        <div className="flex items-center gap-2.5">
-          <button onClick={onClick} className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-md transition-colors" title="Guardrails">
-            <svg width="16" height="16" viewBox="0 0 512 512" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="32"><path d="M256.1 0c4.6 0 9.2 1 13.3 2.9L457.8 82.8c22 9.3 38.4 31 38.3 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0-172.4-82.5-213.2-263.9-213.7-363.2-.1-26.2 16.3-47.9 38.3-57.2L242.7 2.9C246.8 1 251.4 0 256.1 0z" strokeLinejoin="round"/><path d="M352 161.8L234 303l-70-66" strokeLinecap="round" strokeLinejoin="round" strokeWidth="40"/></svg>
+        <div className={`flex items-center ${compact ? "gap-1.5" : "gap-2.5"}`}>
+          <button onClick={onClick} className={`${compact ? "w-6 h-6" : "w-7 h-7"} flex items-center justify-center hover:bg-white/10 rounded-md transition-colors`} title="Guardrails">
+            <svg width={compact ? "13" : "16"} height={compact ? "13" : "16"} viewBox="0 0 512 512" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="32"><path d="M256.1 0c4.6 0 9.2 1 13.3 2.9L457.8 82.8c22 9.3 38.4 31 38.3 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0-172.4-82.5-213.2-263.9-213.7-363.2-.1-26.2 16.3-47.9 38.3-57.2L242.7 2.9C246.8 1 251.4 0 256.1 0z" strokeLinejoin="round"/><path d="M352 161.8L234 303l-70-66" strokeLinecap="round" strokeLinejoin="round" strokeWidth="40"/></svg>
           </button>
-          <button onClick={onClick} className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-md transition-colors" title="Knowledge">
-            <svg width="16" height="16" viewBox="0 0 512 512" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="32"><circle cx="256" cy="256" r="232"/><path d="M176 208c0-44.2 35.8-80 80-80s80 35.8 80 80c0 35-22.4 64.8-53.7 75.7-8.3 2.9-14.3 10.5-14.3 19.3v9m0 56v8" strokeLinecap="round"/></svg>
+          <button onClick={onClick} className={`${compact ? "w-6 h-6" : "w-7 h-7"} flex items-center justify-center hover:bg-white/10 rounded-md transition-colors`} title="Knowledge">
+            <svg width={compact ? "13" : "16"} height={compact ? "13" : "16"} viewBox="0 0 512 512" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="32"><circle cx="256" cy="256" r="232"/><path d="M176 208c0-44.2 35.8-80 80-80s80 35.8 80 80c0 35-22.4 64.8-53.7 75.7-8.3 2.9-14.3 10.5-14.3 19.3v9m0 56v8" strokeLinecap="round"/></svg>
           </button>
-          <button onClick={onClick} className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-md transition-colors" title="Action hooks">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <button onClick={onClick} className={`${compact ? "w-6 h-6" : "w-7 h-7"} flex items-center justify-center hover:bg-white/10 rounded-md transition-colors`} title="Action hooks">
+            <svg width={compact ? "13" : "16"} height={compact ? "13" : "16"} viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           </button>
         </div>
 
         {/* Right: settings, expand */}
-        <div className="flex items-center gap-2.5">
-          <button onClick={onClick} className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-md transition-colors" title="Settings">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <div className={`flex items-center ${compact ? "gap-1.5" : "gap-2.5"}`}>
+          <button onClick={onClick} className={`${compact ? "w-6 h-6" : "w-7 h-7"} flex items-center justify-center hover:bg-white/10 rounded-md transition-colors`} title="Settings">
+            <svg width={compact ? "13" : "16"} height={compact ? "13" : "16"} viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-            className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-md transition-colors"
+            className={`${compact ? "w-6 h-6" : "w-7 h-7"} flex items-center justify-center hover:bg-white/10 rounded-md transition-colors`}
             title={expanded ? "Collapse" : "Expand"}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${expanded ? "rotate-180" : ""}`}>
+            <svg width={compact ? "11" : "14"} height={compact ? "11" : "14"} viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${expanded ? "rotate-180" : ""}`}>
               <polyline points="6 9 12 15 18 9"/>
             </svg>
           </button>
@@ -113,9 +115,11 @@ function AgentCard({
 function TopicGroupColumn({
   group,
   onSelectAgent,
+  compact = false,
 }: {
   group: TopicGroup;
   onSelectAgent: (agent: SpecialistAgent) => void;
+  compact?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -165,6 +169,7 @@ function TopicGroupColumn({
               key={agent.key}
               agent={agent}
               onClick={() => onSelectAgent(agent)}
+              compact={compact}
             />
           ))}
         </div>
@@ -250,7 +255,16 @@ export default function OrchestratorSection({
     }
   }, [onRegisterOpenAgent, allAgents]);
 
-  const totalColumns = config.topicGroups.length;
+  // Ungrouped agents become their own column in the grid
+  const ungroupedGroup: TopicGroup | null = config.standaloneAgents.length > 0
+    ? { key: "ungrouped", label: "Ungrouped", icon: "hierarchy", agents: config.standaloneAgents }
+    : null;
+  const allGroups = ungroupedGroup
+    ? [...config.topicGroups, ungroupedGroup]
+    : config.topicGroups;
+  const totalColumns = allGroups.length;
+  // Scale down when many columns
+  const compact = totalColumns > 4;
 
   const orchestratorAgent: SpecialistAgent = {
     key: "orchestrator",
@@ -369,47 +383,22 @@ export default function OrchestratorSection({
             <div className="h-px" style={{ backgroundColor: CONNECTOR_COLOR }} />
           </div>
 
-          {/* Desktop grid — only topic groups, standalones go below */}
+          {/* Desktop grid — all groups including ungrouped as a column */}
           <div
-            className="hidden md:grid gap-3"
+            className={`hidden md:grid gap-3 ${compact ? "text-xs" : ""}`}
             style={{
-              gridTemplateColumns: `repeat(${config.topicGroups.length}, minmax(0, 1fr))`,
+              gridTemplateColumns: `repeat(${totalColumns}, minmax(0, 1fr))`,
             }}
           >
-            {config.topicGroups.map((group) => (
+            {allGroups.map((group) => (
               <TopicGroupColumn
                 key={group.key}
                 group={group}
                 onSelectAgent={setSelectedAgent}
+                compact={compact}
               />
             ))}
           </div>
-
-          {/* Ungrouped agents — below the main grid */}
-          {config.standaloneAgents.length > 0 && (
-            <div className="hidden md:block mt-4">
-              <div className="rounded-xl overflow-hidden" style={{ background: "rgba(89,25,93,0.3)" }}>
-                {/* Group header */}
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
-                    </svg>
-                    <span className="text-white/90 text-xs font-semibold">Ungrouped</span>
-                  </div>
-                  <span className="text-white/40 text-[10px]">{config.standaloneAgents.length}</span>
-                </div>
-                {/* Cards in a row */}
-                <div className="px-2 pb-2 flex flex-wrap gap-2">
-                  {config.standaloneAgents.map((agent) => (
-                    <div key={agent.key} className="w-[200px]">
-                      <AgentCard agent={agent} onClick={() => setSelectedAgent(agent)} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Mobile vertical list */}
           <div className="md:hidden space-y-3">
