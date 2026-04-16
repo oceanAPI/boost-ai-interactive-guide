@@ -201,46 +201,85 @@ export default function AgentModal({
         aria-labelledby="agent-modal-title"
         tabIndex={-1}
         className="relative bg-white rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border border-boost-border max-w-3xl w-full h-full sm:h-auto sm:max-h-[calc(100vh-4rem)] overflow-y-auto animate-modal-in focus:outline-none">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-boost-border sm:rounded-t-2xl px-4 sm:px-6 py-4">
-          {/* Back to orchestrator breadcrumb */}
-          {onBackToOrchestrator && (
-            <button
-              onClick={onBackToOrchestrator}
-              className="flex items-center gap-1.5 text-[11px] text-boost-muted hover:text-boost-green transition-colors mb-2 -mt-1"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-              <BoostIcon name="robot-brain" variant="purple" size={12} />
-              <span>Agent Orchestrator</span>
-            </button>
-          )}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <BoostIcon name={agent.icon} variant="purple" size={24} />
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 id="agent-modal-title" className="text-lg font-bold text-boost-dark">{agent.name}</h3>
+        {/* Header — platform-style dark purple band, mirrors the agent card */}
+        <div
+          className="sticky top-0 z-10 sm:rounded-t-2xl"
+          style={{
+            background: "linear-gradient(145deg, rgba(75,30,82,0.98) 0%, rgba(55,22,62,1) 100%)",
+          }}
+        >
+          <div className="px-4 sm:px-6 pt-4 pb-0">
+            {/* Back to orchestrator breadcrumb */}
+            {onBackToOrchestrator && (
+              <button
+                onClick={onBackToOrchestrator}
+                className="flex items-center gap-1.5 text-[11px] text-white/50 hover:text-white/90 transition-colors mb-3"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+                <span>Back to Agent Orchestrator</span>
+              </button>
+            )}
+
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                {/* Active pill + tier badge */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/10 text-[9px] font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light" />
+                    <span className="text-white/85">Active</span>
+                  </span>
                   {agent.tier && agent.tier !== "primary" && (
-                    <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-boost-muted bg-boost-surface border border-boost-border rounded-full px-2 py-0.5">
+                    <span className="text-[9px] font-medium uppercase tracking-[0.1em] text-white/35">
                       Expandable
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-boost-muted max-w-md">{agent.description}</p>
+
+                {/* Agent name */}
+                <h3 id="agent-modal-title" className="text-lg sm:text-xl font-bold text-white leading-tight">
+                  {agent.name}
+                </h3>
+
+                {/* Description */}
+                <p className="text-xs sm:text-[13px] text-white/55 max-w-xl mt-1.5 leading-relaxed">
+                  {agent.description}
+                </p>
               </div>
+
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:bg-white/10 hover:text-white/90 transition-colors flex-shrink-0 -mt-0.5"
+                aria-label="Close"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-boost-muted hover:bg-boost-surface hover:text-boost-dark transition-colors flex-shrink-0"
-              aria-label="Close"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
+          </div>
+
+          {/* Platform-style outline icon row — matches agent card bottom band */}
+          <div className="mt-4 px-4 sm:px-6 py-2.5 flex items-center gap-3" style={{ background: "rgba(0,0,0,0.18)" }}>
+            <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.12em] text-white/40 font-semibold mr-1">
+              Agent capabilities
+            </span>
+            <div className="flex items-center gap-2.5 ml-auto">
+              <span className="w-7 h-7 flex items-center justify-center" title="Guardrails">
+                <svg width="14" height="14" viewBox="0 0 512 512" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="32"><path d="M256.1 0c4.6 0 9.2 1 13.3 2.9L457.8 82.8c22 9.3 38.4 31 38.3 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0-172.4-82.5-213.2-263.9-213.7-363.2-.1-26.2 16.3-47.9 38.3-57.2L242.7 2.9C246.8 1 251.4 0 256.1 0z" strokeLinejoin="round"/><path d="M352 161.8L234 303l-70-66" strokeLinecap="round" strokeLinejoin="round" strokeWidth="40"/></svg>
+              </span>
+              <span className="w-7 h-7 flex items-center justify-center" title="Knowledge">
+                <svg width="14" height="14" viewBox="0 0 512 512" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="32"><circle cx="256" cy="256" r="232"/><path d="M176 208c0-44.2 35.8-80 80-80s80 35.8 80 80c0 35-22.4 64.8-53.7 75.7-8.3 2.9-14.3 10.5-14.3 19.3v9m0 56v8" strokeLinecap="round"/></svg>
+              </span>
+              <span className="w-7 h-7 flex items-center justify-center" title="Action hooks">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              </span>
+              <span className="w-7 h-7 flex items-center justify-center" title="Settings">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              </span>
+            </div>
           </div>
         </div>
 
