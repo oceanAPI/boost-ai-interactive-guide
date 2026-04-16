@@ -14,6 +14,7 @@ export const SLIDE_SECTIONS: SlideSection[] = [
   { id: "topic-ways-of-working", label: "Ways of Working" },
   { id: "core-components", label: "Platform Components" },
   { id: "demo", label: "Live Demo" },
+  { id: "trust-validation", label: "Platform Credibility" },
   { id: "case-studies", label: "Case Studies" },
   { id: "roi", label: "ROI Calculator" },
   { id: "next-steps", label: "Next Steps" },

@@ -13,6 +13,7 @@ import OrchestratorSection from "@/components/sections/OrchestratorSection";
 import TopicHubSection from "@/components/sections/TopicHubSection";
 import DemoPreviewSection from "@/components/sections/DemoPreviewSection";
 import CoreComponentsSection from "@/components/sections/CoreComponentsSection";
+import TrustValidationSection from "@/components/sections/TrustValidationSection";
 import CaseStudiesSection from "@/components/sections/CaseStudiesSection";
 import ROISection from "@/components/sections/ROISection";
 import NextStepsSection from "@/components/sections/NextStepsSection";
@@ -136,6 +137,8 @@ export default function SlideshowClient({
         return <CoreComponentsSection guide={guide} />;
       case "demo":
         return <DemoPreviewSection guide={guide} />;
+      case "trust-validation":
+        return <TrustValidationSection guide={guide} />;
       case "case-studies":
         return <CaseStudiesSection guide={guide} />;
       case "roi":

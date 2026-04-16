@@ -12,6 +12,7 @@ import TopicHubSection from "@/components/sections/TopicHubSection";
 import TopicSection from "@/components/sections/topics/TopicSection";
 import DemoPreviewSection from "@/components/sections/DemoPreviewSection";
 import CoreComponentsSection from "@/components/sections/CoreComponentsSection";
+import TrustValidationSection from "@/components/sections/TrustValidationSection";
 import CaseStudiesSection from "@/components/sections/CaseStudiesSection";
 import ROISection from "@/components/sections/ROISection";
 import NextStepsSection from "@/components/sections/NextStepsSection";
@@ -31,6 +32,7 @@ const SECTIONS = [
   })),
   { id: "core-components", label: "Platform Components", icon: "⚙" },
   { id: "demo", label: "Live Demo", icon: "▶" },
+  { id: "trust-validation", label: "Platform Credibility", icon: "◎" },
   { id: "case-studies", label: "Case Studies", icon: "★" },
   { id: "roi", label: "ROI Calculator", icon: "◇" },
   { id: "next-steps", label: "Next Steps", icon: "→" },
@@ -208,6 +210,12 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
           {(!activeSectionSet || activeSectionSet.has("demo")) && (
             <div id="demo" ref={(el) => { sectionRefs.current["demo"] = el; }}>
               <DemoPreviewSection guide={guide} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("trust-validation")) && (
+            <div id="trust-validation" ref={(el) => { sectionRefs.current["trust-validation"] = el; }}>
+              <TrustValidationSection guide={guide} />
             </div>
           )}
 
