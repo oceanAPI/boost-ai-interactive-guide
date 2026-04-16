@@ -165,11 +165,92 @@ function CustomCardPreview({ card }: { card: NonNullable<FlowNode["customCardJso
   );
 }
 
-/* ─── Node detail panel ─── */
+/* ─── Node detail — accent-driven, rich detail view ─── */
+
+/* Map node types to category for accent/icon config */
+function nodeCategory(type: string): "guardrail" | "actionHook" | "process" | "standardResponse" | "knowledge" {
+  if (type.includes("guardrail") || type === "compliance" || type === "hallucination" || type === "topic-boundary" || type === "pii") return "guardrail";
+  if (type === "api" || type === "transfer" || type.includes("hook")) return "actionHook";
+  if (type === "process") return "process";
+  if (type === "response" || type === "standard_response") return "standardResponse";
+  return "knowledge";
+}
+
+/* Category visual config — mirrors FlowNodeCard for consistency */
+const NODE_DETAIL_CONFIG = {
+  guardrail: {
+    label: "Guardrail",
+    accent: "#59195d",
+    accentSoft: "rgba(89,25,93,0.08)",
+    accentBorder: "rgba(89,25,93,0.15)",
+    tagline: "Always enforced — ensures the agent stays within safe operating boundaries.",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z" />
+        <path d="M9 12l2 2 4-4" />
+      </svg>
+    ),
+  },
+  actionHook: {
+    label: "Action Hook",
+    accent: "#7a4b8a",
+    accentSoft: "rgba(122,75,138,0.08)",
+    accentBorder: "rgba(122,75,138,0.18)",
+    tagline: "Triggered by intent — dispatches a real-world action via API or platform integration.",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+      </svg>
+    ),
+  },
+  process: {
+    label: "Process",
+    accent: "#208269",
+    accentSoft: "rgba(32,130,105,0.08)",
+    accentBorder: "rgba(32,130,105,0.2)",
+    tagline: "Multi-step flow — orchestrates a sequence of actions to complete a task.",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+    ),
+  },
+  standardResponse: {
+    label: "Standard Response",
+    accent: "#b38820",
+    accentSoft: "rgba(179,136,32,0.08)",
+    accentBorder: "rgba(179,136,32,0.2)",
+    tagline: "Pre-authored reply — delivered when specific conditions match.",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+      </svg>
+    ),
+  },
+  knowledge: {
+    label: "Knowledge",
+    accent: "#36b595",
+    accentSoft: "rgba(54,181,149,0.08)",
+    accentBorder: "rgba(54,181,149,0.22)",
+    tagline: "Data source — grounds agent responses in verified information.",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 4h12a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2V4zM4 4a2 2 0 0 0-2 2v14" />
+        <path d="M8 8h8M8 12h6" />
+      </svg>
+    ),
+  },
+};
+
 function NodeDetail({ node, onBack }: { node: FlowNode; onBack: () => void }) {
+  const cat = nodeCategory(node.type);
+  const cfg = NODE_DETAIL_CONFIG[cat];
+
   return (
     <div
-      className="rounded-2xl p-5"
+      className="rounded-2xl p-4 sm:p-6"
       style={{
         background:
           "radial-gradient(ellipse at 20% 0%, rgba(89,25,93,0.08), transparent 60%), radial-gradient(ellipse at 80% 100%, rgba(54,181,149,0.06), transparent 55%), linear-gradient(135deg, #f4eef5 0%, #eef5f2 100%)",
@@ -185,28 +266,77 @@ function NodeDetail({ node, onBack }: { node: FlowNode; onBack: () => void }) {
         Back to flow
       </button>
 
-      {/* Platform-style dark card */}
+      {/* Hero card — white with colored accent bar + big icon */}
       <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          background: "linear-gradient(145deg, rgba(75,30,82,0.98) 0%, rgba(55,22,62,1) 100%)",
-        }}
+        className="rounded-2xl bg-white shadow-sm overflow-hidden relative"
+        style={{ border: `1px solid ${cfg.accentBorder}` }}
       >
-        <div className="px-4 pt-3.5 pb-3">
-          <span className="inline-block text-[9px] font-bold tracking-[0.12em] uppercase text-white/55 mb-2">
-            {node.type.replace(/_/g, " ")}
-          </span>
-          <h4 className="text-[15px] font-bold text-white leading-snug">{node.name}</h4>
-          <p className="text-xs text-white/60 leading-relaxed mt-2">{node.description}</p>
+        {/* Left accent bar */}
+        <span
+          className="absolute left-0 top-0 bottom-0 w-1"
+          style={{ background: cfg.accent }}
+          aria-hidden="true"
+        />
 
+        {/* Top band with the big icon + category */}
+        <div className="flex items-start gap-4 px-5 pt-5 pb-4 pl-6">
+          {/* Icon badge */}
+          <div
+            className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
+            style={{ background: cfg.accentSoft, color: cfg.accent }}
+          >
+            {cfg.icon}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <span
+              className="text-[10px] font-bold tracking-[0.14em] uppercase"
+              style={{ color: cfg.accent }}
+            >
+              {cfg.label}
+            </span>
+            <h4 className="text-lg font-bold text-boost-dark leading-tight mt-0.5">
+              {node.name}
+            </h4>
+            <p className="text-[11px] text-boost-muted italic mt-1 leading-relaxed">
+              {cfg.tagline}
+            </p>
+          </div>
+        </div>
+
+        {/* Description block */}
+        <div className="px-6 pb-5">
+          <p className="text-xs font-bold text-boost-muted uppercase tracking-wider mb-2">
+            What it does
+          </p>
+          <p className="text-sm text-boost-text-secondary leading-relaxed">
+            {node.description}
+          </p>
+        </div>
+
+        {/* Type detail pill row */}
+        <div
+          className="flex items-center justify-between px-6 py-3 border-t"
+          style={{ background: cfg.accentSoft, borderColor: cfg.accentBorder }}
+        >
+          <div className="flex items-center gap-2 text-[11px]">
+            <span className="text-boost-muted">Technical type:</span>
+            <span
+              className="font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider text-[10px]"
+              style={{ background: "white", color: cfg.accent, border: `1px solid ${cfg.accentBorder}` }}
+            >
+              {node.type.replace(/_/g, " ")}
+            </span>
+          </div>
           {node.elevioUrl && (
             <a
               href={node.elevioUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-boost-green-light hover:text-white transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold hover:underline"
+              style={{ color: cfg.accent }}
             >
-              Read more
+              Read documentation
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                 <polyline points="15 3 21 3 21 9" />
@@ -218,7 +348,14 @@ function NodeDetail({ node, onBack }: { node: FlowNode; onBack: () => void }) {
       </div>
 
       {/* Custom card preview for action hooks with content type */}
-      {node.customCardJson && <CustomCardPreview card={node.customCardJson} />}
+      {node.customCardJson && (
+        <div className="mt-4">
+          <p className="text-xs font-bold text-boost-muted uppercase tracking-wider mb-2">
+            What the customer sees
+          </p>
+          <CustomCardPreview card={node.customCardJson} />
+        </div>
+      )}
     </div>
   );
 }
