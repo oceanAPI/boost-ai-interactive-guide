@@ -54,6 +54,78 @@ function computeDynamicStats(guide: GuideData) {
   ];
 }
 
+/**
+ * Industry glyphs — used as a faded decoration in the hero top-left.
+ * Each ~40px, monochrome, renders via currentColor so parent controls opacity.
+ */
+function IndustryIcon({ area }: { area: string }) {
+  const common = {
+    width: 20,
+    height: 20,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.5,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  switch (area) {
+    case "banking":
+      // classical column/bank building
+      return (
+        <svg {...common}>
+          <path d="M3 21h18M4 21V10M8 21V10M12 21V10M16 21V10M20 21V10M2 10l10-7 10 7H2z" />
+        </svg>
+      );
+    case "insurance":
+      // umbrella / shield
+      return (
+        <svg {...common}>
+          <path d="M12 3a9 9 0 019 9H3a9 9 0 019-9zM12 12v7a2 2 0 01-4 0" />
+        </svg>
+      );
+    case "wealth_management":
+      // growth chart
+      return (
+        <svg {...common}>
+          <path d="M3 17l5-5 4 4 8-9M14 7h6v6" />
+        </svg>
+      );
+    case "credit_union":
+      // handshake / people
+      return (
+        <svg {...common}>
+          <circle cx="8" cy="7" r="3" />
+          <circle cx="16" cy="7" r="3" />
+          <path d="M2 21v-1a4 4 0 014-4h4a4 4 0 014 4v1M14 15h4a4 4 0 014 4v2" />
+        </svg>
+      );
+    case "fintech":
+      // circuit / chip
+      return (
+        <svg {...common}>
+          <rect x="6" y="6" width="12" height="12" rx="2" />
+          <path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4" />
+        </svg>
+      );
+    case "pension":
+      // clock / long term
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3 2" />
+        </svg>
+      );
+    default:
+      // generic finance / chart
+      return (
+        <svg {...common}>
+          <path d="M3 3v18h18M7 17V9M12 17V5M17 17v-5" />
+        </svg>
+      );
+  }
+}
+
 const STAT_ICONS = {
   bolt: (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -284,6 +356,7 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
         aria-hidden="true"
       />
 
+
       {/* Content */}
       <div className="relative z-10 px-5 sm:px-8 max-w-4xl mx-auto pt-14 sm:pt-20 pb-8 sm:pb-12">
         {/* Co-branded logo bar */}
@@ -388,12 +461,19 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
         )}
 
         {/* CTA hint */}
-        <div className="hero-fade-in flex justify-center mt-8 sm:mt-10" style={{ animationDelay: "0.6s" }}>
+        <div className="hero-fade-in flex flex-col items-center gap-3 mt-8 sm:mt-10" style={{ animationDelay: "0.6s" }}>
           <div className="inline-flex items-center gap-2 text-xs text-white/25 uppercase tracking-[0.2em] font-medium">
             <span className="h-px w-6 bg-gradient-to-r from-transparent to-white/20" />
             Explore below
             <span className="h-px w-6 bg-gradient-to-l from-transparent to-white/20" />
           </div>
+
+          {/* Industry glyph — tiny, faded, primary area of interest */}
+          {guide.areas_of_interest?.[0] && (
+            <div className="text-white/15" aria-hidden="true">
+              <IndustryIcon area={guide.areas_of_interest[0]} />
+            </div>
+          )}
         </div>
 
         {/* Stats row */}

@@ -75,12 +75,15 @@ export async function detectFromWeb(query: string): Promise<DetectionResult[]> {
 
     const cls = classify(summary || heading);
 
-    // No industry signal at all → don't bother offering a guess
-    if (cls.areas.length === 0 && cls.variants.length === 0) return [];
+    // Require STRONG industry signal before offering a web guess.
+    // Low-confidence web hits (e.g. generic Wikipedia abstracts) are
+    // noise for AEs — better to say "no match" than mislead.
+    if (cls.areas.length === 0 || cls.confidence < 0.6) return [];
 
+    // Do NOT populate company_url from AbstractURL — that's typically a
+    // Wikipedia link, not the company's real homepage. AE will enter it.
     const prefill: Partial<GuideFormData> = {
       company_name: heading || ddgQuery,
-      company_url: data.AbstractURL || "",
       ...(cls.areas.length > 0 && { areas_of_interest: cls.areas }),
       ...(cls.variants.length > 0 && { selected_variants: cls.variants }),
     };
