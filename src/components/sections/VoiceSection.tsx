@@ -24,8 +24,14 @@ interface VoiceMessage {
   speaker: "caller" | "agent" | "system";
   text: string;
   time: string;
+  /** Which agent handled this — shown in routing indicator */
+  handledBy?: string;
+  /** Routed to a specialist agent */
+  routedTo?: string;
   /** Intent detected — shown as badge on agent responses */
   intent?: string;
+  /** Is this a goal-tracked intent (shows trophy icon) */
+  isGoal?: boolean;
   /** Under-the-hood detail for analysis panel */
   analysis?: {
     sttConfidence?: number;
@@ -39,15 +45,18 @@ interface VoiceMessage {
 const VOICE_SCRIPT: VoiceMessage[] = [
   {
     speaker: "caller", text: "Hi, I was in a fender bender yesterday and I need to file a claim.", time: "0:00",
+    handledBy: "Agent Orchestrator",
     analysis: { sttConfidence: 0.97, detectedIntent: "FNOL — First Notice of Loss", sentiment: "neutral" },
   },
   {
     speaker: "agent", text: "I'm sorry to hear that. Let me help you get that claim started right away. Can you confirm your name and policy number?", time: "0:04",
+    routedTo: "Claims Agent",
     intent: "FNOL intake",
     analysis: { action: "Requesting identity verification" },
   },
   {
     speaker: "caller", text: "It's Sarah Chen, policy number HM-4482.", time: "0:12",
+    handledBy: "Claims Agent",
     analysis: { sttConfidence: 0.99, detectedIntent: "Identity — providing credentials", sentiment: "neutral" },
   },
   {
@@ -62,6 +71,7 @@ const VOICE_SCRIPT: VoiceMessage[] = [
   {
     speaker: "agent", text: "Got it. I've opened claim number CL-2026-8891 for you. A claims adjuster will contact you within 2 hours. I'm also sending our approved repair network — would you like me to book an inspection?", time: "0:28",
     intent: "Claim filed",
+    isGoal: true,
     analysis: { action: "Claim #CL-2026-8891 created → adjuster notified → repair network sent" },
   },
   {
@@ -70,7 +80,9 @@ const VOICE_SCRIPT: VoiceMessage[] = [
   },
   {
     speaker: "agent", text: "Done — you're booked at Metro Auto Body tomorrow at 10am. They'll send a confirmation text. Anything else I can help with?", time: "0:42",
+    routedTo: "Motor Insurance",
     intent: "Repair booked",
+    isGoal: true,
     analysis: { action: "Metro Auto Body → 10am tomorrow → confirmation SMS queued" },
   },
 ];
@@ -215,7 +227,7 @@ export default function VoiceSection({ guide }: { guide: GuideData }) {
     <section>
       <SectionHeader
         number="08"
-        title="Voice AI"
+        title="Voice Preview"
         subtitle="Outstanding CX doesn't start with Press 1"
       />
 
@@ -284,31 +296,96 @@ export default function VoiceSection({ guide }: { guide: GuideData }) {
                 {VOICE_SCRIPT.slice(0, visibleMessages).map((msg, i) => (
                   <div
                     key={i}
-                    className={i === visibleMessages - 1 && visibleMessages > 1 ? "animate-modal-in" : ""}
+                    className={`${i === visibleMessages - 1 && visibleMessages > 1 ? "animate-modal-in" : ""}`}
                   >
-                    <div className="flex items-start gap-2">
-                      <span className="text-[9px] text-white/20 tabular-nums mt-0.5 w-7 shrink-0 text-right">
-                        {msg.time}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className={`leading-relaxed ${isAnalyzing ? "text-[10px]" : "text-[11px]"} ${
-                          msg.speaker === "caller" ? "text-white/60" : "text-white/90"
-                        }`}>
-                          <span className={`text-[8px] font-semibold uppercase tracking-wider mr-1.5 ${
-                            msg.speaker === "caller" ? "text-white/25" : "text-boost-green-light/60"
-                          }`}>
-                            {msg.speaker === "caller" ? "Caller" : "AI"}
-                          </span>
-                          {msg.text}
-                        </p>
-                        {msg.intent && (
-                          <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[7px] font-semibold uppercase tracking-wider bg-boost-green-light/10 text-boost-green-light/80 border border-boost-green-light/10">
-                            <span className="w-1 h-1 rounded-full bg-boost-green-light/60" />
-                            {msg.intent}
-                          </span>
-                        )}
+                    {/* Routing indicator — shows orchestrator/agent routing */}
+                    {msg.handledBy && (
+                      <div className="flex items-center gap-2 my-1.5 px-1">
+                        <div className="flex-1 h-px bg-white/[0.06]" />
+                        <span className="text-[8px] text-white/25 whitespace-nowrap">
+                          Handled by {msg.handledBy}
+                        </span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/20 shrink-0">
+                          <circle cx="12" cy="12" r="9" /><path d="M12 8v4l2 2" />
+                        </svg>
+                        <div className="flex-1 h-px bg-white/[0.06]" />
                       </div>
-                    </div>
+                    )}
+                    {msg.routedTo && (
+                      <div className="flex items-center gap-2 my-1.5 px-1">
+                        <div className="flex-1 h-px bg-white/[0.06]" />
+                        <span className="text-[8px] text-white/25 whitespace-nowrap">
+                          Routed to → {msg.routedTo}
+                        </span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/20 shrink-0">
+                          <path d="M16 3h5v5M4 20L21 3" />
+                        </svg>
+                        <div className="flex-1 h-px bg-white/[0.06]" />
+                      </div>
+                    )}
+
+                    {/* Agent identification bar */}
+                    {msg.speaker === "agent" && (msg.routedTo || msg.handledBy) && (
+                      <div className={`rounded-md px-2.5 py-1.5 mb-1.5 ${
+                        msg.routedTo ? "bg-boost-purple/15" : "bg-boost-green-light/10"
+                      }`}>
+                        <p className={`text-[9px] font-semibold ${
+                          msg.routedTo ? "text-boost-purple/70" : "text-boost-green-light/70"
+                        }`}>
+                          {msg.routedTo || "Orchestrator"}
+                        </p>
+                        <p className="text-[8px] text-white/30">Generated response</p>
+                      </div>
+                    )}
+
+                    {/* Message bubble */}
+                    {msg.speaker === "caller" ? (
+                      /* Customer — purple bubble, right-aligned */
+                      <div className="flex justify-end">
+                        <div className={`bg-boost-purple/30 rounded-2xl rounded-br-sm px-3 py-2 max-w-[85%] ${isAnalyzing ? "" : ""}`}>
+                          <p className={`text-white/80 leading-relaxed ${isAnalyzing ? "text-[10px]" : "text-[11px]"}`}>
+                            {msg.text}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Agent — grey bubble, left-aligned, with sparkle icon */
+                      <div className="flex items-start gap-2">
+                        {/* Green sparkle icon (LLM-generated indicator) */}
+                        <div className="shrink-0 mt-1">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-boost-green-light/60">
+                            <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z" fill="currentColor" />
+                            <path d="M5 5l1.5 3.5L10 10 6.5 11.5 5 15l-1.5-3.5L0 10l3.5-1.5L5 5z" fill="currentColor" opacity="0.4" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className={`bg-white/[0.08] rounded-2xl rounded-bl-sm px-3 py-2 ${isAnalyzing ? "" : ""}`}>
+                            <p className={`text-white/80 leading-relaxed ${isAnalyzing ? "text-[10px]" : "text-[11px]"}`}>
+                              {msg.text}
+                            </p>
+                          </div>
+                          {/* Goal trophy + intent badge row */}
+                          <div className="flex items-center gap-1.5 mt-1 ml-1">
+                            {msg.isGoal && (
+                              <span className="text-[10px]" title="Goal tracked">🏆</span>
+                            )}
+                            {msg.intent && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[7px] font-semibold uppercase tracking-wider bg-boost-green-light/10 text-boost-green-light/80">
+                                <span className="w-1 h-1 rounded-full bg-boost-green-light/60" />
+                                {msg.intent}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Timestamp */}
+                    <p className={`text-[8px] text-white/15 mt-0.5 tabular-nums ${
+                      msg.speaker === "caller" ? "text-right mr-1" : "ml-7"
+                    }`}>
+                      {msg.time}
+                    </p>
                   </div>
                 ))}
 

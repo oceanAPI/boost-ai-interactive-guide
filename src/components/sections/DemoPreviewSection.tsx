@@ -215,7 +215,7 @@ export default function DemoPreviewSection({ guide }: { guide: GuideData }) {
     <section>
       <SectionHeader
         number="08"
-        title="Live Demo Preview"
+        title="Chat Preview"
         subtitle={`See how ${guide.company_name}'s customers will experience the AI agent`}
       />
 
