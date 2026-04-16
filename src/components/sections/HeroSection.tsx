@@ -5,7 +5,7 @@ import type { GuideData } from "@/lib/types";
 import { assetPath } from "@/lib/asset-path";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
-import { useCompanyLogo } from "@/hooks/useCompanyLogo";
+// useCompanyLogo available if needed for favicon — currently using company name typography instead
 
 function computeDynamicStats(guide: GuideData) {
   const totalVolume = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0);
@@ -203,7 +203,8 @@ function ConstellationField() {
 export default function HeroSection({ guide }: { guide: GuideData }) {
   const { ref: statsRef, isVisible: statsVisible } = useScrollReveal({ once: true });
   const stats = computeDynamicStats(guide);
-  const { logoUrl: companyLogoUrl, loading: logoLoading } = useCompanyLogo(guide.company_url);
+  // Company logo hook available but not used — using typography co-brand instead
+  // const { logoUrl: companyLogoUrl, loading: logoLoading } = useCompanyLogo(guide.company_url);
 
   return (
     <section className="relative overflow-hidden rounded-2xl hero-section">
@@ -274,33 +275,14 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
             />
           </div>
 
-          {/* Connector */}
+          {/* Co-brand connector + company name */}
           {guide.company_name && (
-            <span className="text-white text-[10px] font-medium tracking-[0.2em] uppercase select-none opacity-80">for</span>
-          )}
-
-          {/* Company mark — white frame with logo inside */}
-          {guide.company_name && (
-            <div className="flex items-center gap-2.5">
-              {companyLogoUrl ? (
-                <div className="p-[3px] rounded-md bg-white flex items-center justify-center overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={companyLogoUrl}
-                    alt=""
-                    className="w-6 h-6 sm:w-7 sm:h-7 object-contain"
-                  />
-                </div>
-              ) : !logoLoading ? (
-                <div className="p-[3px] rounded-md bg-white flex items-center justify-center">
-                  <span className="text-boost-dark text-sm sm:text-base font-semibold leading-none">
-                    {guide.company_name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              ) : (
-                <div className="p-[3px] rounded-md bg-white/20 animate-pulse" />
-              )}
-            </div>
+            <>
+              <span className="w-px h-4 bg-white/25" />
+              <span className="text-white/90 text-sm sm:text-base font-semibold tracking-tight select-none">
+                {guide.company_name}
+              </span>
+            </>
           )}
         </div>
 

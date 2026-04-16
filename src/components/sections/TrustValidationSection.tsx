@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { GuideData } from "@/lib/types";
 import { SectionHeader } from "@/components/ui";
+import { assetPath } from "@/lib/asset-path";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
 
@@ -82,7 +83,7 @@ const MILESTONES: Milestone[] = [
 ];
 
 /* ─── World map component ─── */
-/* Light background, continent shapes as subtle ellipses, deployment dots on top */
+/* Real SVG map as background image, deployment dots overlaid */
 function WorldMap({ visibleStep }: { visibleStep: number }) {
   const activeMarkers: (MapMarker & { step: number })[] = [];
   MILESTONES.forEach((m, i) => {
@@ -92,62 +93,20 @@ function WorldMap({ visibleStep }: { visibleStep: number }) {
   });
 
   return (
-    <div className="relative w-full rounded-2xl bg-boost-surface/50 border border-boost-border overflow-hidden" style={{ aspectRatio: "2.2 / 1" }}>
-      {/* SVG continent shapes — simple recognizable blobs, not detailed coastlines */}
-      <svg
-        viewBox="0 0 1000 450"
-        className="absolute inset-0 w-full h-full"
-        preserveAspectRatio="xMidYMid meet"
-      >
-        {/* Dot grid — very subtle background texture */}
-        {Array.from({ length: 18 }).map((_, row) =>
-          Array.from({ length: 40 }).map((_, col) => (
-            <circle
-              key={`${row}-${col}`}
-              cx={25 + col * 24}
-              cy={25 + row * 24}
-              r="0.7"
-              fill="var(--color-boost-border)"
-              opacity="0.4"
-            />
-          ))
-        )}
-
-        {/* Continents as simple ellipses — recognizable shapes, not geographic precision */}
-        {/* North America */}
-        <ellipse cx="230" cy="140" rx="100" ry="90" fill="var(--color-boost-border)" opacity="0.25" />
-        <ellipse cx="200" cy="200" rx="40" ry="30" fill="var(--color-boost-border)" opacity="0.2" />
-        {/* South America */}
-        <ellipse cx="290" cy="310" rx="50" ry="80" fill="var(--color-boost-border)" opacity="0.25" />
-        {/* Europe */}
-        <ellipse cx="500" cy="120" rx="40" ry="35" fill="var(--color-boost-border)" opacity="0.25" />
-        {/* UK */}
-        <ellipse cx="470" cy="110" rx="8" ry="14" fill="var(--color-boost-border)" opacity="0.2" />
-        {/* Scandinavia */}
-        <ellipse cx="510" cy="85" rx="15" ry="30" fill="var(--color-boost-border)" opacity="0.2" transform="rotate(-10 510 85)" />
-        {/* Africa */}
-        <ellipse cx="520" cy="260" rx="55" ry="85" fill="var(--color-boost-border)" opacity="0.25" />
-        {/* Russia / Central Asia */}
-        <ellipse cx="650" cy="100" rx="130" ry="50" fill="var(--color-boost-border)" opacity="0.2" />
-        {/* Middle East */}
-        <ellipse cx="580" cy="190" rx="30" ry="25" fill="var(--color-boost-border)" opacity="0.2" />
-        {/* India */}
-        <ellipse cx="650" cy="220" rx="30" ry="35" fill="var(--color-boost-border)" opacity="0.2" />
-        {/* China / East Asia */}
-        <ellipse cx="730" cy="160" rx="55" ry="45" fill="var(--color-boost-border)" opacity="0.2" />
-        {/* Southeast Asia / Indonesia */}
-        <ellipse cx="730" cy="260" rx="40" ry="15" fill="var(--color-boost-border)" opacity="0.2" />
-        {/* Japan */}
-        <ellipse cx="800" cy="140" rx="10" ry="25" fill="var(--color-boost-border)" opacity="0.2" transform="rotate(20 800 140)" />
-        {/* Australia */}
-        <ellipse cx="810" cy="330" rx="45" ry="30" fill="var(--color-boost-border)" opacity="0.25" />
-        {/* Greenland */}
-        <ellipse cx="340" cy="55" rx="25" ry="20" fill="var(--color-boost-border)" opacity="0.2" />
-      </svg>
+    <div className="relative w-full rounded-2xl overflow-hidden bg-boost-surface/30" style={{ aspectRatio: "2.2 / 1" }}>
+      {/* Real world map SVG — rendered as background with boost-purple tint */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={assetPath("/images/world-map.svg")}
+        alt=""
+        className="absolute inset-0 w-full h-full object-contain opacity-[0.12]"
+        style={{ filter: "hue-rotate(260deg) saturate(0.3)" }}
+        aria-hidden="true"
+      />
 
       {/* Deployment markers */}
       {activeMarkers.map((marker, i) => {
-        const size = marker.size === "lg" ? 8 : marker.size === "md" ? 6 : 4;
+        const size = marker.size === "lg" ? 10 : marker.size === "md" ? 7 : 5;
         const isLatest = marker.step === visibleStep;
 
         return (
@@ -177,7 +136,7 @@ function WorldMap({ visibleStep }: { visibleStep: number }) {
               style={{
                 width: `${size}px`,
                 height: `${size}px`,
-                boxShadow: `0 0 ${size * 2}px rgba(54, 181, 149, 0.3)`,
+                boxShadow: `0 0 ${size * 2}px rgba(54, 181, 149, 0.4)`,
               }}
             />
           </div>
@@ -186,7 +145,7 @@ function WorldMap({ visibleStep }: { visibleStep: number }) {
 
       {/* Step label */}
       <div className="absolute bottom-3 left-4 flex items-center gap-2">
-        <span className="text-[10px] text-boost-dark font-medium tabular-nums">
+        <span className="text-[10px] text-boost-dark font-semibold tabular-nums">
           {MILESTONES[visibleStep]?.year}
         </span>
         <span className="text-[10px] text-boost-muted">
