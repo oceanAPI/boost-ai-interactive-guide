@@ -5,6 +5,12 @@ import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import VideoModal, { getVideoThumb } from "@/components/VideoModal";
 import { assetPath } from "@/lib/asset-path";
+import {
+  BOOST_CAMP_LOCATIONS,
+  locationHasUpcoming,
+  type BoostCampLocation,
+} from "@/data/boost-camp-events";
+import LocationPopup from "./boost-camp/LocationPopup";
 
 /**
  * Boost Camp — the annual boost.ai customer event.
@@ -123,142 +129,163 @@ function EventHero({ onPlay, visible }: { onPlay: () => void; visible: boolean }
   );
 }
 
-/* ─── Event locations on the world map ─── */
-interface EventLocation {
-  city: string;
-  country: string;
-  year: string;
-  status: "past" | "upcoming";
-  /** Position as % of container — tuned to public/images/world-map.svg */
-  x: number;
-  y: number;
-}
-
-// Placeholder locations — replace with real event history when available.
-const EVENT_LOCATIONS: EventLocation[] = [
-  { city: "Oslo",      country: "Norway",      year: "2023", status: "past",     x: 50.5, y: 27 },
-  { city: "Copenhagen", country: "Denmark",    year: "2024", status: "past",     x: 51,   y: 31 },
-  { city: "London",    country: "UK",          year: "2024", status: "past",     x: 47,   y: 34 },
-  { city: "Stockholm", country: "Sweden",      year: "2025", status: "past",     x: 53,   y: 27 },
-  { city: "Amsterdam", country: "Netherlands", year: "2026", status: "upcoming", x: 49,   y: 34 },
-  { city: "New York",  country: "USA",         year: "2026", status: "upcoming", x: 28,   y: 38 },
-];
+/* ─── World map with clickable event locations ─── */
 
 function WorldMap({ visible }: { visible: boolean }) {
-  const [hovered, setHovered] = useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [openLocation, setOpenLocation] = useState<BoostCampLocation | null>(null);
 
   return (
-    <div
-      className="relative overflow-hidden rounded-2xl border border-boost-border/60 bg-boost-surface/40 transition-all duration-700"
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(12px)",
-        transitionDelay: "600ms",
-      }}
-    >
-      {/* Subtle header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-boost-border/60">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-muted">
-            Around the community
-          </p>
-          <p className="text-sm font-semibold text-boost-dark mt-0.5">
-            We bring Boost Camp to where our customers are
-          </p>
+    <>
+      <div
+        className="relative overflow-hidden rounded-2xl border border-boost-border/60 bg-boost-surface/40 transition-all duration-700"
+        style={{
+          opacity: visible ? 1 : 0,
+          transform: visible ? "translateY(0)" : "translateY(12px)",
+          transitionDelay: "600ms",
+        }}
+      >
+        {/* Subtle header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-boost-border/60">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-muted">
+              Around the community
+            </p>
+            <p className="text-sm font-semibold text-boost-dark mt-0.5">
+              Click a city to see the events and speakers
+            </p>
+          </div>
+
+          {/* Legend */}
+          <div className="hidden sm:flex items-center gap-4 text-[11px] text-boost-muted">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-boost-purple" />
+              Past
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-boost-green-light ring-2 ring-boost-green-light/20" />
+              Upcoming
+            </span>
+          </div>
         </div>
 
-        {/* Legend */}
-        <div className="hidden sm:flex items-center gap-4 text-[11px] text-boost-muted">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-boost-purple" />
-            Past
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-boost-green-light ring-2 ring-boost-green-light/20" />
-            Upcoming
-          </span>
-        </div>
-      </div>
+        {/* Map */}
+        <div className="relative aspect-[16/9] bg-white">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={assetPath("/images/world-map.svg")}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-contain opacity-[0.08] p-4"
+          />
 
-      {/* Map */}
-      <div className="relative aspect-[16/9] bg-white">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={assetPath("/images/world-map.svg")}
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-contain opacity-[0.08] p-4"
-        />
-
-        {/* Event markers */}
-        {EVENT_LOCATIONS.map((loc) => {
-          const key = `${loc.city}-${loc.year}`;
-          const isHovered = hovered === key;
-          const isUpcoming = loc.status === "upcoming";
-          return (
-            <div
-              key={key}
-              className="absolute"
-              style={{
-                left: `${loc.x}%`,
-                top: `${loc.y}%`,
-                transform: "translate(-50%, -50%)",
-              }}
-              onMouseEnter={() => setHovered(key)}
-              onMouseLeave={() => setHovered(null)}
-            >
-              {/* Ripple ring for upcoming */}
-              {isUpcoming && (
-                <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-boost-green-light/30 animate-ping pointer-events-none" />
-              )}
-
-              {/* Dot */}
-              <button
-                type="button"
-                aria-label={`${loc.city}, ${loc.country} — ${loc.year}`}
-                className={`relative block w-2.5 h-2.5 rounded-full transition-all duration-200 ${
-                  isUpcoming
-                    ? "bg-boost-green-light ring-2 ring-boost-green-light/25"
-                    : "bg-boost-purple"
-                } ${isHovered ? "scale-[1.4]" : ""}`}
-              />
-
-              {/* Label tooltip */}
-              {isHovered && (
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1.5 rounded-md bg-boost-dark text-white shadow-lg text-[11px] whitespace-nowrap pointer-events-none z-10">
-                  <p className="font-semibold">{loc.city}, {loc.country}</p>
-                  <p className="text-white/60 text-[10px] mt-0.5">
-                    {loc.year} · {isUpcoming ? "Upcoming" : "Past event"}
-                  </p>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Footer — compact list */}
-      <div className="px-6 py-4 border-t border-boost-border/60 bg-white/50">
-        <div className="flex flex-wrap gap-x-5 gap-y-2">
-          {EVENT_LOCATIONS.map((loc) => {
-            const isUpcoming = loc.status === "upcoming";
+          {/* Location markers — one per city, aggregates events */}
+          {BOOST_CAMP_LOCATIONS.map((loc) => {
+            const isHovered = hoveredId === loc.id;
+            const hasUpcoming = locationHasUpcoming(loc);
+            const eventCount = loc.events.length;
             return (
-              <div key={`${loc.city}-${loc.year}-list`} className="inline-flex items-center gap-2">
-                <span
-                  className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                    isUpcoming ? "bg-boost-green-light" : "bg-boost-purple"
-                  }`}
-                />
-                <span className="text-[11px] text-boost-dark font-medium">
-                  {loc.year}
-                </span>
-                <span className="text-[11px] text-boost-muted">{loc.city}</span>
+              <div
+                key={loc.id}
+                className="absolute"
+                style={{
+                  left: `${loc.x}%`,
+                  top: `${loc.y}%`,
+                  transform: "translate(-50%, -50%)",
+                  zIndex: isHovered ? 20 : 10,
+                }}
+                onMouseEnter={() => setHoveredId(loc.id)}
+                onMouseLeave={() => setHoveredId(null)}
+              >
+                {/* Ripple ring for locations with upcoming events */}
+                {hasUpcoming && (
+                  <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-boost-green-light/30 animate-ping pointer-events-none" />
+                )}
+
+                {/* Clickable dot button */}
+                <button
+                  type="button"
+                  onClick={() => setOpenLocation(loc)}
+                  aria-label={`${loc.city}, ${loc.country} — ${eventCount} event${eventCount === 1 ? "" : "s"}`}
+                  className={`relative block rounded-full transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-boost-green-light ${
+                    hasUpcoming
+                      ? "bg-boost-green-light ring-2 ring-boost-green-light/25"
+                      : "bg-boost-purple ring-2 ring-boost-purple/20"
+                  } ${isHovered ? "scale-[1.5] shadow-lg" : ""}`}
+                  style={{
+                    width: eventCount > 1 ? "14px" : "11px",
+                    height: eventCount > 1 ? "14px" : "11px",
+                  }}
+                >
+                  {/* Count badge for locations with multiple events */}
+                  {eventCount > 1 && (
+                    <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white leading-none">
+                      {eventCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Hover tooltip */}
+                {isHovered && (
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1.5 rounded-md bg-boost-dark text-white shadow-lg text-[11px] whitespace-nowrap pointer-events-none">
+                    <p className="font-semibold">{loc.city}, {loc.country}</p>
+                    <p className="text-white/60 text-[10px] mt-0.5">
+                      {eventCount} event{eventCount === 1 ? "" : "s"} · click to view
+                    </p>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
+
+        {/* Footer — compact list of all events across locations, newest first */}
+        <div className="px-6 py-4 border-t border-boost-border/60 bg-white/50">
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {BOOST_CAMP_LOCATIONS.flatMap((loc) =>
+              loc.events.map((e) => ({
+                year: e.year,
+                status: e.status,
+                city: loc.city,
+                locId: loc.id,
+                eventId: e.id,
+                loc,
+              })),
+            )
+              .sort((a, b) => Number(b.year) - Number(a.year))
+              .map((row) => {
+                const isUpcoming = row.status === "upcoming";
+                return (
+                  <button
+                    key={row.eventId}
+                    type="button"
+                    onClick={() => setOpenLocation(row.loc)}
+                    className="inline-flex items-center gap-2 hover:opacity-80 transition-opacity"
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                        isUpcoming ? "bg-boost-green-light" : "bg-boost-purple"
+                      }`}
+                    />
+                    <span className="text-[11px] text-boost-dark font-medium">
+                      {row.year}
+                    </span>
+                    <span className="text-[11px] text-boost-muted">{row.city}</span>
+                  </button>
+                );
+              })}
+          </div>
+        </div>
       </div>
-    </div>
+
+      {/* Popup — opens on dot click */}
+      {openLocation && (
+        <LocationPopup
+          location={openLocation}
+          onClose={() => setOpenLocation(null)}
+        />
+      )}
+    </>
   );
 }
 

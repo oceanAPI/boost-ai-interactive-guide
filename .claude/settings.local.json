@@ -64,7 +64,10 @@
       "Bash(pip3 install:*)",
       "Bash(ls *.jpg)",
       "Bash(find '/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/public' -type f \\\\\\(-iname *map* -o -iname *world* \\\\\\))",
-      "Bash(ls -la \"/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/\"BoostCamp* \"/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/\"Community*)"
+      "Bash(ls -la \"/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/\"BoostCamp* \"/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/\"Community*)",
+      "WebFetch(domain:camp.boost.ai)",
+      "WebFetch(domain:explore.boost.ai)",
+      "WebFetch(domain:vux.world)"
     ]
   }
 }
