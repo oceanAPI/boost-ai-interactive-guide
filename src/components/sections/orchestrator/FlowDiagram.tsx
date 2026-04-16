@@ -168,43 +168,57 @@ function CustomCardPreview({ card }: { card: NonNullable<FlowNode["customCardJso
 /* ─── Node detail panel ─── */
 function NodeDetail({ node, onBack }: { node: FlowNode; onBack: () => void }) {
   return (
-    <div className="bg-boost-surface rounded-xl border border-boost-border p-4">
+    <div
+      className="rounded-2xl p-5"
+      style={{
+        background:
+          "radial-gradient(ellipse at 20% 0%, rgba(89,25,93,0.08), transparent 60%), radial-gradient(ellipse at 80% 100%, rgba(54,181,149,0.06), transparent 55%), linear-gradient(135deg, #f4eef5 0%, #eef5f2 100%)",
+      }}
+    >
       <button
         onClick={onBack}
-        className="flex items-center gap-1 text-xs text-boost-muted hover:text-boost-dark mb-3 transition-colors"
+        className="flex items-center gap-1.5 text-xs text-boost-muted hover:text-boost-dark mb-4 transition-colors"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polyline points="15 18 9 12 15 6" />
         </svg>
-        Back
+        Back to flow
       </button>
-      <div className="flex items-start gap-3 mb-3">
-        <BoostIcon name={node.icon} variant="purple" size={20} />
-        <div>
-          <h4 className="text-sm font-bold text-boost-dark">{node.name}</h4>
-          <span className="text-[10px] text-boost-muted uppercase">{node.type.replace(/_/g, " ")}</span>
+
+      {/* Platform-style dark card */}
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{
+          background: "linear-gradient(145deg, rgba(75,30,82,0.98) 0%, rgba(55,22,62,1) 100%)",
+        }}
+      >
+        <div className="px-4 pt-3.5 pb-3">
+          <span className="inline-block text-[9px] font-bold tracking-[0.12em] uppercase text-white/55 mb-2">
+            {node.type.replace(/_/g, " ")}
+          </span>
+          <h4 className="text-[15px] font-bold text-white leading-snug">{node.name}</h4>
+          <p className="text-xs text-white/60 leading-relaxed mt-2">{node.description}</p>
+
+          {node.elevioUrl && (
+            <a
+              href={node.elevioUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-boost-green-light hover:text-white transition-colors"
+            >
+              Read more
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </a>
+          )}
         </div>
       </div>
-      <p className="text-xs text-boost-muted leading-relaxed">{node.description}</p>
 
       {/* Custom card preview for action hooks with content type */}
       {node.customCardJson && <CustomCardPreview card={node.customCardJson} />}
-
-      {node.elevioUrl && (
-        <a
-          href={node.elevioUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 mt-3 text-xs font-medium text-boost-green hover:underline"
-        >
-          Read more
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            <polyline points="15 3 21 3 21 9" />
-            <line x1="10" y1="14" x2="21" y2="3" />
-          </svg>
-        </a>
-      )}
     </div>
   );
 }
@@ -228,47 +242,46 @@ function InlineSection({
   if (nodes.length === 0) return null;
 
   return (
-    <div className="border-t border-boost-border overflow-hidden">
+    <div className="overflow-hidden" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-white relative z-10"
-        style={{ background: "rgba(89,25,93,0.6)" }}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-white relative z-10 hover:bg-white/5 transition-colors"
       >
         <div className="flex items-center gap-2">
           {icon === "computer-api" ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" className="flex-shrink-0" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" aria-hidden="true">
               <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
             </svg>
           ) : (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" className="flex-shrink-0" aria-hidden="true">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" aria-hidden="true">
+              <path d="M4 4h12a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2V4zM4 4a2 2 0 0 0-2 2v14" />
+              <path d="M8 8h8M8 12h6" />
             </svg>
           )}
-          <span className="text-[10px] font-semibold">{label}</span>
-          <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full">{nodes.length}</span>
+          <span className="text-[10px] font-semibold tracking-wider text-white/80 uppercase">{label}</span>
+          <span className="text-[10px] font-bold bg-white/15 text-white/90 px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{nodes.length}</span>
         </div>
         <svg
           width="10" height="10" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="2"
+          stroke="white" strokeOpacity="0.5" strokeWidth="2"
           className={`transition-transform ${open ? "rotate-180" : ""}`}
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
       {open && (
-        <div className="px-3 py-2 space-y-1.5 bg-boost-surface/50">
+        <div className="px-3 py-2 space-y-1" style={{ background: "rgba(0,0,0,0.18)" }}>
           {nodes.map((node) => (
             <button
               key={node.id}
               onClick={() => onSelect(node)}
-              className="w-full flex items-center gap-2 text-left hover:bg-white rounded p-1 transition-colors"
+              className="w-full flex items-center gap-2 text-left hover:bg-white/5 rounded p-1 transition-colors"
             >
-              <svg width="12" height="12" viewBox="0 0 384 512" fill="#7a6b80" className="flex-shrink-0">
+              <svg width="11" height="11" viewBox="0 0 384 512" fill="rgba(255,255,255,0.45)" className="flex-shrink-0">
                 <path d="M192 32L64 32C46.3 32 32 46.3 32 64l0 384c0 17.7 14.3 32 32 32l256 0c17.7 0 32-14.3 32-32l0-256-96 0c-35.3 0-64-28.7-64-64l0-96zM338.7 160L224 45.3V128c0 17.7 14.3 32 32 32h82.7zM0 64C0 28.7 28.7 0 64 0L197.5 0c17 0 33.3 6.7 45.3 18.7L365.3 141.3c12 12 18.7 28.3 18.7 45.3L384 448c0 35.3-28.7 64-64 64L64 512c-35.3 0-64-28.7-64-64L0 64z"/>
               </svg>
-              <span className="text-[11px] text-boost-dark truncate">{node.name}</span>
+              <span className="text-[11px] text-white/80 truncate">{node.name}</span>
             </button>
           ))}
         </div>
@@ -290,16 +303,28 @@ function AgenticCard({
   onSelectNode: (node: FlowNode) => void;
 }) {
   return (
-    <div className="bg-white rounded-lg border border-boost-green-light/25 border-t-[3px] border-t-boost-green-light shadow-sm overflow-hidden w-full sm:max-w-[340px]">
-      {/* Header */}
-      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-boost-green-light/8">
-        <BoostIcon name="robot-brain" variant="purple" size={14} />
-        <span className="text-[10px] font-bold tracking-wider uppercase text-boost-green">AGENTIC</span>
+    <div
+      className="rounded-xl overflow-hidden w-full sm:max-w-[340px] shadow-lg shadow-black/10"
+      style={{
+        background: "linear-gradient(145deg, rgba(75,30,82,0.98) 0%, rgba(55,22,62,1) 100%)",
+      }}
+    >
+      {/* Header — AGENTIC label + active dot */}
+      <div className="flex items-center gap-2 px-3 pt-2.5 pb-1.5">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3v4M12 17v4M3 12h4M17 12h4M7 7l2 2M15 15l2 2M7 17l2-2M15 9l2-2" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+        <span className="text-[9px] font-bold tracking-[0.12em] uppercase text-white/70">AGENTIC</span>
+        <span className="ml-auto inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light" />
+          <span className="text-[9px] text-white/70 font-medium">Active</span>
+        </span>
       </div>
       {/* Body */}
-      <div className="px-3 py-2.5">
-        <p className="text-sm font-bold text-boost-dark leading-snug">{agent.name}</p>
-        <p className="text-[11px] text-boost-muted mt-1 leading-snug line-clamp-3">{agent.description}</p>
+      <div className="px-3 pb-3">
+        <p className="text-[14px] font-bold text-white leading-snug">{agent.name}</p>
+        <p className="text-[11px] text-white/55 mt-1 leading-relaxed line-clamp-3">{agent.description}</p>
       </div>
       {/* Knowledge section */}
       <InlineSection
