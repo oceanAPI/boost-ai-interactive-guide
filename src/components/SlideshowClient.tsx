@@ -13,8 +13,11 @@ import OrchestratorSection from "@/components/sections/OrchestratorSection";
 import TopicHubSection from "@/components/sections/TopicHubSection";
 import DemoPreviewSection from "@/components/sections/DemoPreviewSection";
 import CoreComponentsSection from "@/components/sections/CoreComponentsSection";
+import VoiceSection from "@/components/sections/VoiceSection";
+import ImpactSection from "@/components/sections/ImpactSection";
 import TrustValidationSection from "@/components/sections/TrustValidationSection";
 import CaseStudiesSection from "@/components/sections/CaseStudiesSection";
+import CommercialOfferSection from "@/components/sections/CommercialOfferSection";
 import ROISection from "@/components/sections/ROISection";
 import NextStepsSection from "@/components/sections/NextStepsSection";
 import TopicSection from "@/components/sections/topics/TopicSection";
@@ -135,12 +138,18 @@ export default function SlideshowClient({
         return <TopicHubSection guide={guide} onNavigate={handleTopicNavigate} />;
       case "core-components":
         return <CoreComponentsSection guide={guide} />;
+      case "voice":
+        return <VoiceSection guide={guide} />;
       case "demo":
         return <DemoPreviewSection guide={guide} />;
+      case "impact":
+        return <ImpactSection guide={guide} />;
       case "trust-validation":
         return <TrustValidationSection guide={guide} />;
       case "case-studies":
         return <CaseStudiesSection guide={guide} />;
+      case "commercial-offer":
+        return <CommercialOfferSection guide={guide} />;
       case "roi":
         return <ROISection guide={guide} />;
       case "next-steps":

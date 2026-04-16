@@ -13,9 +13,12 @@ export const SLIDE_SECTIONS: SlideSection[] = [
   { id: "topic-security", label: "Security & Compliance" },
   { id: "topic-ways-of-working", label: "Ways of Working" },
   { id: "core-components", label: "Platform Components" },
+  { id: "voice", label: "Voice AI" },
   { id: "demo", label: "Live Demo" },
+  { id: "impact", label: "Business Impact" },
   { id: "trust-validation", label: "Platform Credibility" },
   { id: "case-studies", label: "Case Studies" },
+  { id: "commercial-offer", label: "Commercial Offer" },
   { id: "roi", label: "ROI Calculator" },
   { id: "next-steps", label: "Next Steps" },
 ];
