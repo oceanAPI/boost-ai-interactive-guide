@@ -291,50 +291,53 @@ export default function HeroSection({ guide }: { guide: GuideData }) {
           <div className="hero-accent-line h-px w-16 sm:w-24" />
         </div>
 
-        {/* Company name */}
+        {/* Headline — purpose, not company name (that's in the co-brand bar) */}
         <div className="hero-fade-in" style={{ animationDelay: "0.3s" }}>
-          <h1 className="text-center text-4xl sm:text-6xl md:text-7xl font-bold leading-[1.1] tracking-tight">
-            <span className="bg-gradient-to-b from-white via-white to-white/50 bg-clip-text text-transparent">
-              {guide.company_name}
+          <h1 className="text-center text-3xl sm:text-5xl md:text-6xl font-bold leading-[1.15] tracking-tight max-w-3xl mx-auto">
+            <span className="text-white">
+              Your AI implementation
+            </span>
+            <br />
+            <span className="text-white/50">
+              with boost.ai
             </span>
           </h1>
         </div>
 
-        {/* Contact line */}
-        {guide.contact_name && (
-          <div className="hero-fade-in mt-4 text-center" style={{ animationDelay: "0.4s" }}>
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] text-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light animate-pulse" />
-              <span className="text-white/50">Prepared for</span>
-              <span className="text-white/80 font-medium">{guide.contact_name}</span>
-              {guide.contact_role && (
-                <span className="text-white/30">{guide.contact_role}</span>
-              )}
-            </span>
+        {/* Contact + URL line */}
+        <div className="hero-fade-in mt-5 sm:mt-6 text-center" style={{ animationDelay: "0.4s" }}>
+          <div className="inline-flex items-center gap-3 text-sm text-white/40">
+            {guide.contact_name && (
+              <>
+                <span className="inline-flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light animate-pulse" />
+                  <span className="text-white/60 font-medium">{guide.contact_name}</span>
+                  {guide.contact_role && (
+                    <span className="text-white/25">{guide.contact_role}</span>
+                  )}
+                </span>
+              </>
+            )}
+            {guide.contact_name && guide.company_url && (
+              <span className="w-px h-3 bg-white/15" />
+            )}
+            {guide.company_url && (
+              <a
+                href={guide.company_url.startsWith("http") ? guide.company_url : `https://${guide.company_url}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white/25 hover:text-boost-green-light/50 transition-colors text-xs"
+              >
+                {guide.company_url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+              </a>
+            )}
           </div>
-        )}
-
-        {/* Company URL (if provided) */}
-        {guide.company_url && (
-          <div className="hero-fade-in mt-3 text-center" style={{ animationDelay: "0.45s" }}>
-            <a
-              href={guide.company_url.startsWith("http") ? guide.company_url : `https://${guide.company_url}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs text-white/30 hover:text-boost-green-light/60 transition-colors"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-50">
-                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
-              </svg>
-              {guide.company_url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
-            </a>
-          </div>
-        )}
+        </div>
 
         {/* Tagline */}
         <div className="hero-fade-in" style={{ animationDelay: "0.5s" }}>
           <p className="text-center text-base sm:text-lg text-white/40 mt-6 sm:mt-8 leading-relaxed max-w-2xl mx-auto font-light">
-            Your AI-powered customer service transformation
+            An overview of your customer service transformation
             <span className="text-white/20 mx-2">—</span>
             <span className="text-boost-green-light/60">from first contact to full resolution.</span>
           </p>
