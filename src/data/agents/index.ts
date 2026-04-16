@@ -27,6 +27,7 @@ export {
 // Industry-specific imports
 import { BANKING_AGENTS, BANKING_STANDALONE, BANKING_TOPIC_GROUPS } from "./banking";
 import { INSURANCE_AGENTS, INSURANCE_TOPIC_GROUPS } from "./insurance";
+import { PENSION_AGENTS, PENSION_TOPIC_GROUPS } from "./pension";
 
 import type { AgentTier, OrchestratorConfig, SpecialistAgent, TopicGroup } from "./_types";
 import { filterAgentsByVariants } from "./_types";
@@ -124,6 +125,10 @@ export const ORCHESTRATOR_BY_INDUSTRY: Record<string, OrchestratorConfig> = {
     standaloneAgents: [],
     topicGroups: INSURANCE_TOPIC_GROUPS,
   },
+  pension: {
+    standaloneAgents: [],
+    topicGroups: PENSION_TOPIC_GROUPS,
+  },
 };
 
 /**
@@ -192,4 +197,4 @@ export function getAgentsForGuide(
   });
 }
 
-export const SPECIALIST_AGENTS = [...INSURANCE_AGENTS, ...BANKING_AGENTS];
+export const SPECIALIST_AGENTS = [...INSURANCE_AGENTS, ...BANKING_AGENTS, ...PENSION_AGENTS];
