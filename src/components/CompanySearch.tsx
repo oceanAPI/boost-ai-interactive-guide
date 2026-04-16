@@ -166,10 +166,22 @@ export default function CompanySearch({ onApply }: CompanySearchProps) {
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder="Search company or paste URL"
-          className="w-full pl-10 pr-3 py-2.5 bg-white border border-boost-border rounded-lg text-boost-dark placeholder-boost-muted/70 focus:outline-none focus-visible:outline-none focus:border-boost-muted/50 transition-colors text-[13px] tracking-tight"
+          className="w-full pl-10 pr-9 py-2.5 bg-white border border-boost-border rounded-lg text-boost-dark placeholder-boost-muted/70 focus:outline-none focus-visible:outline-none focus:border-boost-muted/50 transition-colors text-[13px] tracking-tight"
           style={{ outline: "none", outlineColor: "transparent" }}
           autoComplete="off"
         />
+        {/* Right-aligned spinner — appears while web enrichment is mid-flight */}
+        {webLoading && (
+          <svg
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-boost-muted/80 pointer-events-none"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" strokeOpacity="0.2" />
+            <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+          </svg>
+        )}
       </div>
 
       {/* Helper text */}
@@ -194,7 +206,7 @@ export default function CompanySearch({ onApply }: CompanySearchProps) {
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" strokeOpacity="0.2" />
                     <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
                   </svg>
-                  <span>Searching for <span className="text-boost-dark">{query}</span></span>
+                  <span>Checking the web for <span className="text-boost-dark">{query}</span>…</span>
                 </span>
               ) : (
                 <div className="space-y-0.5">
@@ -202,7 +214,7 @@ export default function CompanySearch({ onApply }: CompanySearchProps) {
                     No match for <span className="text-boost-dark">{query}</span>
                   </p>
                   <p className="text-[11px] text-boost-muted/80">
-                    Noted — we&apos;ll add it to the library.
+                    Noted in the search log — review it later to decide if it&apos;s worth adding.
                   </p>
                 </div>
               )}
@@ -222,18 +234,37 @@ export default function CompanySearch({ onApply }: CompanySearchProps) {
                         active ? "bg-boost-surface" : "hover:bg-boost-surface/60"
                       }`}
                     >
-                      {/* Source glyph */}
-                      <span className="shrink-0 w-8 h-8 rounded-md bg-white border border-boost-border flex items-center justify-center">
-                        {isWeb ? (
-                          <svg className="w-3.5 h-3.5 text-boost-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="9" />
-                            <path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18" />
-                          </svg>
-                        ) : (
-                          <span className="text-[10px] font-semibold text-boost-dark/70 tracking-wider">
-                            {r.match?.country}
-                          </span>
-                        )}
+                      {/* Source glyph — logo when available, fallback to country/globe */}
+                      <span className="shrink-0 w-8 h-8 rounded-md bg-white border border-boost-border flex items-center justify-center overflow-hidden">
+                        {r.match?.logoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={r.match.logoUrl}
+                            alt=""
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              // Gracefully fall through to placeholder if logo 404s
+                              (e.currentTarget as HTMLImageElement).style.display = "none";
+                              const fb = e.currentTarget.nextElementSibling as HTMLElement | null;
+                              if (fb) fb.style.display = "flex";
+                            }}
+                          />
+                        ) : null}
+                        <span
+                          className="w-full h-full items-center justify-center"
+                          style={{ display: r.match?.logoUrl ? "none" : "flex" }}
+                        >
+                          {isWeb ? (
+                            <svg className="w-3.5 h-3.5 text-boost-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18" />
+                            </svg>
+                          ) : (
+                            <span className="text-[10px] font-semibold text-boost-dark/70 tracking-wider">
+                              {r.match?.country}
+                            </span>
+                          )}
+                        </span>
                       </span>
 
                       {/* Text column */}
