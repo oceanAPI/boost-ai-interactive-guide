@@ -67,7 +67,8 @@
       "Bash(ls -la \"/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/\"BoostCamp* \"/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/\"Community*)",
       "WebFetch(domain:camp.boost.ai)",
       "WebFetch(domain:explore.boost.ai)",
-      "WebFetch(domain:vux.world)"
+      "WebFetch(domain:vux.world)",
+      "Bash(grep -n \"HubSpotImportModal$\\\\|</HubSpotImportModal>\" \"/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/admin/page.tsx\")"
     ]
   }
 }

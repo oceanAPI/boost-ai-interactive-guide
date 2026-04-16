@@ -10,6 +10,7 @@ import { generateSOWPdf } from "@/lib/generate-sow-pdf";
 import SalesforceImportModal from "@/components/SalesforceImportModal";
 import HubSpotImportModal from "@/components/HubSpotImportModal";
 import CompanySearch from "@/components/CompanySearch";
+import SearchLogPanel from "@/components/SearchLogPanel";
 import type { DetectionResult } from "@/lib/company-detect";
 import { SLIDE_SECTIONS } from "@/lib/slide-sections";
 import { CASE_STUDIES } from "@/data/case-studies";
@@ -271,6 +272,7 @@ export default function AdminPage() {
   /* ─── Salesforce import ─── */
   const [showSalesforce, setShowSalesforce] = useState(false);
   const [showHubspot, setShowHubspot] = useState(false);
+  const [showSearchLog, setShowSearchLog] = useState(false);
 
   /* ─── Guide sections (inline picker) ─── */
   const [sectionItems, setSectionItems] = useState(() =>
@@ -437,7 +439,24 @@ export default function AdminPage() {
         >
           {/* Pattern-library quick prefill */}
           <div className="mb-5 pb-5 border-b border-boost-border">
-            <CompanySearch onApply={applyCompanyPattern} />
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <CompanySearch onApply={applyCompanyPattern} />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSearchLog(true)}
+                className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors flex-shrink-0 mt-2.5 px-2 py-1 rounded hover:bg-boost-surface"
+                title="Review company searches made on this browser"
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 3h18v18H3z M3 9h18 M9 21V9" />
+                  </svg>
+                  Search log
+                </span>
+              </button>
+            </div>
             {lastPrefilled && (
               <div className="mt-2 flex items-center gap-2 text-xs">
                 <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-boost-green-light/10 text-boost-green font-medium">
@@ -1278,6 +1297,12 @@ export default function AdminPage() {
         onClose={() => setShowHubspot(false)}
         currentForm={form}
         onApply={(merged) => setForm(merged)}
+      />
+
+      {/* Search log review panel */}
+      <SearchLogPanel
+        open={showSearchLog}
+        onClose={() => setShowSearchLog(false)}
       />
     </div>
   );
