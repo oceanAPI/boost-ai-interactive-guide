@@ -1,322 +1,121 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import type { GuideData } from "@/lib/types";
+import { getAgentsForGuide } from "@/data/agents";
+import { calculateROI } from "@/lib/roi-calculator";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
 
 /* ─────────────────────────────────────────────────────────────────────
- *  Business Impact — "What changes when AI handles your conversations"
+ *  Business Impact — 4 tabs, each with a DISTINCT visual
  *
- *  Four tabs: CSAT, Automation, Data, Commercial. Each tab presents
- *  a single editorial insight with one visual focal point. No
- *  dashboard grids, no metric cards. Restraint is confidence.
+ *  CSAT:        Score-distribution bar chart (before vs after)
+ *  Automation:  Vertical conversation-flow split (AI vs Human)
+ *  Data:        Mini analytics dashboard mockup (4 widgets)
+ *  Commercial:  Savings timeline with animated fill + break-even
+ *
+ *  Each tab looks and feels genuinely different. No two tabs share
+ *  the same visual structure.
  * ───────────────────────────────────────────────────────────────────── */
 
-/* ─── Helpers ─── */
-
-function formatCurrency(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
-  return `$${Math.round(n)}`;
-}
-
-function parseCost(raw: string | undefined): number {
-  return parseFloat(raw?.replace(/[^0-9.]/g, "") || "0") || 8;
-}
-
-function totalVolume(vols: GuideData["channel_volumes"]): number {
-  return Object.values(vols).reduce((s, v) => s + (v || 0), 0);
-}
-
-/* ─── Tab definitions ─── */
-
 type TabId = "csat" | "automation" | "data" | "commercial";
-
-const TABS: { id: TabId; label: string }[] = [
-  { id: "csat", label: "CSAT" },
-  { id: "automation", label: "Automation" },
-  { id: "data", label: "Data" },
-  { id: "commercial", label: "Commercial" },
+const TABS: { id: TabId; label: string; icon: string }[] = [
+  { id: "csat", label: "CSAT", icon: "★" },
+  { id: "automation", label: "Automation", icon: "◎" },
+  { id: "data", label: "Data Insights", icon: "◈" },
+  { id: "commercial", label: "Commercial", icon: "◇" },
 ];
 
-/* ─── Insight types for the Data tab ─── */
-
-const DATA_INSIGHTS = [
-  {
-    label: "Intent trends",
-    desc: "What customers ask about most, and how it shifts week to week.",
-  },
-  {
-    label: "Sentiment shifts",
-    desc: "Aggregate mood changes across channels, flagged before they escalate.",
-  },
-  {
-    label: "Topic clusters",
-    desc: "Conversations grouped by theme, revealing product or service gaps.",
-  },
-  {
-    label: "Escalation patterns",
-    desc: "Why, when, and where conversations require human intervention.",
-  },
-  {
-    label: "Resolution rates",
-    desc: "First-contact resolution tracked by agent, channel, and complexity.",
-  },
-  {
-    label: "Peak-hour analysis",
-    desc: "Volume patterns that inform staffing and routing decisions.",
-  },
-];
-
-/* ─── CSAT visual: satisfaction scale with animated pointer ─── */
-
-function CSATScale({ active }: { active: boolean }) {
-  const [hasAnimated, setHasAnimated] = useState(false);
-  const prevActiveRef = useRef(false);
-
-  // Reset animation state when tab becomes active so it replays
+/* ─── Shared hook: reset animation when tab activates ─── */
+function useTabActivation(active: boolean) {
+  const [ready, setReady] = useState(false);
+  const prevRef = useRef(false);
   useEffect(() => {
-    if (active && !prevActiveRef.current) {
-      setHasAnimated(false);
-      const timer = setTimeout(() => setHasAnimated(true), 80);
-      return () => clearTimeout(timer);
+    if (active && !prevRef.current) {
+      setReady(false);
+      const t = setTimeout(() => setReady(true), 100);
+      return () => clearTimeout(t);
     }
-    prevActiveRef.current = active;
+    prevRef.current = active;
   }, [active]);
+  return ready;
+}
 
-  const markers = [1, 2, 3, 4, 5];
-  const beforePos = ((3.2 - 1) / 4) * 100; // percentage along the scale
-  const afterPos = ((4.6 - 1) / 4) * 100;
+/* ═══════════════════════════════════════════════════════════════════
+ *  TAB 1 — CSAT: Score distribution shift
+ *
+ *  5 horizontal bars for scores 1-5. "Before" (muted) and "After"
+ *  (green) side by side. The after bars animate their widths to show
+ *  the distribution shifting right (toward 4-5).
+ * ═══════════════════════════════════════════════════════════════════ */
+
+const CSAT_DATA = [
+  { score: 5, before: 12, after: 48 },
+  { score: 4, before: 18, after: 32 },
+  { score: 3, before: 35, after: 12 },
+  { score: 2, before: 25, after: 6 },
+  { score: 1, before: 10, after: 2 },
+];
+
+function CSATDistribution({ active }: { active: boolean }) {
+  const ready = useTabActivation(active);
+  const maxVal = 50; // scale ceiling
 
   return (
-    <div className="py-6">
-      {/* Scale track */}
-      <div className="relative h-2 bg-boost-surface rounded-full mx-6">
-        {/* Filled region: before to after */}
-        <div
-          className="absolute top-0 h-full rounded-full bg-boost-green-light/20 transition-all"
-          style={{
-            left: `${beforePos}%`,
-            width: hasAnimated ? `${afterPos - beforePos}%` : "0%",
-            transitionDuration: "1200ms",
-            transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
-            transitionDelay: "400ms",
-          }}
-        />
+    <div className="space-y-3 py-4">
+      {/* Legend */}
+      <div className="flex items-center gap-5 mb-2">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-2 rounded-sm bg-boost-muted/25" />
+          <span className="text-[10px] text-boost-muted">Before</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-2 rounded-sm bg-boost-green-light" />
+          <span className="text-[10px] text-boost-dark font-medium">After</span>
+        </div>
+      </div>
 
-        {/* Marker dots */}
-        {markers.map((n) => {
-          const pos = ((n - 1) / 4) * 100;
-          return (
-            <div
-              key={n}
-              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
-              style={{ left: `${pos}%` }}
-            >
-              <div className="w-1.5 h-1.5 rounded-full bg-boost-border" />
+      {CSAT_DATA.map((row, i) => (
+        <div key={row.score} className="flex items-center gap-3">
+          {/* Score label */}
+          <span className="w-4 text-right text-[11px] font-bold text-boost-dark tabular-nums shrink-0">
+            {row.score}
+          </span>
+
+          {/* Bar pair */}
+          <div className="flex-1 space-y-1">
+            {/* Before bar */}
+            <div className="h-3 bg-boost-surface rounded-sm overflow-hidden">
+              <div
+                className="h-full bg-boost-muted/25 rounded-sm transition-all"
+                style={{
+                  width: ready ? `${(row.before / maxVal) * 100}%` : "0%",
+                  transitionDuration: "800ms",
+                  transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+                  transitionDelay: `${200 + i * 80}ms`,
+                }}
+              />
             </div>
-          );
-        })}
+            {/* After bar */}
+            <div className="h-3 bg-boost-surface rounded-sm overflow-hidden">
+              <div
+                className="h-full bg-boost-green-light rounded-sm transition-all"
+                style={{
+                  width: ready ? `${(row.after / maxVal) * 100}%` : "0%",
+                  transitionDuration: "1000ms",
+                  transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+                  transitionDelay: `${400 + i * 80}ms`,
+                }}
+              />
+            </div>
+          </div>
 
-        {/* "Before" pointer */}
-        <div
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-all"
-          style={{
-            left: `${beforePos}%`,
-            opacity: hasAnimated ? 1 : 0,
-            transitionDuration: "500ms",
-            transitionDelay: "200ms",
-          }}
-        >
-          <div className="w-4 h-4 rounded-full bg-boost-muted/30 border-2 border-boost-muted/50" />
-        </div>
-
-        {/* "After" pointer — animates from before to after position */}
-        <div
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-all"
-          style={{
-            left: hasAnimated ? `${afterPos}%` : `${beforePos}%`,
-            opacity: hasAnimated ? 1 : 0,
-            transitionDuration: "1200ms",
-            transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
-            transitionDelay: "400ms",
-          }}
-        >
-          <div className="w-5 h-5 rounded-full bg-boost-green border-2 border-white shadow-md shadow-boost-green/20" />
-        </div>
-      </div>
-
-      {/* Scale labels */}
-      <div className="relative mx-6 mt-3">
-        {markers.map((n) => {
-          const pos = ((n - 1) / 4) * 100;
-          return (
-            <span
-              key={n}
-              className="absolute -translate-x-1/2 text-[10px] text-boost-muted/60 tabular-nums"
-              style={{ left: `${pos}%` }}
-            >
-              {n}
-            </span>
-          );
-        })}
-      </div>
-
-      {/* Before / After legend */}
-      <div className="flex items-center justify-center gap-8 mt-8">
-        <div
-          className="flex items-center gap-2 transition-all"
-          style={{
-            opacity: hasAnimated ? 1 : 0,
-            transitionDuration: "400ms",
-            transitionDelay: "300ms",
-          }}
-        >
-          <div className="w-3 h-3 rounded-full bg-boost-muted/30 border border-boost-muted/50" />
-          <span className="text-[11px] text-boost-muted">
-            Before <span className="font-semibold tabular-nums">3.2</span>
-          </span>
-        </div>
-        <div
-          className="flex items-center gap-2 transition-all"
-          style={{
-            opacity: hasAnimated ? 1 : 0,
-            transitionDuration: "400ms",
-            transitionDelay: "1400ms",
-          }}
-        >
-          <div className="w-3 h-3 rounded-full bg-boost-green border border-white shadow-sm" />
-          <span className="text-[11px] text-boost-dark font-medium">
-            After <span className="font-semibold tabular-nums">4.6</span>
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Automation visual: stacked horizontal bar ─── */
-
-function AutomationBar({ active }: { active: boolean }) {
-  const [hasAnimated, setHasAnimated] = useState(false);
-  const prevActiveRef = useRef(false);
-
-  useEffect(() => {
-    if (active && !prevActiveRef.current) {
-      setHasAnimated(false);
-      const timer = setTimeout(() => setHasAnimated(true), 80);
-      return () => clearTimeout(timer);
-    }
-    prevActiveRef.current = active;
-  }, [active]);
-
-  return (
-    <div className="py-6">
-      {/* Bar */}
-      <div className="h-10 rounded-lg overflow-hidden bg-boost-surface flex">
-        <div
-          className="h-full bg-boost-green/90 flex items-center transition-all"
-          style={{
-            width: hasAnimated ? "80%" : "0%",
-            transitionDuration: "1000ms",
-            transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
-            transitionDelay: "300ms",
-          }}
-        >
-          <span
-            className="pl-3 text-[11px] font-semibold text-white whitespace-nowrap transition-opacity"
-            style={{
-              opacity: hasAnimated ? 1 : 0,
-              transitionDuration: "300ms",
-              transitionDelay: "900ms",
-            }}
-          >
-            AI-resolved
-          </span>
-        </div>
-        <div className="h-full flex-1 flex items-center">
-          <span
-            className="pl-3 text-[11px] font-medium text-boost-purple whitespace-nowrap transition-opacity"
-            style={{
-              opacity: hasAnimated ? 1 : 0,
-              transitionDuration: "300ms",
-              transitionDelay: "1100ms",
-            }}
-          >
-            Human
-          </span>
-        </div>
-      </div>
-
-      {/* Percentage labels */}
-      <div className="flex justify-between mt-2.5">
-        <span
-          className="text-[11px] font-semibold text-boost-green tabular-nums transition-opacity"
-          style={{
-            opacity: hasAnimated ? 1 : 0,
-            transitionDuration: "300ms",
-            transitionDelay: "1000ms",
-          }}
-        >
-          80%
-        </span>
-        <span
-          className="text-[11px] font-medium text-boost-purple tabular-nums transition-opacity"
-          style={{
-            opacity: hasAnimated ? 1 : 0,
-            transitionDuration: "300ms",
-            transitionDelay: "1200ms",
-          }}
-        >
-          20%
-        </span>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Data visual: sequential insight list ─── */
-
-function DataInsightList({ active }: { active: boolean }) {
-  const [visibleCount, setVisibleCount] = useState(0);
-  const prevActiveRef = useRef(false);
-
-  useEffect(() => {
-    if (active && !prevActiveRef.current) {
-      setVisibleCount(0);
-      let count = 0;
-      const interval = setInterval(() => {
-        count++;
-        setVisibleCount(count);
-        if (count >= DATA_INSIGHTS.length) clearInterval(interval);
-      }, 140);
-      return () => clearInterval(interval);
-    }
-    prevActiveRef.current = active;
-  }, [active]);
-
-  return (
-    <div className="py-4 space-y-0">
-      {DATA_INSIGHTS.map((insight, i) => (
-        <div
-          key={insight.label}
-          className="flex items-start gap-3 py-2.5 border-b border-boost-border/40 last:border-b-0 transition-all"
-          style={{
-            opacity: i < visibleCount ? 1 : 0,
-            transform: i < visibleCount ? "translateY(0)" : "translateY(8px)",
-            transitionDuration: "350ms",
-          }}
-        >
-          <span className="mt-1.5 flex-shrink-0 w-1.5 h-1.5 rounded-full bg-boost-green-light" />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-boost-dark leading-tight">
-              {insight.label}
-            </p>
-            <p className="text-[12px] text-boost-muted leading-relaxed mt-0.5">
-              {insight.desc}
-            </p>
+          {/* Percentage labels */}
+          <div className="w-16 shrink-0 text-right space-y-1">
+            <p className="text-[9px] text-boost-muted tabular-nums">{row.before}%</p>
+            <p className="text-[9px] text-boost-green font-semibold tabular-nums">{row.after}%</p>
           </div>
         </div>
       ))}
@@ -324,244 +123,392 @@ function DataInsightList({ active }: { active: boolean }) {
   );
 }
 
-/* ─── Commercial visual: side-by-side cost comparison ─── */
+/* ═══════════════════════════════════════════════════════════════════
+ *  TAB 2 — Automation: Conversation flow split
+ *
+ *  Visual flow: incoming conversations → orchestrator decision →
+ *  two branches (AI resolved / Human handled) with counts.
+ * ═══════════════════════════════════════════════════════════════════ */
 
-function CostComparison({
-  active,
-  currentMonthly,
-  projectedMonthly,
-}: {
-  active: boolean;
-  currentMonthly: number;
-  projectedMonthly: number;
-}) {
-  const [hasAnimated, setHasAnimated] = useState(false);
-  const prevActiveRef = useRef(false);
+function AutomationFlow({ active, volume }: { active: boolean; volume: number }) {
+  const ready = useTabActivation(active);
+  const aiCount = Math.round(volume * 0.8);
+  const humanCount = volume - aiCount;
 
-  useEffect(() => {
-    if (active && !prevActiveRef.current) {
-      setHasAnimated(false);
-      const timer = setTimeout(() => setHasAnimated(true), 80);
-      return () => clearTimeout(timer);
-    }
-    prevActiveRef.current = active;
-  }, [active]);
-
-  const currentCount = useCountUp({
-    target: currentMonthly,
-    enabled: hasAnimated,
-    duration: 1000,
-  });
-
-  const projectedCount = useCountUp({
-    target: projectedMonthly,
-    enabled: hasAnimated,
-    duration: 1000,
-  });
-
-  const savings = currentMonthly - projectedMonthly;
-  const savingsPercent = currentMonthly > 0 ? Math.round((savings / currentMonthly) * 100) : 0;
+  const aiDisplay = useCountUp({ target: aiCount, enabled: ready, duration: 1200 });
+  const humanDisplay = useCountUp({ target: humanCount, enabled: ready, duration: 1200 });
 
   return (
-    <div className="py-6">
-      <div className="grid grid-cols-2 gap-4">
-        {/* Current cost */}
-        <div
-          className="rounded-xl bg-boost-surface p-5 transition-all"
+    <div className="py-4">
+      {/* Incoming */}
+      <div className="text-center mb-3">
+        <span
+          className="inline-block px-3 py-1.5 rounded-lg bg-boost-surface border border-boost-border text-[11px] font-semibold text-boost-dark transition-all"
           style={{
-            opacity: hasAnimated ? 1 : 0,
-            transform: hasAnimated ? "translateY(0)" : "translateY(10px)",
-            transitionDuration: "500ms",
-            transitionDelay: "200ms",
+            opacity: ready ? 1 : 0,
+            transform: ready ? "translateY(0)" : "translateY(-8px)",
+            transitionDuration: "400ms",
           }}
         >
-          <p className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.12em] mb-3">
-            Current monthly
-          </p>
-          <p className="text-2xl font-bold text-boost-dark tabular-nums">
-            {formatCurrency(currentCount)}
-          </p>
-        </div>
+          {volume.toLocaleString()} monthly conversations
+        </span>
+      </div>
 
-        {/* Projected cost */}
+      {/* Connector down */}
+      <div className="flex justify-center">
         <div
-          className="rounded-xl bg-boost-green-light/5 border border-boost-green-light/15 p-5 transition-all"
+          className="w-px h-6 transition-all"
           style={{
-            opacity: hasAnimated ? 1 : 0,
-            transform: hasAnimated ? "translateY(0)" : "translateY(10px)",
-            transitionDuration: "500ms",
+            backgroundColor: ready ? "var(--color-boost-border)" : "transparent",
+            transitionDuration: "300ms",
+            transitionDelay: "300ms",
+          }}
+        />
+      </div>
+
+      {/* Orchestrator decision node */}
+      <div className="flex justify-center mb-1">
+        <div
+          className="w-8 h-8 rounded-full bg-boost-purple/10 border border-boost-purple/20 flex items-center justify-center transition-all"
+          style={{
+            opacity: ready ? 1 : 0,
+            transform: ready ? "scale(1)" : "scale(0.5)",
+            transitionDuration: "400ms",
             transitionDelay: "400ms",
           }}
         >
-          <p className="text-[10px] font-bold text-boost-green uppercase tracking-[0.12em] mb-3">
-            With boost.ai
-          </p>
-          <p className="text-2xl font-bold text-boost-green tabular-nums">
-            {formatCurrency(projectedCount)}
-          </p>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-boost-purple">
+            <circle cx="12" cy="12" r="3" /><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
+          </svg>
         </div>
       </div>
 
-      {/* Savings callout */}
-      <div
-        className="mt-4 flex items-center gap-2 transition-all"
-        style={{
-          opacity: hasAnimated ? 1 : 0,
-          transitionDuration: "400ms",
-          transitionDelay: "800ms",
-        }}
-      >
-        <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light" />
-        <p className="text-[12px] text-boost-muted">
-          Projected saving of{" "}
-          <span className="font-semibold text-boost-dark">
-            {formatCurrency(savings)}/month
-          </span>{" "}
-          — a{" "}
-          <span className="font-semibold text-boost-dark">{savingsPercent}%</span>{" "}
-          reduction
-        </p>
+      {/* Branch connectors + results */}
+      <div className="grid grid-cols-2 gap-4 mt-2">
+        {/* AI branch */}
+        <div
+          className="text-center transition-all"
+          style={{
+            opacity: ready ? 1 : 0,
+            transform: ready ? "translateY(0)" : "translateY(12px)",
+            transitionDuration: "500ms",
+            transitionDelay: "600ms",
+          }}
+        >
+          <div className="flex justify-center mb-2">
+            <div className="w-px h-4 bg-boost-green-light/40" />
+          </div>
+          <div className="rounded-xl bg-boost-green-light/5 border border-boost-green-light/15 p-4">
+            <p className="text-2xl font-bold text-boost-green tabular-nums">{aiDisplay.toLocaleString()}</p>
+            <p className="text-[10px] font-semibold text-boost-green uppercase tracking-wider mt-1">AI-resolved</p>
+            <p className="text-[10px] text-boost-muted mt-2 leading-relaxed">
+              Instant, 24/7. No queue, no wait. Full self-service or guided resolution.
+            </p>
+          </div>
+        </div>
+
+        {/* Human branch */}
+        <div
+          className="text-center transition-all"
+          style={{
+            opacity: ready ? 1 : 0,
+            transform: ready ? "translateY(0)" : "translateY(12px)",
+            transitionDuration: "500ms",
+            transitionDelay: "750ms",
+          }}
+        >
+          <div className="flex justify-center mb-2">
+            <div className="w-px h-4 bg-boost-purple/30" />
+          </div>
+          <div className="rounded-xl bg-boost-purple/[0.03] border border-boost-purple/10 p-4">
+            <p className="text-2xl font-bold text-boost-purple tabular-nums">{humanDisplay.toLocaleString()}</p>
+            <p className="text-[10px] font-semibold text-boost-purple uppercase tracking-wider mt-1">Human-handled</p>
+            <p className="text-[10px] text-boost-muted mt-2 leading-relaxed">
+              Warm handover with full context. The agent never asks &ldquo;how can I help you?&rdquo;
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-/* ─── Main section component ─── */
+/* ═══════════════════════════════════════════════════════════════════
+ *  TAB 3 — Data: Mini analytics dashboard mockup
+ *
+ *  4 decorative widget cards that look like real dashboard elements.
+ *  Each has a different visual shape (bars, line, donut, heatmap).
+ * ═══════════════════════════════════════════════════════════════════ */
+
+const DASHBOARD_WIDGETS = [
+  {
+    title: "Top intents",
+    type: "bars" as const,
+    data: [85, 72, 58, 45, 30, 22],
+    labels: ["Balance", "Claims", "Payments", "Transfer", "Login", "Rates"],
+  },
+  {
+    title: "Sentiment trend",
+    type: "line" as const,
+    data: [35, 42, 38, 55, 62, 58, 70, 75, 72, 80, 78, 82],
+  },
+  {
+    title: "Resolution",
+    type: "donut" as const,
+    data: [80, 15, 5], // resolved, escalated, unsolved
+  },
+  {
+    title: "Volume by hour",
+    type: "heatmap" as const,
+    data: [2, 3, 1, 1, 2, 5, 8, 9, 7, 6, 5, 4, 5, 6, 7, 8, 6, 4, 3, 2, 1, 1, 1, 1],
+  },
+];
+
+function MiniDashboard({ active }: { active: boolean }) {
+  const ready = useTabActivation(active);
+
+  return (
+    <div className="grid grid-cols-2 gap-3 py-4">
+      {DASHBOARD_WIDGETS.map((widget, wi) => (
+        <div
+          key={widget.title}
+          className="rounded-lg bg-boost-dark p-3 transition-all"
+          style={{
+            opacity: ready ? 1 : 0,
+            transform: ready ? "translateY(0)" : "translateY(10px)",
+            transitionDuration: "500ms",
+            transitionDelay: `${200 + wi * 120}ms`,
+          }}
+        >
+          <p className="text-[9px] text-white/40 uppercase tracking-wider mb-2">{widget.title}</p>
+
+          {/* Bars widget */}
+          {widget.type === "bars" && (
+            <div className="flex items-end gap-1 h-12">
+              {widget.data.map((v, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                  <div
+                    className="w-full rounded-sm bg-boost-green-light/60 transition-all"
+                    style={{
+                      height: ready ? `${(v / 100) * 40}px` : "2px",
+                      transitionDuration: "600ms",
+                      transitionDelay: `${400 + wi * 120 + i * 50}ms`,
+                    }}
+                  />
+                  <span className="text-[7px] text-white/25">{widget.labels?.[i]?.[0]}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Line widget */}
+          {widget.type === "line" && (
+            <svg viewBox="0 0 120 40" className="w-full h-12" preserveAspectRatio="none">
+              <polyline
+                points={widget.data.map((v, i) => `${(i / (widget.data.length - 1)) * 120},${40 - (v / 100) * 38}`).join(" ")}
+                fill="none"
+                stroke="rgba(54,181,149,0.6)"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  strokeDasharray: 300,
+                  strokeDashoffset: ready ? 0 : 300,
+                  transition: `stroke-dashoffset 1500ms cubic-bezier(0.16,1,0.3,1) ${400 + wi * 120}ms`,
+                }}
+              />
+            </svg>
+          )}
+
+          {/* Donut widget */}
+          {widget.type === "donut" && (
+            <div className="flex items-center gap-3 h-12">
+              <svg width="40" height="40" viewBox="0 0 40 40" className="shrink-0">
+                <circle cx="20" cy="20" r="15" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5" />
+                <circle
+                  cx="20" cy="20" r="15" fill="none" stroke="rgba(54,181,149,0.7)" strokeWidth="5"
+                  strokeDasharray={`${ready ? (widget.data[0] / 100) * 94 : 0} 94`}
+                  transform="rotate(-90 20 20)"
+                  style={{ transition: `stroke-dasharray 1200ms cubic-bezier(0.16,1,0.3,1) ${400 + wi * 120}ms` }}
+                />
+              </svg>
+              <div className="space-y-0.5">
+                <p className="text-[10px] text-white/70 font-semibold">{widget.data[0]}% resolved</p>
+                <p className="text-[8px] text-white/30">{widget.data[1]}% escalated</p>
+                <p className="text-[8px] text-white/20">{widget.data[2]}% unsolved</p>
+              </div>
+            </div>
+          )}
+
+          {/* Heatmap widget */}
+          {widget.type === "heatmap" && (
+            <div className="grid grid-cols-12 gap-[2px] h-12 content-center">
+              {widget.data.map((v, i) => (
+                <div
+                  key={i}
+                  className="rounded-[2px] transition-all"
+                  style={{
+                    height: "8px",
+                    backgroundColor: ready
+                      ? `rgba(54,181,149,${Math.max(0.1, v / 10)})`
+                      : "rgba(255,255,255,0.03)",
+                    transitionDuration: "400ms",
+                    transitionDelay: `${400 + wi * 120 + i * 20}ms`,
+                  }}
+                />
+              ))}
+              <div className="col-span-12 flex justify-between mt-1">
+                <span className="text-[6px] text-white/20">00:00</span>
+                <span className="text-[6px] text-white/20">23:00</span>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  TAB 4 — Commercial: Savings timeline
+ *
+ *  Horizontal timeline (months 1-12) with an animated line showing
+ *  cumulative savings. Break-even marker pops in at the right month.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+function SavingsTimeline({ active, annualSavings, breakEvenMonths }: {
+  active: boolean;
+  annualSavings: number;
+  breakEvenMonths: number;
+}) {
+  const ready = useTabActivation(active);
+  const months = 12;
+  const monthlySavings = annualSavings / 12;
+
+  const savingsCount = useCountUp({ target: annualSavings, enabled: ready, duration: 1400 });
+
+  const formatCurrency = (n: number) => {
+    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
+    return `$${Math.round(n)}`;
+  };
+
+  return (
+    <div className="py-4">
+      {/* Big number */}
+      <div className="text-center mb-6">
+        <p className="text-3xl font-bold text-boost-green tabular-nums">
+          {formatCurrency(savingsCount)}
+        </p>
+        <p className="text-[11px] text-boost-muted mt-1">Estimated annual savings</p>
+      </div>
+
+      {/* Timeline bar */}
+      <div className="relative mx-2">
+        {/* Track */}
+        <div className="h-2 bg-boost-surface rounded-full overflow-hidden">
+          <div
+            className="h-full bg-boost-green-light/70 rounded-full transition-all"
+            style={{
+              width: ready ? "100%" : "0%",
+              transitionDuration: "2000ms",
+              transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+              transitionDelay: "300ms",
+            }}
+          />
+        </div>
+
+        {/* Month markers */}
+        <div className="flex justify-between mt-2">
+          {Array.from({ length: months }).map((_, i) => (
+            <span key={i} className="text-[8px] text-boost-muted/50 tabular-nums">
+              {i + 1}
+            </span>
+          ))}
+        </div>
+
+        {/* Break-even marker */}
+        <div
+          className="absolute top-0 -translate-x-1/2 transition-all"
+          style={{
+            left: `${((breakEvenMonths - 1) / (months - 1)) * 100}%`,
+            opacity: ready ? 1 : 0,
+            transform: `translateX(-50%) ${ready ? "translateY(0)" : "translateY(-4px)"}`,
+            transitionDuration: "500ms",
+            transitionDelay: `${300 + (breakEvenMonths / months) * 2000}ms`,
+          }}
+        >
+          <div className="w-px h-8 bg-boost-purple/30 -mt-3" />
+          <div className="bg-boost-purple/10 border border-boost-purple/20 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+            <p className="text-[8px] font-semibold text-boost-purple">Break-even</p>
+            <p className="text-[7px] text-boost-muted">Month {breakEvenMonths}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Supporting metrics */}
+      <div className="flex justify-center gap-8 mt-8">
+        <div className="text-center">
+          <p className="text-lg font-bold text-boost-dark tabular-nums">{breakEvenMonths} mo</p>
+          <p className="text-[10px] text-boost-muted">Break-even</p>
+        </div>
+        <div className="text-center">
+          <p className="text-lg font-bold text-boost-dark tabular-nums">{formatCurrency(monthlySavings)}</p>
+          <p className="text-[10px] text-boost-muted">Monthly savings</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  MAIN SECTION
+ * ═══════════════════════════════════════════════════════════════════ */
 
 export default function ImpactSection({ guide }: { guide: GuideData }) {
-  const { ref: sectionRef, isVisible } = useScrollReveal({ once: true });
+  const { ref, isVisible } = useScrollReveal({ once: true });
   const [activeTab, setActiveTab] = useState<TabId>("csat");
-  const [displayedTab, setDisplayedTab] = useState<TabId>("csat");
-  const [isFading, setIsFading] = useState(false);
 
-  /* Cross-fade tab transition */
-  const handleTabSwitch = (id: TabId) => {
-    if (id === activeTab) return;
-    setIsFading(true);
-    setTimeout(() => {
-      setDisplayedTab(id);
-      setActiveTab(id);
-      setIsFading(false);
-    }, 200);
-  };
+  // Dynamic data
+  const vol = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0) || 10000;
+  const costNum = parseFloat(guide.conversation_cost?.replace(/[^0-9.]/g, "") || "0") || 8;
+  const agents = getAgentsForGuide(guide.areas_of_interest, guide.selected_variants);
+  const avgRate = agents.length > 0
+    ? Math.round(agents.reduce((s, a) => s + a.automationRate, 0) / agents.length) : 80;
 
-  /* Derive volume / cost data for Automation + Commercial tabs */
-  const vol = totalVolume(guide.channel_volumes);
-  const hasVolume = vol > 0;
-  const monthlyVolume = hasVolume ? vol : 10_000;
-  const costPerConv = parseCost(guide.conversation_cost);
-  const currentMonthly = monthlyVolume * costPerConv;
-  const projectedMonthly = Math.round(
-    monthlyVolume * 0.2 * costPerConv + monthlyVolume * 0.8 * 0.5,
-  ); // 20% human at full cost + 80% AI at ~$0.50
+  const roi = useMemo(() => calculateROI({
+    monthlyConversations: vol,
+    costPerConversation: costNum,
+    pricingModel: guide.pricing_model || "fixed",
+    automationRate: avgRate,
+    markets: guide.deployment_markets || 1,
+  }), [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets]);
 
-  const monthlySavings = currentMonthly - projectedMonthly;
-
-  /* Tab content map */
-  const tabContent: Record<TabId, {
-    headline: React.ReactNode;
-    visual: React.ReactNode;
-    supporting: React.ReactNode;
-  }> = {
+  // Tab descriptions
+  const TAB_CONTENT: Record<TabId, { headline: string; sub: string }> = {
     csat: {
-      headline: (
-        <p className="text-lg sm:text-xl text-boost-dark leading-relaxed max-w-xl">
-          From <span className="font-bold tabular-nums">3.2</span> to{" "}
-          <span className="font-bold tabular-nums">4.6</span> — the CSAT leap
-          when customers don&apos;t wait.
-        </p>
-      ),
-      visual: <CSATScale active={displayedTab === "csat" && isVisible} />,
-      supporting: (
-        <p className="text-sm text-boost-muted leading-relaxed max-w-lg">
-          Instant resolution drives satisfaction more than any other factor.
-          When the AI understands intent in the first message and resolves
-          without transfers, customers notice — and their scores reflect it.
-        </p>
-      ),
+      headline: "The CSAT leap when customers don\u2019t wait",
+      sub: "Instant resolution shifts the entire satisfaction distribution. Scores 4-5 jump from 30% to 80% of total responses.",
     },
-
     automation: {
-      headline: (
-        <p className="text-lg sm:text-xl text-boost-dark leading-relaxed max-w-xl">
-          <span className="font-bold">80% of conversations</span> resolved
-          without a human in the loop.
-        </p>
-      ),
-      visual: <AutomationBar active={displayedTab === "automation" && isVisible} />,
-      supporting: (
-        <p className="text-sm text-boost-muted leading-relaxed max-w-lg">
-          {hasVolume ? (
-            <>
-              At{" "}
-              <span className="font-medium text-boost-dark">
-                {monthlyVolume.toLocaleString()} monthly conversations
-              </span>
-              , that means roughly{" "}
-              <span className="font-medium text-boost-dark">
-                {Math.round(monthlyVolume * 0.8).toLocaleString()}
-              </span>{" "}
-              handled end-to-end by AI.{" "}
-            </>
-          ) : (
-            <>
-              For a typical operation, that means thousands of interactions
-              handled end-to-end by AI every month.{" "}
-            </>
-          )}
-          The remaining 20% aren&apos;t cold transfers — they&apos;re warm
-          handovers with full context, so the agent picks up exactly where the
-          AI left off.
-        </p>
-      ),
+      headline: `${Math.round(avgRate)}% of conversations resolved without a human`,
+      sub: "The remaining conversations get a warm handover with full context \u2014 no cold transfers, no repeating the problem.",
     },
-
     data: {
-      headline: (
-        <p className="text-lg sm:text-xl text-boost-dark leading-relaxed max-w-xl">
-          Every conversation becomes a{" "}
-          <span className="font-bold">data point</span>, not a dead end.
-        </p>
-      ),
-      visual: <DataInsightList active={displayedTab === "data" && isVisible} />,
-      supporting: (
-        <p className="text-sm text-boost-muted leading-relaxed max-w-lg">
-          The analytics dashboard surfaces patterns that live agents
-          can&apos;t report at scale — from emerging intent spikes to
-          sentiment trends that predict churn before it happens.
-        </p>
-      ),
+      headline: "Every conversation becomes a data point",
+      sub: "The analytics dashboard surfaces what your customers actually need \u2014 intents, sentiment, resolution rates, and volume patterns.",
     },
-
     commercial: {
-      headline: (
-        <p className="text-lg sm:text-xl text-boost-dark leading-relaxed max-w-xl">
-          A projected{" "}
-          <span className="font-bold">
-            {formatCurrency(monthlySavings)} saved every month
-          </span>{" "}
-          — cost that moves from overhead to investment.
-        </p>
-      ),
-      visual: (
-        <CostComparison
-          active={displayedTab === "commercial" && isVisible}
-          currentMonthly={currentMonthly}
-          projectedMonthly={projectedMonthly}
-        />
-      ),
-      supporting: (
-        <p className="text-sm text-boost-muted leading-relaxed max-w-lg">
-          Most deployments reach break-even within{" "}
-          <span className="font-medium text-boost-dark">3-4 months</span>.
-          After that, savings compound — especially as the AI improves
-          through continuous learning and your automation rate climbs further.
-        </p>
-      ),
+      headline: `Path to ${formatCurrency(roi.annualSavings)} in annual savings`,
+      sub: `Based on ${vol.toLocaleString()} monthly conversations at ${guide.conversation_cost || "$8"} per conversation.`,
     },
   };
 
-  const current = tabContent[displayedTab];
+  function formatCurrency(n: number): string {
+    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
+    return `$${Math.round(n)}`;
+  }
 
   return (
     <section>
@@ -571,89 +518,52 @@ export default function ImpactSection({ guide }: { guide: GuideData }) {
         subtitle="What changes when AI handles your conversations"
       />
 
-      <div ref={sectionRef}>
-        {/* ── Tab bar ── */}
-        <div
-          className={`flex gap-1 mb-0 transition-all duration-600 ${
-            isVisible
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-6"
-          }`}
-          style={{ transitionDelay: "100ms" }}
-        >
-          {TABS.map((tab, i) => (
+      <div
+        ref={ref}
+        className={`transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+      >
+        {/* Tab row */}
+        <div className="flex gap-1 mb-6">
+          {TABS.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => handleTabSwitch(tab.id)}
-              className={`relative px-5 py-3 rounded-t-lg text-sm font-medium transition-all duration-300 ${
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-medium transition-all ${
                 activeTab === tab.id
-                  ? "bg-white text-boost-dark shadow-sm z-10"
-                  : "bg-boost-surface/60 text-boost-muted hover:text-boost-dark hover:bg-boost-surface"
+                  ? "bg-boost-dark text-white"
+                  : "text-boost-muted hover:text-boost-dark hover:bg-boost-surface"
               }`}
-              style={{
-                transitionDelay: isVisible ? `${150 + i * 60}ms` : "0ms",
-              }}
             >
+              <span className="text-[10px] opacity-60">{tab.icon}</span>
               {tab.label}
-              {/* Active indicator */}
-              <span
-                className={`absolute bottom-0 left-3 right-3 h-0.5 rounded-full transition-all duration-300 ${
-                  activeTab === tab.id
-                    ? "bg-boost-green-light"
-                    : "bg-transparent"
-                }`}
-              />
             </button>
           ))}
         </div>
 
-        {/* ── Content panel ── */}
-        <div
-          className={`bg-white rounded-b-2xl rounded-tr-2xl border border-boost-border/50 border-t-0 shadow-sm transition-all duration-600 ${
-            isVisible
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-8"
-          }`}
-          style={{ transitionDelay: "300ms" }}
-        >
-          <div
-            className="p-6 sm:p-8 lg:p-10 transition-opacity"
-            style={{
-              opacity: isFading ? 0 : 1,
-              transitionDuration: "200ms",
-            }}
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-              {/* Left — editorial content */}
-              <div className="space-y-5">
-                {current.headline}
-                <div className="lg:hidden">{current.visual}</div>
-                {current.supporting}
-              </div>
-
-              {/* Right — visual (visible on lg+) */}
-              <div className="hidden lg:block">
-                <div className="h-full flex flex-col justify-center">
-                  {current.visual}
-                </div>
-              </div>
-            </div>
+        {/* Tab content */}
+        <div className="min-h-[380px]">
+          {/* Headline + sub — changes per tab */}
+          <div className="mb-4">
+            <p className="text-lg font-semibold text-boost-dark leading-snug max-w-lg">
+              {TAB_CONTENT[activeTab].headline}
+            </p>
+            <p className="text-sm text-boost-muted mt-2 max-w-md leading-relaxed">
+              {TAB_CONTENT[activeTab].sub}
+            </p>
           </div>
-        </div>
 
-        {/* ── Closing editorial ── */}
-        <p
-          className={`text-sm text-boost-muted mt-10 max-w-xl leading-relaxed transition-all duration-600 ${
-            isVisible
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-4"
-          }`}
-          style={{ transitionDelay: "500ms" }}
-        >
-          These numbers aren&apos;t projections in isolation — they compound.
-          Higher automation lifts CSAT, richer data improves routing, and
-          lower cost per conversation funds the next phase of rollout.
-        </p>
+          {/* Visuals — each tab renders something genuinely different */}
+          {activeTab === "csat" && <CSATDistribution active={activeTab === "csat"} />}
+          {activeTab === "automation" && <AutomationFlow active={activeTab === "automation"} volume={vol} />}
+          {activeTab === "data" && <MiniDashboard active={activeTab === "data"} />}
+          {activeTab === "commercial" && (
+            <SavingsTimeline
+              active={activeTab === "commercial"}
+              annualSavings={roi.annualSavings}
+              breakEvenMonths={roi.breakEvenMonths}
+            />
+          )}
+        </div>
       </div>
     </section>
   );
