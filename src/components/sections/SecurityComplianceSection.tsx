@@ -813,6 +813,13 @@ export default function SecurityComplianceSection({
   headerBlocks,
   contentBlocks,
 }: Props) {
+  // Paired rows: clicking either card in a row expands/collapses both together.
+  // Only matters on sm+ screens where we're 2 cols; on mobile each card stacks
+  // naturally so per-card state is fine — but using paired state works there too.
+  const [row1Open, setRow1Open] = useState(true); // Generative Action Flow + PII Masking (defaultOpen pair)
+  const [row2Open, setRow2Open] = useState(false); // Compliance Certs + Guardrail Config
+  const [row3Open, setRow3Open] = useState(false); // Data Handling + Regulatory Readiness
+
   return (
     <section>
       <SectionHeader
@@ -838,66 +845,73 @@ export default function SecurityComplianceSection({
         </p>
       </div>
 
-      {/* Expandable card grid */}
+      {/* Expandable card grid — left/right in each row are paired: toggling one toggles both */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Card 1 — Generative Action Flow */}
+        {/* Row 1: Generative Action Flow + PII Masking */}
         <ExpandableCard
           title="Generative Action Flow"
           subtitle="How every interaction is secured end-to-end"
           icon={<BoostIcon name="shield-medal" />}
           accentColor="border-boost-purple"
-          defaultOpen
+          open={row1Open}
+          onToggle={() => setRow1Open((v) => !v)}
         >
           <GenerativeActionFlow />
         </ExpandableCard>
 
-        {/* Card 2 — PII Masking */}
         <ExpandableCard
           title="PII Masking"
           subtitle="Real-time data protection in every conversation"
           icon={<BoostIcon name="lock-security" />}
           accentColor="border-boost-green"
-          defaultOpen
+          open={row1Open}
+          onToggle={() => setRow1Open((v) => !v)}
         >
           <PIIMaskingDemo />
         </ExpandableCard>
 
-        {/* Card 3 — Certifications */}
+        {/* Row 2: Compliance Certifications + Guardrail Configuration */}
         <ExpandableCard
           title="Compliance Certifications"
           subtitle="ISO 27001, SOC 2, GDPR, and more"
           icon={<BoostIcon name="check-symbol-check" />}
           accentColor="border-boost-purple"
+          open={row2Open}
+          onToggle={() => setRow2Open((v) => !v)}
         >
           <ComplianceCertifications />
         </ExpandableCard>
 
-        {/* Card 4 — Guardrail Configuration */}
         <ExpandableCard
           title="Guardrail Configuration"
           subtitle="Six layers of configurable protection"
           icon={<BoostIcon name="check-robot" />}
           accentColor="border-boost-purple"
+          open={row2Open}
+          onToggle={() => setRow2Open((v) => !v)}
         >
           <GuardrailConfig />
         </ExpandableCard>
 
-        {/* Card 5 — Data & Infrastructure */}
+        {/* Row 3: Data Handling + Regulatory Readiness */}
         <ExpandableCard
           title="Data Handling & Infrastructure"
           subtitle="Encryption, access control, residency, and audit"
           icon={<BoostIcon name="lock-server" />}
           accentColor="border-boost-green"
+          open={row3Open}
+          onToggle={() => setRow3Open((v) => !v)}
         >
           <DataInfrastructure />
         </ExpandableCard>
 
-        {/* Card 6 — Regulatory Readiness */}
         <ExpandableCard
           title="Regulatory Readiness"
           subtitle="EU AI Act and DORA compliance mapped"
           icon={<BoostIcon name="hierarchy-document-3671708" />}
           accentColor="border-boost-purple"
+          open={row3Open}
+          onToggle={() => setRow3Open((v) => !v)}
         >
           <RegulatoryReadiness />
         </ExpandableCard>
