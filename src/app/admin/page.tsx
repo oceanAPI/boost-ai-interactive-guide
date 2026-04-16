@@ -956,7 +956,7 @@ export default function AdminPage() {
           hasContent={hasSectionChanges}
         >
           <p className="text-boost-muted text-sm mb-3">
-            Toggle sections on/off and reorder them. Both Generate and Guide use this selection.
+            Drag to reorder. Toggle sections on/off. Both Generate and Guide use this selection.
           </p>
           <div className="space-y-0.5">
             {(() => {
@@ -967,13 +967,78 @@ export default function AdminPage() {
                 return (
                   <div
                     key={item.id}
-                    className={`flex items-center gap-3 py-2 px-2 rounded-lg transition-colors ${
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/plain", String(index));
+                      (e.currentTarget as HTMLElement).style.opacity = "0.4";
+                    }}
+                    onDragEnd={(e) => {
+                      (e.currentTarget as HTMLElement).style.opacity = "1";
+                      // Clear all drop indicators
+                      e.currentTarget.parentElement?.querySelectorAll("[data-drop-indicator]").forEach(
+                        (el) => ((el as HTMLElement).style.opacity = "0"),
+                      );
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                      // Show drop indicator
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const midY = rect.top + rect.height / 2;
+                      const indicator = e.currentTarget.querySelector("[data-drop-indicator]") as HTMLElement;
+                      if (indicator) {
+                        indicator.style.opacity = "1";
+                        indicator.style.top = e.clientY < midY ? "-1px" : `${rect.height - 1}px`;
+                      }
+                    }}
+                    onDragLeave={(e) => {
+                      const indicator = e.currentTarget.querySelector("[data-drop-indicator]") as HTMLElement;
+                      if (indicator) indicator.style.opacity = "0";
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const fromIndex = parseInt(e.dataTransfer.getData("text/plain"));
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const midY = rect.top + rect.height / 2;
+                      let toIndex = e.clientY < midY ? index : index + 1;
+                      if (fromIndex < toIndex) toIndex--;
+                      if (fromIndex !== toIndex && !isNaN(fromIndex)) {
+                        setSectionItems((prev) => {
+                          const next = [...prev];
+                          const [moved] = next.splice(fromIndex, 1);
+                          next.splice(toIndex, 0, moved);
+                          return next;
+                        });
+                      }
+                      // Clear all drop indicators
+                      e.currentTarget.parentElement?.querySelectorAll("[data-drop-indicator]").forEach(
+                        (el) => ((el as HTMLElement).style.opacity = "0"),
+                      );
+                    }}
+                    className={`relative flex items-center gap-3 py-2 px-2 rounded-lg transition-colors cursor-grab active:cursor-grabbing ${
                       item.enabled ? "bg-white" : "bg-boost-surface/50"
                     }`}
                   >
+                    {/* Drop indicator line */}
+                    <div
+                      data-drop-indicator
+                      className="absolute left-2 right-2 h-[2px] bg-boost-green-light rounded-full pointer-events-none transition-opacity"
+                      style={{ opacity: 0, top: "-1px" }}
+                    />
+
+                    {/* Drag handle */}
+                    <span className="flex-shrink-0 text-boost-muted/40 hover:text-boost-muted transition-colors touch-none select-none">
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                        <circle cx="5" cy="3" r="1.2" /><circle cx="11" cy="3" r="1.2" />
+                        <circle cx="5" cy="8" r="1.2" /><circle cx="11" cy="8" r="1.2" />
+                        <circle cx="5" cy="13" r="1.2" /><circle cx="11" cy="13" r="1.2" />
+                      </svg>
+                    </span>
+
                     {/* Checkbox */}
                     <button
-                      onClick={() => toggleSection(item.id)}
+                      onClick={(e) => { e.stopPropagation(); toggleSection(item.id); }}
                       className={`w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-all ${
                         item.enabled
                           ? "bg-boost-green-light border-boost-green-light"
@@ -1000,36 +1065,12 @@ export default function AdminPage() {
 
                     {/* Label */}
                     <span
-                      className={`flex-1 text-sm ${
+                      className={`flex-1 text-sm select-none ${
                         item.enabled ? "text-boost-dark font-medium" : "text-boost-muted"
                       }`}
                     >
                       {item.label}
                     </span>
-
-                    {/* Up / Down arrows */}
-                    <div className="flex items-center gap-0.5 flex-shrink-0">
-                      <button
-                        onClick={() => moveSectionUp(index)}
-                        disabled={index === 0}
-                        className="w-7 h-7 rounded flex items-center justify-center text-boost-muted hover:bg-boost-surface hover:text-boost-dark transition-colors disabled:opacity-20 disabled:cursor-default"
-                        aria-label="Move up"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <path d="M12 19V5M5 12l7-7 7 7" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => moveSectionDown(index)}
-                        disabled={index === sectionItems.length - 1}
-                        className="w-7 h-7 rounded flex items-center justify-center text-boost-muted hover:bg-boost-surface hover:text-boost-dark transition-colors disabled:opacity-20 disabled:cursor-default"
-                        aria-label="Move down"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <path d="M12 5v14M19 12l-7 7-7-7" />
-                        </svg>
-                      </button>
-                    </div>
                   </div>
                 );
               });
