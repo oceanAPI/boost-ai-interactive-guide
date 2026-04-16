@@ -16,8 +16,11 @@ import VoiceSection from "@/components/sections/VoiceSection";
 import ImpactSection from "@/components/sections/ImpactSection";
 import TrustValidationSection from "@/components/sections/TrustValidationSection";
 import CaseStudiesSection from "@/components/sections/CaseStudiesSection";
+import BoostCampSection from "@/components/sections/BoostCampSection";
 import CommercialOfferSection from "@/components/sections/CommercialOfferSection";
 import ROISection from "@/components/sections/ROISection";
+import ScopeOfWorkSection from "@/components/sections/ScopeOfWorkSection";
+import CustomSection from "@/components/sections/CustomSection";
 import NextStepsSection from "@/components/sections/NextStepsSection";
 import { TOPIC_COMPONENTS } from "@/data/topics/registry";
 
@@ -39,9 +42,12 @@ const SECTIONS = [
   { id: "impact", label: "Business Impact", icon: "△" },
   { id: "trust-validation", label: "Platform Credibility", icon: "◎" },
   { id: "case-studies", label: "Case Studies", icon: "★" },
+  { id: "boost-camp", label: "Boost Camp", icon: "▸" },
   { id: "commercial-offer", label: "Commercial Offer", icon: "◈" },
   { id: "roi", label: "ROI Calculator", icon: "◇" },
+  { id: "scope-of-work", label: "Scope of Work", icon: "◫" },
   { id: "next-steps", label: "Next Steps", icon: "→" },
+  { id: "custom", label: "Other", icon: "◌" },
 ];
 
 export default function GuideClient({ guide, sectionIds }: { guide: GuideData; sectionIds?: string[] }) {
@@ -243,6 +249,12 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
             </div>
           )}
 
+          {(!activeSectionSet || activeSectionSet.has("boost-camp")) && (
+            <div id="boost-camp" ref={(el) => { sectionRefs.current["boost-camp"] = el; }}>
+              <BoostCampSection />
+            </div>
+          )}
+
           {(!activeSectionSet || activeSectionSet.has("commercial-offer")) && (
             <div id="commercial-offer" ref={(el) => { sectionRefs.current["commercial-offer"] = el; }}>
               <CommercialOfferSection guide={guide} />
@@ -255,9 +267,21 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
             </div>
           )}
 
+          {(!activeSectionSet || activeSectionSet.has("scope-of-work")) && (
+            <div id="scope-of-work" ref={(el) => { sectionRefs.current["scope-of-work"] = el; }}>
+              <ScopeOfWorkSection guide={guide} />
+            </div>
+          )}
+
           {(!activeSectionSet || activeSectionSet.has("next-steps")) && (
             <div id="next-steps" ref={(el) => { sectionRefs.current["next-steps"] = el; }}>
               <NextStepsSection guide={guide} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("custom")) && guide.custom_section?.title && (
+            <div id="custom" ref={(el) => { sectionRefs.current["custom"] = el; }}>
+              <CustomSection guide={guide} />
             </div>
           )}
 

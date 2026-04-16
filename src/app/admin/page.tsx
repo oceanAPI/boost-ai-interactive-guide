@@ -8,6 +8,7 @@ import { INDUSTRIES, SUPPORTING_DEPARTMENTS, INDUSTRY_VARIANTS } from "@/data/ag
 import { encodeGuideData, decodeGuideData } from "@/lib/url-encoding";
 import { generateSOWPdf } from "@/lib/generate-sow-pdf";
 import SalesforceImportModal from "@/components/SalesforceImportModal";
+import HubSpotImportModal from "@/components/HubSpotImportModal";
 import CompanySearch from "@/components/CompanySearch";
 import type { DetectionResult } from "@/lib/company-detect";
 import { SLIDE_SECTIONS } from "@/lib/slide-sections";
@@ -137,6 +138,7 @@ export default function AdminPage() {
     custom_notes: "",
     selected_case_studies: [],
     selected_variants: [],
+    custom_section: { title: "", body: "" },
   });
 
   const updateField = <K extends keyof GuideFormData>(key: K, value: GuideFormData[K]) => {
@@ -268,10 +270,11 @@ export default function AdminPage() {
 
   /* ─── Salesforce import ─── */
   const [showSalesforce, setShowSalesforce] = useState(false);
+  const [showHubspot, setShowHubspot] = useState(false);
 
   /* ─── Guide sections (inline picker) ─── */
   const [sectionItems, setSectionItems] = useState(() =>
-    SLIDE_SECTIONS.map((s) => ({ ...s, enabled: true })),
+    SLIDE_SECTIONS.map((s) => ({ ...s, enabled: s.defaultEnabled ?? true })),
   );
 
   const toggleSection = (id: string) => {
@@ -373,43 +376,52 @@ export default function AdminPage() {
             />
             <span className="text-boost-muted text-xs sm:text-sm hidden sm:inline">Guide Builder</span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 sm:gap-1.5">
             <button
               onClick={() => setShowSalesforce(true)}
-              className="px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface transition-colors flex-shrink-0 hidden sm:flex items-center gap-1.5"
+              className="px-2 sm:px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface transition-colors flex-shrink-0 flex items-center gap-1.5"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00A1E0" strokeWidth="2">
                 <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" />
               </svg>
-              Salesforce
+              <span className="hidden sm:inline">Salesforce</span>
+            </button>
+            <button
+              onClick={() => setShowHubspot(true)}
+              className="px-2 sm:px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface transition-colors flex-shrink-0 flex items-center gap-1.5"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#FF7A59">
+                <path d="M17.2 9.2V6.7a1.7 1.7 0 001-1.5V5a1.7 1.7 0 00-1.7-1.7h-.2A1.7 1.7 0 0014.6 5v.2a1.7 1.7 0 001 1.5v2.5a5.3 5.3 0 00-2.4 1.3l-6.4-5a2.1 2.1 0 00.1-.6 2.1 2.1 0 10-2.1 2.1c.4 0 .8-.1 1.1-.3l6.3 4.9a5.3 5.3 0 00-.5 2.3 5.3 5.3 0 00.7 2.6l-2 2a1.8 1.8 0 00-.5-.1 1.8 1.8 0 101.8 1.8 1.8 1.8 0 00-.1-.5l2-2a5.3 5.3 0 103.6-8.5zM16.5 17a3 3 0 01-3-3 3 3 0 013-3 3 3 0 013 3 3 3 0 01-3 3z" />
+              </svg>
+              <span className="hidden sm:inline">HubSpot</span>
             </button>
             <button
               onClick={handleDownloadSOW}
               disabled={generatingPdf}
-              className="px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0 hidden sm:flex items-center gap-1.5"
+              className="px-2 sm:px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0 flex items-center gap-1.5"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
               </svg>
-              {generatingPdf ? "Generating..." : "SOW"}
+              <span className="hidden sm:inline">{generatingPdf ? "Generating..." : "SOW"}</span>
             </button>
             <button
               onClick={handleStartPresentation}
-              className="px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface transition-colors flex-shrink-0 hidden sm:flex items-center gap-1.5"
+              className="px-2 sm:px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface transition-colors flex-shrink-0 flex items-center gap-1.5"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
               </svg>
-              Guide
+              <span className="hidden sm:inline">Guide</span>
             </button>
             <button
               onClick={handleSubmit}
-              className="px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface transition-colors flex-shrink-0 flex items-center gap-1.5"
+              className="px-2 sm:px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface transition-colors flex-shrink-0 flex items-center gap-1.5"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 5v14M5 12h14" />
               </svg>
-              Generate
+              <span className="hidden sm:inline">Generate</span>
             </button>
           </div>
         </div>
@@ -1078,7 +1090,7 @@ export default function AdminPage() {
           </div>
           {hasSectionChanges && (
             <button
-              onClick={() => setSectionItems(SLIDE_SECTIONS.map((s) => ({ ...s, enabled: true })))}
+              onClick={() => setSectionItems(SLIDE_SECTIONS.map((s) => ({ ...s, enabled: s.defaultEnabled ?? true })))}
               className="mt-3 text-xs text-boost-muted hover:text-boost-dark transition-colors"
             >
               Reset to defaults
@@ -1166,12 +1178,104 @@ export default function AdminPage() {
           </div>
         </CollapsibleSection>
 
+        {/* 10 — Custom Section Content */}
+        <CollapsibleSection
+          number={10}
+          title="Custom Section Content"
+          subtitle={
+            form.custom_section?.title
+              ? form.custom_section.title
+              : "Optional — add a custom section to the guide"
+          }
+          hasContent={!!form.custom_section?.title}
+        >
+          <p className="text-boost-muted text-sm mb-4">
+            Add a custom content section to the guide. It will appear as &ldquo;Other&rdquo; in the section list.
+          </p>
+          <div className="space-y-4">
+            <div>
+              <FieldLabel>Section Title</FieldLabel>
+              <input
+                type="text"
+                value={form.custom_section?.title || ""}
+                onChange={(e) =>
+                  updateField("custom_section", {
+                    ...form.custom_section!,
+                    title: e.target.value,
+                    body: form.custom_section?.body || "",
+                  })
+                }
+                placeholder="e.g. Partnership Vision"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <FieldLabel>Body Content</FieldLabel>
+              <textarea
+                value={form.custom_section?.body || ""}
+                onChange={(e) =>
+                  updateField("custom_section", {
+                    ...form.custom_section!,
+                    title: form.custom_section?.title || "",
+                    body: e.target.value,
+                  })
+                }
+                placeholder="Write the section content here. Use double line-breaks for paragraphs."
+                rows={5}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <FieldLabel optional>Image URL</FieldLabel>
+              <input
+                type="url"
+                value={form.custom_section?.image_url || ""}
+                onChange={(e) =>
+                  updateField("custom_section", {
+                    ...form.custom_section!,
+                    title: form.custom_section?.title || "",
+                    body: form.custom_section?.body || "",
+                    image_url: e.target.value || undefined,
+                  })
+                }
+                placeholder="https://example.com/image.jpg"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <FieldLabel optional>Video URL</FieldLabel>
+              <input
+                type="url"
+                value={form.custom_section?.video_url || ""}
+                onChange={(e) =>
+                  updateField("custom_section", {
+                    ...form.custom_section!,
+                    title: form.custom_section?.title || "",
+                    body: form.custom_section?.body || "",
+                    video_url: e.target.value || undefined,
+                  })
+                }
+                placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+                className={inputClass}
+              />
+            </div>
+          </div>
+        </CollapsibleSection>
+
       </main>
 
       {/* Salesforce import modal */}
       <SalesforceImportModal
         open={showSalesforce}
         onClose={() => setShowSalesforce(false)}
+        currentForm={form}
+        onApply={(merged) => setForm(merged)}
+      />
+
+      {/* HubSpot import modal */}
+      <HubSpotImportModal
+        open={showHubspot}
+        onClose={() => setShowHubspot(false)}
         currentForm={form}
         onApply={(merged) => setForm(merged)}
       />

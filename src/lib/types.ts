@@ -46,6 +46,12 @@ export interface GuideData {
   /** Selected industry-variant keys (e.g. "insurance:mutual", "banking:retail")
    *  — empty means no variant filter (all agents of the selected industries shown). */
   selected_variants?: string[];
+  custom_section?: {
+    title: string;
+    body: string;
+    image_url?: string;
+    video_url?: string;
+  };
 }
 
 export interface GuideFormData {
@@ -68,4 +74,10 @@ export interface GuideFormData {
   /** Selected industry-variant keys (e.g. "insurance:mutual", "banking:retail")
    *  — empty means no variant filter (all agents of the selected industries shown). */
   selected_variants?: string[];
+  custom_section?: {
+    title: string;
+    body: string;
+    image_url?: string;
+    video_url?: string;
+  };
 }

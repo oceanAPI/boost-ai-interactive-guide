@@ -2,6 +2,7 @@
 export interface SlideSection {
   id: string;
   label: string;
+  defaultEnabled?: boolean;
 }
 
 export const SLIDE_SECTIONS: SlideSection[] = [
@@ -18,7 +19,10 @@ export const SLIDE_SECTIONS: SlideSection[] = [
   { id: "impact", label: "Business Impact" },
   { id: "trust-validation", label: "Platform Credibility" },
   { id: "case-studies", label: "Case Studies" },
+  { id: "boost-camp", label: "Boost Camp" },
   { id: "commercial-offer", label: "Commercial Offer" },
   { id: "roi", label: "ROI Calculator" },
+  { id: "scope-of-work", label: "Scope of Work" },
   { id: "next-steps", label: "Next Steps" },
+  { id: "custom", label: "Other", defaultEnabled: false },
 ];
