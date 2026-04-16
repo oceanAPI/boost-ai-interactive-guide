@@ -22,7 +22,7 @@ const CONNECTOR_COLOR = "rgba(89,25,93,0.15)";
 /* ─── Tier badge ─── */
 function tierBadgeLabel(agent: SpecialistAgent): string | null {
   if (!agent.tier || agent.tier === "primary") return null;
-  return "Expandable";
+  return null; // Don't show badges — all agents are equal in the orchestrator view
 }
 
 /* ─── Platform-style agent card (matches boost.ai platform UI) ─── */
@@ -74,33 +74,33 @@ function AgentCard({
         )}
       </button>
 
-      {/* Bottom section — icon buttons (matches platform layout) */}
-      <div className="px-3.5 pb-3 pt-1 flex items-center justify-between">
-        {/* Left: shield, globe, webhook */}
-        <div className="flex items-center gap-2">
-          <button onClick={onClick} className="w-7 h-7 rounded-md bg-white/[0.06] hover:bg-white/[0.12] flex items-center justify-center transition-colors" title="Guardrails">
-            <svg width="13" height="13" viewBox="0 0 512 512" fill="white" fillOpacity="0.5"><path d="M256 0c4.6 0 9.2 1 13.3 2.9L457.8 83c22 9.3 38.4 31 38.3 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0C57.3 420.7 16.5 239.2 16 140c-.1-26.2 16.3-47.9 38.3-57.2L242.7 2.9C246.8 1 251.4 0 256 0z"/></svg>
+      {/* Bottom section — darker purple band with outline icons (matches platform) */}
+      <div className="px-3.5 pb-2.5 pt-2 flex items-center justify-between rounded-b-xl" style={{ background: "rgba(0,0,0,0.15)" }}>
+        {/* Left: shield-check, globe, webhook */}
+        <div className="flex items-center gap-2.5">
+          <button onClick={onClick} className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-md transition-colors" title="Guardrails">
+            <svg width="16" height="16" viewBox="0 0 512 512" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="32"><path d="M256.1 0c4.6 0 9.2 1 13.3 2.9L457.8 82.8c22 9.3 38.4 31 38.3 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0-172.4-82.5-213.2-263.9-213.7-363.2-.1-26.2 16.3-47.9 38.3-57.2L242.7 2.9C246.8 1 251.4 0 256.1 0z" strokeLinejoin="round"/><path d="M352 161.8L234 303l-70-66" strokeLinecap="round" strokeLinejoin="round" strokeWidth="40"/></svg>
           </button>
-          <button onClick={onClick} className="w-7 h-7 rounded-md bg-white/[0.06] hover:bg-white/[0.12] flex items-center justify-center transition-colors" title="Knowledge">
-            <svg width="13" height="13" viewBox="0 0 512 512" fill="white" fillOpacity="0.5"><path d="M256 512a256 256 0 1 0 0-512 256 256 0 1 0 0 512zM232 280V232h-24c-13.3 0-24-10.7-24-24s10.7-24 24-24h48c13.3 0 24 10.7 24 24v72h8c13.3 0 24 10.7 24 24s-10.7 24-24 24h-80c-13.3 0-24-10.7-24-24s10.7-24 24-24h24zm24-120a32 32 0 1 1 0-64 32 32 0 1 1 0 64z"/></svg>
+          <button onClick={onClick} className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-md transition-colors" title="Knowledge">
+            <svg width="16" height="16" viewBox="0 0 512 512" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="32"><circle cx="256" cy="256" r="232"/><path d="M176 208c0-44.2 35.8-80 80-80s80 35.8 80 80c0 35-22.4 64.8-53.7 75.7-8.3 2.9-14.3 10.5-14.3 19.3v9m0 56v8" strokeLinecap="round"/></svg>
           </button>
-          <button onClick={onClick} className="w-7 h-7 rounded-md bg-white/[0.06] hover:bg-white/[0.12] flex items-center justify-center transition-colors" title="Action hooks">
-            <svg width="13" height="13" viewBox="0 0 576 512" fill="white" fillOpacity="0.5"><path d="M288 0a144 144 0 1 1 0 288 144 144 0 1 1 0-288zM64 256a64 64 0 1 1 128 0 64 64 0 1 1 -128 0zm384 0a64 64 0 1 1 128 0 64 64 0 1 1 -128 0zM24 440c0-39.8 32.2-72 72-72h16c13.2 0 25.7 3.6 36.4 9.8-4.5 9.3-7.8 19.2-9.7 29.6C134.7 419.3 128 434.7 128 452v20H24v-32zm464 32H392v-20c0-17.3-6.7-32.7-10.7-44.6-1.9-10.4-5.2-20.3-9.7-29.6 10.7-6.2 23.2-9.8 36.4-9.8h16c39.8 0 72 32.2 72 72v32zM336 452c0 22.1-17.9 40-40 40H280c-22.1 0-40-17.9-40-40v-20c0-39.8 32.2-72 72-72h-48c-39.8 0-72 32.2-72 72v20c0 22.1-17.9 40-40 40h-16c-22.1 0-40-17.9-40-40v-20c0-57.4 46.6-104 104-104h16c20.9 0 40.4 6.2 56.7 16.8a103.7 103.7 0 0 1 56.7-16.8h16c57.4 0 104 46.6 104 104v20c0 22.1-17.9 40-40 40h-16z"/></svg>
+          <button onClick={onClick} className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-md transition-colors" title="Action hooks">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           </button>
         </div>
 
         {/* Right: settings, expand */}
-        <div className="flex items-center gap-2">
-          <button onClick={onClick} className="w-7 h-7 rounded-md bg-white/[0.06] hover:bg-white/[0.12] flex items-center justify-center transition-colors" title="Settings">
-            <svg width="13" height="13" viewBox="0 0 512 512" fill="white" fillOpacity="0.5"><path d="M256 0c17 0 33.6 1.7 49.8 4.8c7.9 1.5 21.8 6.1 29.4 20.1c2.4 4.4 12.2 23.1 12.2 23.1l.1 .2c7.9 14.8 3.7 33-9.6 43.2-4.5 3.4-8.5 7.4-12 11.8-9.6 12.2-15 26.8-15.8 41.5v1.2c-.2 14.9 4.5 29.8 14 42.3 3.5 4.5 7.6 8.6 12 12 13.2 10.2 17.3 28.3 9.5 43.1l-.2 .3s-9.7 18.7-12.1 23.1c-7.6 13.9-21.5 18.5-29.3 20-16.2 3.2-33 4.9-50.1 4.9-17 0-33.6-1.7-49.8-4.8-7.9-1.5-21.8-6.1-29.4-20.1-2.4-4.4-12.2-23.1-12.2-23.1l-.1-.2c-7.9-14.8-3.7-33 9.6-43.2 4.5-3.4 8.5-7.4 12-11.8 9.6-12.2 15-26.8 15.8-41.5v-1.2c.2-14.9-4.5-29.8-14-42.3-3.5-4.5-7.6-8.6-12-12-13.2-10.2-17.3-28.3-9.5-43.1l.2-.3s9.7-18.7 12.1-23.1C176.9 10.9 190.8 6.3 198.6 4.8 214.8 1.7 231.4 0 248.4 0h7.2zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>
+        <div className="flex items-center gap-2.5">
+          <button onClick={onClick} className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-md transition-colors" title="Settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-            className="w-7 h-7 rounded-md bg-white/[0.06] hover:bg-white/[0.12] flex items-center justify-center transition-colors"
+            className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-md transition-colors"
             title={expanded ? "Collapse" : "Expand"}
           >
-            <svg width="12" height="12" viewBox="0 0 448 512" fill="white" fillOpacity="0.5" className={`transition-transform ${expanded ? "rotate-180" : ""}`}>
-              <path d="M207.5 411c9.4 9.4 24.6 9.4 33.9 0l200-200c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0L224 360.5 40.5 177c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9l200 200z"/>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${expanded ? "rotate-180" : ""}`}>
+              <polyline points="6 9 12 15 18 9"/>
             </svg>
           </button>
         </div>
@@ -324,17 +324,21 @@ export default function OrchestratorSection({
               >
                 <div className="bg-white rounded-xl shadow-lg shadow-black/10 px-5 py-4 min-w-[280px] max-w-[360px]">
                   <div className="flex items-center gap-2.5 mb-2">
-                    <BoostIcon name="robot-brain" variant="purple" size={20} />
+                    {/* Generative AI agent icon (from platform SVG) */}
+                    <svg width="22" height="22" viewBox="0 0 27 20" fill="#59195d">
+                      <path opacity="0.4" d="M23.7 7.17l-.53-1.82-1.82-.53c-.19-.04-.3-.19-.3-.38s.11-.34.3-.38l1.82-.53.53-1.82c.04-.19.15-.3.38-.3s.34.11.38.3l.53 1.82 1.82.53c.19.04.3.19.3.38s-.11.34-.3.38l-1.82.53-.53 1.82c-.04.19-.15.3-.38.3s-.34-.11-.38-.3zM.23 10.6l1.48.42.42 1.48c.04.11.15.23.3.23s.27-.08.3-.23l.42-1.48 1.48-.42c.11-.04.23-.15.23-.3s-.08-.27-.23-.3l-1.48-.42-.42-1.48c-.04-.11-.15-.23-.3-.23s-.27.08-.3.23l-.42 1.48-1.48.42c-.11.04-.23.15-.23.3s.11.27.23.3z"/>
+                      <path d="M10.15 6.06c0 1.67 1.36 3.03 3.03 3.03s3.03-1.36 3.03-3.03h-6.06zM8.33 6.06V1.21c0-.34.27-.6.6-.6h.11c.11 0 .23.04.34.11l.76.49.08.04c.49.34 1.14.27 1.55-.15l.91-.87c.11-.15.3-.23.49-.23s.38.08.53.23l.91.91c.38.38 1.02.45 1.51.15l.08-.08.76-.49c.11-.08.23-.11.34-.11h.11c.34 0 .6.27.6.6v4.85c0 2.69-2.16 4.85-4.85 4.85s-4.85-2.16-4.85-4.85zm3.34 8.48c-2.5 0-4.55 2.05-4.55 4.55 0 .49-.42.91-.91.91s-.91-.42-.91-.91c0-3.52 2.84-6.36 6.36-6.36h3.03c3.52 0 6.36 2.84 6.36 6.36 0 .49-.42.91-.91.91s-.91-.42-.91-.91c0-2.5-2.05-4.55-4.55-4.55h-3.03z"/>
+                    </svg>
                     <span className="text-base font-bold text-boost-dark">Agent Orchestrator</span>
                   </div>
                   <p className="text-xs text-boost-muted leading-relaxed mb-3">
                     The main orchestrator handles all incoming requests and traffic to pass on to agents.
                   </p>
-                  {/* Platform-style icons */}
-                  <div className="flex items-center gap-2">
-                    <BoostIcon name="shield-medal" variant="purple" size={14} />
-                    <BoostIcon name="books" variant="purple" size={14} />
-                    <BoostIcon name="hierarchy" variant="purple" size={14} />
+                  {/* Platform-style outline icons */}
+                  <div className="flex items-center gap-3">
+                    <svg width="16" height="16" viewBox="0 0 512 512" fill="none" stroke="#59195d" strokeOpacity="0.4" strokeWidth="32"><path d="M256.1 0c4.6 0 9.2 1 13.3 2.9L457.8 82.8c22 9.3 38.4 31 38.3 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0-172.4-82.5-213.2-263.9-213.7-363.2-.1-26.2 16.3-47.9 38.3-57.2L242.7 2.9C246.8 1 251.4 0 256.1 0z" strokeLinejoin="round"/><path d="M352 161.8L234 303l-70-66" strokeLinecap="round" strokeLinejoin="round" strokeWidth="40"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 512 512" fill="none" stroke="#59195d" strokeOpacity="0.4" strokeWidth="32"><circle cx="256" cy="256" r="232"/><path d="M176 208c0-44.2 35.8-80 80-80s80 35.8 80 80c0 35-22.4 64.8-53.7 75.7-8.3 2.9-14.3 10.5-14.3 19.3v9m0 56v8" strokeLinecap="round"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#59195d" strokeOpacity="0.4" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                   </div>
                 </div>
               </button>
