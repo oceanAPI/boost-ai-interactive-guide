@@ -19,6 +19,7 @@ export const SLIDE_SECTIONS: SlideSection[] = [
   { id: "impact", label: "Business Impact" },
   { id: "trust-validation", label: "Platform Credibility" },
   { id: "case-studies", label: "Case Studies" },
+  { id: "community", label: "Boost.ai Community" },
   { id: "boost-camp", label: "Boost Camp" },
   { id: "commercial-offer", label: "Commercial Offer" },
   { id: "roi", label: "ROI Calculator" },

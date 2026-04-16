@@ -210,7 +210,7 @@ export interface SectionContentMap {
   "impact-commercial": ImpactContent;
   "scope-of-work": ScopeOfWorkContent;
   "auth-impacts": AuthImpactsContent;
-  "boost-camp": BoostCampContent;
+  community: BoostCampContent;
   "commercial-offer": CommercialOfferContent;
   "custom-other": CustomSectionContent;
   roi: ROIContent;

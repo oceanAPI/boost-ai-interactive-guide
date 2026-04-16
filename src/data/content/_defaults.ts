@@ -390,7 +390,7 @@ export const DEFAULTS: SectionContentMap = {
   },
 
   // ─── Boost Camp Videos ───
-  "boost-camp": {
+  community: {
     sectionTitle: "Boost Camp",
     sectionSubtitle: "Self-paced training videos to get your team up to speed",
     videos: [

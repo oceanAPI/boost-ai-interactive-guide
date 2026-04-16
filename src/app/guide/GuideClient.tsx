@@ -16,6 +16,7 @@ import VoiceSection from "@/components/sections/VoiceSection";
 import ImpactSection from "@/components/sections/ImpactSection";
 import TrustValidationSection from "@/components/sections/TrustValidationSection";
 import CaseStudiesSection from "@/components/sections/CaseStudiesSection";
+import CommunitySection from "@/components/sections/CommunitySection";
 import BoostCampSection from "@/components/sections/BoostCampSection";
 import CommercialOfferSection from "@/components/sections/CommercialOfferSection";
 import ROISection from "@/components/sections/ROISection";
@@ -42,6 +43,7 @@ const SECTIONS = [
   { id: "impact", label: "Business Impact", icon: "△" },
   { id: "trust-validation", label: "Platform Credibility", icon: "◎" },
   { id: "case-studies", label: "Case Studies", icon: "★" },
+  { id: "community", label: "Boost.ai Community", icon: "◎" },
   { id: "boost-camp", label: "Boost Camp", icon: "▸" },
   { id: "commercial-offer", label: "Commercial Offer", icon: "◈" },
   { id: "roi", label: "ROI Calculator", icon: "◇" },
@@ -246,6 +248,12 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
           {(!activeSectionSet || activeSectionSet.has("case-studies")) && (
             <div id="case-studies" ref={(el) => { sectionRefs.current["case-studies"] = el; }}>
               <CaseStudiesSection guide={guide} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("community")) && (
+            <div id="community" ref={(el) => { sectionRefs.current["community"] = el; }}>
+              <CommunitySection />
             </div>
           )}
 

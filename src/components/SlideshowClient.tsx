@@ -17,6 +17,8 @@ import VoiceSection from "@/components/sections/VoiceSection";
 import ImpactSection from "@/components/sections/ImpactSection";
 import TrustValidationSection from "@/components/sections/TrustValidationSection";
 import CaseStudiesSection from "@/components/sections/CaseStudiesSection";
+import CommunitySection from "@/components/sections/CommunitySection";
+import BoostCampSection from "@/components/sections/BoostCampSection";
 import CommercialOfferSection from "@/components/sections/CommercialOfferSection";
 import ROISection from "@/components/sections/ROISection";
 import NextStepsSection from "@/components/sections/NextStepsSection";
@@ -148,6 +150,10 @@ export default function SlideshowClient({
         return <TrustValidationSection guide={guide} />;
       case "case-studies":
         return <CaseStudiesSection guide={guide} />;
+      case "community":
+        return <CommunitySection />;
+      case "boost-camp":
+        return <BoostCampSection />;
       case "commercial-offer":
         return <CommercialOfferSection guide={guide} />;
       case "roi":
