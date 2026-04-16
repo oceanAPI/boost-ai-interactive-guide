@@ -885,6 +885,126 @@ export const COMPANY_PATTERNS: CompanyPattern[] = [
       custom_notes: "Brand voice is friendly/informal — tone alignment matters more than usual.",
     },
   },
+
+  // ─── Nordic fintech ──────────────────────────
+  {
+    key: "vipps",
+    name: "Vipps MobilePay",
+    domain: "vipps.no",
+    aliases: ["vipps", "mobilepay", "vippsmobilepay", "vipps.com"],
+    country: "NO",
+    category: "Mobile payments · Nordic",
+    prefill: {
+      company_name: "Vipps MobilePay",
+      company_url: "https://www.vipps.no/",
+      areas_of_interest: ["fintech"],
+      channel_volumes: { chat: 120000, voice: 60000, email: 40000, social: 15000 },
+      conversation_cost: "~40 NOK",
+      pricing_model: "usage",
+      deployment_markets: 3,
+      resources: {
+        stakeholder_owners: 3,
+        ai_trainers: 5,
+        technical_resources: 4,
+        supporting_departments: ["Customer Service", "Fraud & Risk", "Compliance"],
+        knowledge_management: true,
+      },
+      integrations: { channel: ["Custom Web Chat"], human_handover: ["Zendesk"], openid: ["BankID"] },
+      specific_requirements:
+        "Nordic mobile payments platform. Vipps (NO) merged with MobilePay (DK/FI) in 2022 — 11M+ users across Norway, Denmark, and Finland. Owned by a consortium of Nordic banks (DNB + SpareBank 1 alliance). Chat-heavy, fraud-sensitive, with heavy volumes on payment disputes, merchant onboarding, and identity verification.",
+      custom_notes: "Bank-owned consortium; any AI deployment must satisfy multiple bank shareholders' compliance standards. Multi-market launch, multi-language.",
+    },
+  },
+  {
+    key: "bulder",
+    name: "Bulder Bank",
+    domain: "bulder.no",
+    aliases: ["bulder", "bulderbank"],
+    country: "NO",
+    category: "Digital bank (mortgage-led) · NO",
+    prefill: {
+      company_name: "Bulder Bank",
+      company_url: "https://www.bulder.no/",
+      areas_of_interest: ["banking"],
+      selected_variants: ["banking:neobank"],
+      channel_volumes: { chat: 35000, voice: 15000, email: 8000, social: 1500 },
+      conversation_cost: "~45 NOK",
+      pricing_model: "usage",
+      deployment_markets: 1,
+      resources: {
+        stakeholder_owners: 2,
+        ai_trainers: 3,
+        technical_resources: 3,
+        supporting_departments: ["Customer Service", "Lending", "Compliance"],
+        knowledge_management: true,
+      },
+      integrations: { channel: ["Custom Web Chat"], human_handover: ["Intercom"], openid: ["BankID"] },
+      specific_requirements:
+        "Norwegian app-first digital bank launched 2019 by SpareBank 1 SR-Bank. Mortgage-focused retail bank with no branches — fully digital. App-native chat is the primary support channel. Mortgage application and rate-change flows dominate ticket volume.",
+      custom_notes: "Neobank subsidiary of a larger parent — operational decisions move fast, but platform choices may route through SR-Bank group architecture.",
+    },
+  },
+
+  // ─── Rest of Europe ──────────────────────────
+  {
+    key: "nn-group",
+    name: "NN Group",
+    domain: "nn-group.com",
+    aliases: ["nn", "nngroup", "nnbank", "nn.nl", "nationale-nederlanden"],
+    country: "EU",
+    category: "Insurance + bank + pension · Netherlands",
+    prefill: {
+      company_name: "NN Group",
+      company_url: "https://www.nn-group.com/",
+      areas_of_interest: ["insurance", "banking", "pension"],
+      channel_volumes: { chat: 90000, voice: 220000, email: 60000, social: 8000 },
+      conversation_cost: "~€5",
+      pricing_model: "fixed",
+      deployment_markets: 11,
+      resources: {
+        stakeholder_owners: 4,
+        ai_trainers: 6,
+        technical_resources: 5,
+        supporting_departments: ["Customer Service", "Claims", "Pension Administration", "Compliance"],
+        knowledge_management: true,
+      },
+      integrations: { channel: ["Custom Web Chat"], human_handover: ["Genesys"], openid: ["DigiD"] },
+      specific_requirements:
+        "Dutch financial services group (insurance + NN Bank + largest Dutch pension provider). ~18M customers across 11 countries in Europe and Japan. Multi-language (NL/EN/Spanish/Czech/Polish/Turkish/Japanese). Each market has local regulatory requirements.",
+      custom_notes: "Multi-country deployment is the norm — governance model must handle per-market compliance variations within a single agentic platform.",
+    },
+  },
+
+  // ─── North America ───────────────────────────
+  {
+    key: "bank-of-america",
+    name: "Bank of America",
+    domain: "bankofamerica.com",
+    aliases: ["boa", "bofa", "bankofamerica", "bank of america"],
+    country: "US",
+    category: "Universal bank · US",
+    prefill: {
+      company_name: "Bank of America",
+      company_url: "https://www.bankofamerica.com/",
+      areas_of_interest: ["banking", "wealth_management"],
+      selected_variants: ["banking:retail", "banking:corporate", "banking:private"],
+      channel_volumes: { chat: 800000, voice: 3500000, email: 500000, social: 80000 },
+      conversation_cost: "~$9",
+      pricing_model: "fixed",
+      deployment_markets: 35,
+      resources: {
+        stakeholder_owners: 8,
+        ai_trainers: 15,
+        technical_resources: 12,
+        supporting_departments: ["Customer Service", "Fraud & Security", "Digital Banking", "Wealth Management", "Compliance"],
+        knowledge_management: true,
+      },
+      integrations: { channel: ["Custom Web Chat"], human_handover: ["Genesys"] },
+      specific_requirements:
+        "US money-center bank — ~67M retail and SMB clients, ~200K+ employees, ~35 markets. Existing large-scale AI assistant (Erica) handles ~1B+ interactions per year. Any boost engagement is augmentation or specialist-agent federation, not greenfield. Extreme scale + US regulatory rigor (OCC, FDIC, CFPB).",
+      custom_notes: "Erica is the incumbent AI — position boost agents as specialist orchestrators that federate with, rather than replace, the existing stack.",
+    },
+  },
 ];
 
 // ─── Helpers ─────────────────────────────────────
