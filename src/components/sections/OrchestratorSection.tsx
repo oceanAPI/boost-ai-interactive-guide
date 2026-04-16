@@ -286,11 +286,11 @@ export default function OrchestratorSection({
             <div className="border-t-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
           </div>
 
-          {/* Desktop grid */}
+          {/* Desktop grid — all columns in one row, max 10 */}
           <div
             className="hidden md:grid gap-2"
             style={{
-              gridTemplateColumns: `repeat(${Math.min(totalColumns, 6)}, minmax(0, 1fr))`,
+              gridTemplateColumns: `repeat(${Math.min(totalColumns, 10)}, minmax(0, 1fr))`,
             }}
           >
             {config.standaloneAgents.map((agent) => (
