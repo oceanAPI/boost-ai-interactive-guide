@@ -7,16 +7,42 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
 // useCompanyLogo available if needed for favicon — currently using company name typography instead
 
+function abbreviateNumber(n: number): { value: number; suffix: string } {
+  if (n >= 1_000_000) return { value: Math.round(n / 100_000) / 10, suffix: "M" };
+  if (n >= 1_000) return { value: Math.round(n / 1_000), suffix: "K" };
+  return { value: n, suffix: "" };
+}
+
 function computeDynamicStats(guide: GuideData) {
   const totalVolume = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0);
   const costNum = parseFloat(guide.conversation_cost?.replace(/[^0-9.]/g, "") || "0");
 
+  // Detect currency symbol
+  const costStr = guide.conversation_cost || "";
+  let currSymbol = "";
+  if (costStr.includes("SEK")) currSymbol = "SEK ";
+  else if (costStr.includes("NOK")) currSymbol = "NOK ";
+  else if (costStr.includes("DKK")) currSymbol = "DKK ";
+  else if (costStr.includes("EUR") || costStr.includes("€")) currSymbol = "€";
+  else if (costStr.includes("£")) currSymbol = "£";
+  else currSymbol = "$";
+
   if (totalVolume > 0 && costNum > 0) {
     const automated = Math.round(totalVolume * 0.8);
-    const savings = Math.round(automated * costNum * 0.85);
+    // Net savings: 80% automated at 8% of human cost, minus 15% platform overhead
+    const aiCost = automated * costNum * 0.08;
+    const humanCost = (totalVolume - automated) * costNum;
+    const platformOverhead = totalVolume * costNum * 0.15;
+    const currentCost = totalVolume * costNum;
+    const newCost = aiCost + humanCost + platformOverhead;
+    const monthlySavings = Math.round(currentCost - newCost);
+
+    const autoAbbr = abbreviateNumber(automated);
+    const savingsAbbr = abbreviateNumber(monthlySavings);
+
     return [
-      { value: automated, suffix: "", label: "Conversations Automated / mo", prefix: "", icon: "chat" as const },
-      { value: savings, suffix: "", label: "Projected Monthly Savings", prefix: "$", icon: "savings" as const },
+      { value: autoAbbr.value, suffix: autoAbbr.suffix, label: "Conversations Automated / mo", prefix: "", icon: "chat" as const },
+      { value: savingsAbbr.value, suffix: savingsAbbr.suffix, label: "Projected Monthly Savings", prefix: currSymbol, icon: "savings" as const },
       { value: 80, suffix: "%+", label: "Avg Automation Rate", prefix: "", icon: "bolt" as const },
     ];
   }
