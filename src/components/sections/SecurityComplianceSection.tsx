@@ -459,8 +459,8 @@ function GuardrailConfig() {
         ))}
       </div>
 
-      {/* Detail panel */}
-      <div className="bg-boost-surface rounded-lg border border-boost-border p-4 space-y-3">
+      {/* Detail panel — no extra card wrapping, sits directly in ExpandableCard */}
+      <div className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BoostIcon name={active.icon} size={20} />
@@ -473,7 +473,7 @@ function GuardrailConfig() {
         <p className="text-xs text-boost-text-secondary leading-relaxed">
           {active.description}
         </p>
-        <div className="bg-white rounded-md border border-boost-border/50 p-2.5">
+        <div className="bg-boost-surface/50 rounded-md p-2.5">
           <p className="text-[10px] font-bold text-boost-muted uppercase tracking-wider mb-1">
             Example
           </p>
@@ -553,8 +553,8 @@ function DataInfrastructure() {
               onClick={() => setExpandedLayer(isExpanded ? null : layerIdx)}
               className={`w-full rounded-lg border-l-[3px] ${layer.color} p-3 text-left transition-all ${
                 isExpanded
-                  ? "bg-boost-surface shadow-sm"
-                  : "bg-boost-surface/50 hover:bg-boost-surface/80"
+                  ? "bg-boost-surface/40"
+                  : "hover:bg-boost-surface/30"
               }`}
             >
               <div className="flex items-center justify-between">
@@ -586,7 +586,7 @@ function DataInfrastructure() {
                 {layer.items.map((item) => (
                   <div
                     key={item.name}
-                    className="bg-white rounded-lg border border-boost-border p-3"
+                    className="bg-boost-surface/30 rounded-lg p-3"
                   >
                     <p className="text-xs font-semibold text-boost-dark">{item.name}</p>
                     <p className="text-[10px] text-boost-text-secondary leading-relaxed mt-1">
