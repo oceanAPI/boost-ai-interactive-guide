@@ -257,7 +257,7 @@ export default function OrchestratorSection({
 
   // Ungrouped agents become their own column in the grid
   const ungroupedGroup: TopicGroup | null = config.standaloneAgents.length > 0
-    ? { key: "ungrouped", label: "Ungrouped", icon: "hierarchy", agents: config.standaloneAgents }
+    ? { key: "ungrouped", label: "Ungrouped", icon: "hierarchy-3671707", agents: config.standaloneAgents }
     : null;
   const allGroups = ungroupedGroup
     ? [...config.topicGroups, ungroupedGroup]
