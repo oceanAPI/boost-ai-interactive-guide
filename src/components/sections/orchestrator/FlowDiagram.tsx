@@ -11,6 +11,9 @@ interface FlowDiagramProps {
   onDrillChange?: (isDrilledIn: boolean) => void;
 }
 
+// Orchestrator-matching connector color
+const FD_CONNECTOR_COLOR = "rgba(89,25,93,0.18)";
+
 /* ─── Category column (same style as topic group in orchestrator) ─── */
 function CategoryColumn({
   label,
@@ -31,33 +34,34 @@ function CategoryColumn({
 
   return (
     <div className="flex flex-col min-w-0">
-      {/* Vertical dashed stub */}
+      {/* Vertical connector stub */}
       <div className="flex justify-center h-6" aria-hidden="true">
-        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
+        <div className="w-px" style={{ backgroundColor: FD_CONNECTOR_COLOR }} />
       </div>
-      {/* Count badge */}
-      <div className="flex justify-center -mt-0.5 mb-0.5" aria-hidden="true">
-        <span className="w-5 h-5 rounded-full bg-white border text-[10px] font-semibold text-boost-muted flex items-center justify-center"
-          style={{ borderColor: "var(--color-boost-connector)" }}
-        >{nodes.length}</span>
+      {/* Count badge — matches orchestrator */}
+      <div className="flex justify-center mb-1" aria-hidden="true">
+        <span className="w-5 h-5 rounded-full bg-white text-[10px] font-bold text-boost-purple flex items-center justify-center shadow-sm border border-boost-purple/20">
+          {nodes.length}
+        </span>
       </div>
       <div className="flex justify-center h-3" aria-hidden="true">
-        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
+        <div className="w-px" style={{ backgroundColor: FD_CONNECTOR_COLOR }} />
       </div>
 
-      {/* Header */}
+      {/* Header — matches orchestrator group header */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-between gap-2 px-3 py-2 rounded-t-lg bg-boost-purple/90 text-white"
+        className="flex items-center justify-between gap-2 px-3 py-2 rounded-t-xl text-white"
+        style={{ background: "rgba(89,25,93,0.6)" }}
       >
         <div className="flex items-center gap-2 min-w-0">
           <BoostIcon name={icon} variant="white" size={14} />
-          <span className="text-[10px] sm:text-xs font-semibold truncate">{label}</span>
+          <span className="text-[11px] font-semibold truncate">{label}</span>
         </div>
         <svg
           width="12" height="12" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" strokeWidth="2"
-          className={`flex-shrink-0 transition-transform ${collapsed ? "" : "rotate-180"}`}
+          className={`flex-shrink-0 text-white/60 transition-transform ${collapsed ? "" : "rotate-180"}`}
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
@@ -71,7 +75,7 @@ function CategoryColumn({
               <FlowNodeCard
                 node={node}
                 category={category === "knowledge" ? "knowledge" : category}
-                className="w-full max-w-none cursor-pointer transition-shadow hover:shadow-md"
+                className="w-full max-w-none cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5"
               />
             </button>
           ))}
@@ -227,7 +231,8 @@ function InlineSection({
     <div className="border-t border-boost-border overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-boost-purple/90 text-white relative z-10"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-white relative z-10"
+        style={{ background: "rgba(89,25,93,0.6)" }}
       >
         <div className="flex items-center gap-2">
           {icon === "computer-api" ? (
@@ -342,7 +347,13 @@ export default function FlowDiagram({ agent, onDrillChange }: FlowDiagramProps) 
   ].filter(c => c.nodes.length > 0);
 
   return (
-    <div className="pb-2">
+    <div
+      className="rounded-2xl px-3 sm:px-5 py-6 -mx-1 sm:-mx-2"
+      style={{
+        background:
+          "radial-gradient(ellipse at 20% 0%, rgba(89,25,93,0.08), transparent 60%), radial-gradient(ellipse at 80% 100%, rgba(54,181,149,0.06), transparent 55%), linear-gradient(135deg, #f4eef5 0%, #eef5f2 100%)",
+      }}
+    >
       {/* Agentic node with Knowledge + API Hook sections inside */}
       <div className="flex justify-center">
         <AgenticCard
@@ -353,18 +364,18 @@ export default function FlowDiagram({ agent, onDrillChange }: FlowDiagramProps) 
         />
       </div>
 
-      {/* Vertical line down */}
-      <div className="flex justify-center h-6" aria-hidden="true">
-        <div className="w-0 border-l-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
+      {/* Vertical solid line down — matches orchestrator */}
+      <div className="flex justify-center h-8" aria-hidden="true">
+        <div className="w-px" style={{ backgroundColor: FD_CONNECTOR_COLOR }} />
       </div>
 
-      {/* Horizontal dashed bar */}
+      {/* Horizontal solid bar — matches orchestrator */}
       <div className="mx-2" aria-hidden="true">
-        <div className="border-t-[1.5px] border-dashed" style={{ borderColor: "var(--color-boost-connector)" }} />
+        <div className="h-px" style={{ backgroundColor: FD_CONNECTOR_COLOR }} />
       </div>
 
       {/* Category columns grid — 2 cols on mobile, auto on desktop */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
         {categories.map((cat) => (
           <CategoryColumn
             key={cat.key}
