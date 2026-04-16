@@ -78,7 +78,7 @@ export default function ROISection({
             <div>
               <div className="flex justify-between mb-2">
                 <label className="text-xs text-boost-muted">Cost per Conversation</label>
-                <span className="text-sm font-bold text-boost-dark tabular-nums">${cost.toFixed(2)}</span>
+                <span className="text-sm font-bold text-boost-dark tabular-nums">{currency}{cost.toFixed(2)}</span>
               </div>
               <input
                 type="range"
@@ -90,7 +90,7 @@ export default function ROISection({
                 className="w-full accent-boost-green-light"
               />
               <div className="flex justify-between text-[10px] text-boost-muted mt-1">
-                <span>$1</span><span>$25</span>
+                <span>{currency}1</span><span>{currency}25</span>
               </div>
             </div>
           </div>
@@ -119,7 +119,7 @@ export default function ROISection({
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-boost-text-secondary">Cost per conversation</span>
-                <span className="font-semibold text-boost-dark">${cost.toFixed(2)}</span>
+                <span className="font-semibold text-boost-dark">{currency}{cost.toFixed(2)}</span>
               </div>
               <div className="border-t border-boost-border pt-3 flex justify-between items-center">
                 <span className="text-sm font-medium text-boost-dark">Total monthly cost</span>
@@ -138,7 +138,7 @@ export default function ROISection({
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-boost-text-secondary">Human handled</span>
-                <span className="font-semibold text-boost-dark tabular-nums">{roi.humanConversations.toLocaleString()} @ ${cost.toFixed(2)}</span>
+                <span className="font-semibold text-boost-dark tabular-nums">{roi.humanConversations.toLocaleString()} @ {currency}{cost.toFixed(2)}</span>
               </div>
               <div className="border-t border-boost-green-light/20 pt-3 flex justify-between items-center">
                 <span className="text-sm font-medium text-boost-dark">New monthly cost</span>

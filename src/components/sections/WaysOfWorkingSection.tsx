@@ -265,7 +265,7 @@ function TeamResponsibilities() {
           >
             <div className="flex items-center justify-between mb-1">
               <p className="text-xs font-semibold text-boost-dark">{r.role}</p>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-boost-purple/10 text-boost-purple font-medium whitespace-nowrap">
+              <span className="text-[10px] text-boost-muted font-medium whitespace-nowrap">
                 {r.commitment}
               </span>
             </div>

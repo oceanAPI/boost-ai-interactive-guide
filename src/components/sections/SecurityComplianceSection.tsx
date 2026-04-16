@@ -308,8 +308,6 @@ function PIIMaskingDemo() {
    Badge grid with details
    ═══════════════════════════════════════════════════════════════ */
 function ComplianceCertifications() {
-  const [selectedCert, setSelectedCert] = useState<number | null>(null);
-
   const certs = [
     {
       name: "ISO 27001",
@@ -356,42 +354,23 @@ function ComplianceCertifications() {
   ];
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {certs.map((cert, i) => (
-          <button
-            key={cert.name}
-            onClick={() => setSelectedCert(selectedCert === i ? null : i)}
-            className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-all text-center ${
-              selectedCert === i
-                ? "border-boost-purple bg-boost-purple/5 shadow-sm"
-                : "border-boost-border bg-white hover:bg-boost-surface/50 hover:border-boost-purple/20"
-            }`}
-          >
-            <BoostIcon name={cert.icon} size={24} />
-            <div>
-              <p className="text-xs font-semibold text-boost-dark">{cert.name}</p>
-              <p className="text-[10px] text-boost-muted">{cert.category}</p>
+    <div className="space-y-3">
+      {certs.map((cert) => (
+        <div key={cert.name} className="flex items-start gap-3">
+          <div className="shrink-0 mt-0.5">
+            <BoostIcon name={cert.icon} size={18} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold text-boost-dark">{cert.name}</p>
+              <span className="text-[9px] text-boost-muted uppercase tracking-wider">{cert.category}</span>
             </div>
-          </button>
-        ))}
-      </div>
-
-      {selectedCert !== null && (
-        <div className="bg-boost-surface rounded-lg border border-boost-border p-3 animate-modal-in">
-          <div className="flex items-start gap-2">
-            <BoostIcon name={certs[selectedCert].icon} size={20} />
-            <div>
-              <p className="text-sm font-semibold text-boost-dark">
-                {certs[selectedCert].name}
-              </p>
-              <p className="text-xs text-boost-text-secondary leading-relaxed mt-1">
-                {certs[selectedCert].description}
-              </p>
-            </div>
+            <p className="text-xs text-boost-text-secondary leading-relaxed mt-0.5">
+              {cert.description}
+            </p>
           </div>
         </div>
-      )}
+      ))}
     </div>
   );
 }
