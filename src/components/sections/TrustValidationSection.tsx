@@ -370,9 +370,9 @@ export default function TrustValidationSection({ guide }: { guide: GuideData }) 
 
       {/* ── Zone 3: Proof cards + quote ── */}
       <div ref={proofRef}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
           <div>
-            <p className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.15em] mb-5">
+            <p className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.15em] mb-3 lg:mb-5">
               Trust signals
             </p>
             <ProofCards visible={proofVisible} />
@@ -387,7 +387,7 @@ export default function TrustValidationSection({ guide }: { guide: GuideData }) 
               transitionDelay: "400ms",
             }}
           >
-            <p className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.15em] mb-5">
+            <p className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.15em] mb-3 lg:mb-5">
               Industry voice
             </p>
             <blockquote className="rounded-xl bg-boost-purple/[0.03] border border-boost-purple/10 p-5">

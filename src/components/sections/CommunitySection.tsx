@@ -6,19 +6,51 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 import VideoModal, { getVideoThumb } from "@/components/VideoModal";
 import { COMMUNITY_VIDEOS, type CommunityVideo } from "@/data/community-videos";
 
-const CATEGORIES = ["All", "Getting Started", "Platform", "Best Practices"] as const;
-type CategoryFilter = (typeof CATEGORIES)[number];
+/**
+ * Categories render as collapsible groups rather than a flat filter. Much
+ * easier to scan, and a long-press of placeholder cards feels less monotone
+ * when broken into 2-3 smaller chunks.
+ */
+const CATEGORIES = [
+  {
+    key: "Getting Started",
+    eyebrow: "Start here",
+    title: "Getting Started",
+    description: "The essentials — platform overview and your first specialist agent",
+    /** Subtle accent tint for placeholder cards in this category */
+    accent: "from-boost-purple/30 to-boost-purple-dark/40",
+  },
+  {
+    key: "Platform",
+    eyebrow: "Platform depth",
+    title: "Platform",
+    description: "Orchestrator, guardrails, analytics — how the pieces fit together",
+    accent: "from-boost-green/25 to-boost-purple-dark/45",
+  },
+  {
+    key: "Best Practices",
+    eyebrow: "Best practices",
+    title: "Best Practices",
+    description: "Patterns that separate great deployments from just-working ones",
+    accent: "from-boost-gold/20 to-boost-purple-dark/50",
+  },
+] as const;
+
+type CategoryKey = (typeof CATEGORIES)[number]["key"];
 
 function VideoCard({
   video,
   index,
   visible,
   onPlay,
+  categoryAccent,
 }: {
   video: CommunityVideo;
   index: number;
   visible: boolean;
   onPlay: () => void;
+  /** Tailwind gradient classes e.g. "from-boost-purple/30 to-boost-purple-dark/40" */
+  categoryAccent: string;
 }) {
   const thumb = getVideoThumb(video.url);
   const hasVideo = !!video.url;
@@ -35,10 +67,10 @@ function VideoCard({
       }`}
       style={{
         opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(24px)",
+        transform: visible ? "translateY(0)" : "translateY(16px)",
         transitionProperty: "opacity, transform, box-shadow",
-        transitionDuration: "500ms",
-        transitionDelay: `${100 + index * 80}ms`,
+        transitionDuration: "400ms",
+        transitionDelay: `${60 + index * 60}ms`,
       }}
     >
       {/* Thumbnail / branded placeholder */}
@@ -51,34 +83,26 @@ function VideoCard({
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          // Branded placeholder when no URL yet
+          // Branded placeholder — tinted per category to reduce monotony
           <div
-            className="w-full h-full flex items-center justify-center relative overflow-hidden"
-            style={{
-              background:
-                "radial-gradient(ellipse at 20% 0%, rgba(89,25,93,0.35), transparent 60%), radial-gradient(ellipse at 80% 100%, rgba(54,181,149,0.25), transparent 55%), linear-gradient(135deg, #3a1a40 0%, #2a1530 100%)",
-            }}
+            className={`w-full h-full flex items-center justify-center relative overflow-hidden bg-gradient-to-br ${categoryAccent}`}
           >
             {/* Soft dots pattern */}
             <div
-              className="absolute inset-0 opacity-30"
+              className="absolute inset-0 opacity-25"
               style={{
                 backgroundImage:
                   "radial-gradient(rgba(255,255,255,0.15) 1px, transparent 1px)",
                 backgroundSize: "18px 18px",
               }}
             />
-            {/* Category chip */}
-            <span className="absolute top-3 left-3 text-[9px] uppercase tracking-[0.15em] font-semibold text-white/70 bg-white/10 px-2 py-0.5 rounded-full backdrop-blur-sm">
-              {video.category}
-            </span>
             {/* Lock/coming-soon icon */}
             <div className="flex flex-col items-center gap-1.5 relative z-10">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="23 7 16 12 23 17 23 7" />
                 <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
               </svg>
-              <span className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50">
+              <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-white/55">
                 Coming soon
               </span>
             </div>
@@ -117,56 +141,115 @@ function VideoCard({
   );
 }
 
-export default function CommunitySection({ sectionNumber }: { sectionNumber?: string }) {
-  const { ref, isVisible } = useScrollReveal({ once: true });
-  const [activeCategory, setActiveCategory] = useState<CategoryFilter>("All");
-  const [playingUrl, setPlayingUrl] = useState<string | null>(null);
-
-  const filtered =
-    activeCategory === "All"
-      ? COMMUNITY_VIDEOS
-      : COMMUNITY_VIDEOS.filter((v) => v.category === activeCategory);
+/* ─── Collapsible category group ─── */
+function CategoryGroup({
+  category,
+  videos,
+  defaultOpen,
+  visible,
+  onPlay,
+}: {
+  category: (typeof CATEGORIES)[number];
+  videos: CommunityVideo[];
+  defaultOpen: boolean;
+  visible: boolean;
+  onPlay: (url: string) => void;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <section>
+    <div className="rounded-2xl border border-boost-border/60 bg-white overflow-hidden">
+      {/* Header — clickable to toggle */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-boost-surface/40 transition-colors"
+        aria-expanded={open}
+      >
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-green">
+            {category.eyebrow}
+          </p>
+          <p className="text-base font-bold text-boost-dark leading-tight mt-0.5">
+            {category.title}
+          </p>
+          <p className="text-xs text-boost-muted leading-relaxed mt-1">
+            {category.description}
+          </p>
+        </div>
+        <span className="flex items-center gap-2 shrink-0 text-boost-muted">
+          <span className="text-[11px] tabular-nums">
+            {videos.length}
+          </span>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className={`transition-transform ${open ? "rotate-180" : ""}`}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </span>
+      </button>
+
+      {/* Video grid — collapses via grid-rows animation */}
+      <div
+        className="grid transition-all duration-300"
+        style={{
+          gridTemplateRows: open ? "1fr" : "0fr",
+        }}
+      >
+        <div className="overflow-hidden">
+          <div className="px-5 pt-0 pb-5 border-t border-boost-border/40">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-5">
+              {videos.map((video, i) => (
+                <VideoCard
+                  key={video.id}
+                  video={video}
+                  index={i}
+                  visible={visible && open}
+                  onPlay={() => onPlay(video.url)}
+                  categoryAccent={category.accent}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function CommunitySection({ sectionNumber }: { sectionNumber?: string }) {
+  const { ref, isVisible } = useScrollReveal({ once: true });
+  const [playingUrl, setPlayingUrl] = useState<string | null>(null);
+
+  return (
+    <section ref={ref}>
       <SectionHeader
         number={sectionNumber ?? "07"}
         title="Boost.ai Community"
         subtitle="On-demand enablement — training videos, platform walkthroughs, and best-practice content to help your team master the boost.ai platform"
       />
 
-      {/* Category filter chips */}
-      <div className="flex flex-wrap gap-2 mb-8">
-        {CATEGORIES.map((cat) => {
-          const isActive = activeCategory === cat;
+      {/* Collapsible category groups — first opens by default */}
+      <div className="space-y-3">
+        {CATEGORIES.map((category, i) => {
+          const videos = COMMUNITY_VIDEOS.filter((v) => v.category === category.key);
           return (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setActiveCategory(cat)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 border ${
-                isActive
-                  ? "bg-boost-purple text-white border-boost-purple shadow-sm"
-                  : "bg-white text-boost-muted border-boost-border hover:border-boost-purple/40 hover:text-boost-purple"
-              }`}
-            >
-              {cat}
-            </button>
+            <CategoryGroup
+              key={category.key}
+              category={category}
+              videos={videos}
+              defaultOpen={i === 0}
+              visible={isVisible}
+              onPlay={(url) => url && setPlayingUrl(url)}
+            />
           );
         })}
-      </div>
-
-      {/* Video grid */}
-      <div ref={ref} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-        {filtered.map((video, i) => (
-          <VideoCard
-            key={video.id}
-            video={video}
-            index={i}
-            visible={isVisible}
-            onPlay={() => setPlayingUrl(video.url)}
-          />
-        ))}
       </div>
 
       {/* Video modal */}
