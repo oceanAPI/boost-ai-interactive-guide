@@ -24,6 +24,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # Set these as repo variables: Settings → Secrets and variables
+          # → Actions → Variables → New repository variable.
+          # Leave blank to fall back to localStorage-only mode.
+          NEXT_PUBLIC_FEED_API_URL: ${{ vars.FEED_API_URL }}
+          NEXT_PUBLIC_FEED_CLIENT_TOKEN: ${{ vars.FEED_CLIENT_TOKEN }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

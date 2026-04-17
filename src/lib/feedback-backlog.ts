@@ -1,14 +1,16 @@
 /**
- * Feedback backlog — client-side only.
+ * Feedback backlog.
  *
- * A shared jot-pad for "things we want to fix or try" that the AE running
- * this tool and the builder (Claude) can both drop notes into. Stored in
- * localStorage so it's per-browser, not shared cross-device (same
- * limitation as the search log — documented + accepted).
+ * In shared mode (Cloudflare worker env vars set): every browser reads
+ * and writes the same list. Anyone with the client token can add,
+ * read, or delete entries. Admin password optional — grants the same
+ * permissions on top.
  *
- * Entries are soft-deletable (delete button in the UI) and capped at 500
- * entries, oldest dropping off first.
+ * In local mode: falls back to localStorage so development without
+ * the worker keeps working.
  */
+
+import { feedDelete, feedGet, feedPost, isSharedBackendEnabled } from "./feed-api";
 
 export type FeedbackAuthor = "me" | "claude" | (string & {});
 
@@ -22,7 +24,9 @@ export interface FeedbackEntry {
 const KEY = "boost.ai:feedback-backlog";
 const MAX_ENTRIES = 500;
 
-function read(): FeedbackEntry[] {
+/* ─── localStorage fallback ─────────────────────────────── */
+
+function readLocal(): FeedbackEntry[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(KEY);
@@ -42,42 +46,62 @@ function read(): FeedbackEntry[] {
   }
 }
 
-function write(entries: FeedbackEntry[]): void {
+function writeLocal(entries: FeedbackEntry[]): void {
   if (typeof window === "undefined") return;
   try {
-    const trimmed = entries.slice(-MAX_ENTRIES);
-    window.localStorage.setItem(KEY, JSON.stringify(trimmed));
+    window.localStorage.setItem(KEY, JSON.stringify(entries.slice(-MAX_ENTRIES)));
   } catch {
-    // Silent fail — quota exceeded, disabled localStorage, etc.
+    // Silent fail
   }
 }
 
-export function getFeedback(): FeedbackEntry[] {
-  return read();
+/* ─── public API ────────────────────────────────────────── */
+
+export function isShared(): boolean {
+  return isSharedBackendEnabled();
 }
 
-export function addFeedback(text: string, author: FeedbackAuthor = "me"): FeedbackEntry | null {
+/** Fetch the full list — shared across browsers when the worker is set. */
+export async function getFeedback(): Promise<FeedbackEntry[]> {
+  if (isSharedBackendEnabled()) {
+    const data = await feedGet<{ entries: FeedbackEntry[] }>("/feedback");
+    if (data?.entries) return data.entries;
+    // Fall through to local if the fetch failed — avoids the UI going
+    // blank on a worker hiccup.
+  }
+  return readLocal();
+}
+
+export async function addFeedback(
+  text: string,
+  author: FeedbackAuthor = "me",
+): Promise<FeedbackEntry | null> {
   const trimmed = text.trim();
   if (!trimmed) return null;
-  const entry: FeedbackEntry = {
+
+  if (isSharedBackendEnabled()) {
+    const remote = await feedPost<{ entry: FeedbackEntry }>("/feedback", {
+      text: trimmed.slice(0, 2000),
+      author,
+    });
+    if (remote?.entry) return remote.entry;
+    // fall through to local echo if remote failed
+  }
+
+  const local: FeedbackEntry = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     text: trimmed.slice(0, 2000),
     author,
     timestamp: Date.now(),
   };
-  write([...read(), entry]);
-  return entry;
+  writeLocal([...readLocal(), local]);
+  return local;
 }
 
-export function removeFeedback(id: string): void {
-  write(read().filter((e) => e.id !== id));
-}
-
-export function clearFeedback(): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(KEY);
-  } catch {
-    // Silent fail
+export async function removeFeedback(id: string): Promise<void> {
+  if (isSharedBackendEnabled()) {
+    const ok = await feedDelete(`/feedback/${encodeURIComponent(id)}`);
+    if (ok) return;
   }
+  writeLocal(readLocal().filter((e) => e.id !== id));
 }

@@ -1,13 +1,17 @@
 /* ─────────────────────────────────────────────
- *  Search log — client-side only
+ *  Search log.
  *
- *  Every time an AE searches the company pattern library we log the
- *  query, whether it matched, and the timestamp to localStorage. This
- *  gives us a zero-infra learning loop: periodically review "no match"
- *  entries to decide which companies/industries to add next.
+ *  In shared mode (Cloudflare worker env vars set): writes stream to
+ *  the worker in the background (fire-and-forget) so every browser's
+ *  searches land in the same KV store. Reads require the admin
+ *  password.
  *
- *  Capped at 500 entries; oldest drop off first.
+ *  In local mode: falls back to localStorage.
+ *
+ *  Capped at 500 entries on both sides; oldest drop off first.
  * ───────────────────────────────────────────── */
+
+import { feedDelete, feedGet, feedPost, isSharedBackendEnabled } from "./feed-api";
 
 export interface SearchLogEntry {
   query: string;
@@ -18,23 +22,21 @@ export interface SearchLogEntry {
 const LOG_KEY = "boost.ai:search-log";
 const MAX_ENTRIES = 500;
 
-export function logSearch(query: string, matchedKey: string | null): void {
+/* ─── localStorage ─── */
+
+function writeLocal(query: string, matchedKey: string | null): void {
   if (typeof window === "undefined") return;
   try {
-    const existing = getSearchLog();
-    existing.push({
-      query: query.slice(0, 500), // defensive truncate
-      matchedKey,
-      timestamp: Date.now(),
-    });
+    const existing = readLocal();
+    existing.push({ query: query.slice(0, 500), matchedKey, timestamp: Date.now() });
     const trimmed = existing.slice(-MAX_ENTRIES);
     window.localStorage.setItem(LOG_KEY, JSON.stringify(trimmed));
   } catch {
-    // Silent fail — quota exceeded, disabled localStorage, etc.
+    // Silent fail
   }
 }
 
-export function getSearchLog(): SearchLogEntry[] {
+function readLocal(): SearchLogEntry[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(LOG_KEY);
@@ -47,11 +49,44 @@ export function getSearchLog(): SearchLogEntry[] {
   }
 }
 
-export function clearSearchLog(): void {
-  if (typeof window === "undefined") return;
+/* ─── public API ─── */
+
+export function logSearch(query: string, matchedKey: string | null): void {
+  const q = query.slice(0, 500);
+  if (!q) return;
+  if (isSharedBackendEnabled()) {
+    // Fire and forget — don't block the UI on the round-trip.
+    feedPost("/search-log", { query: q, matchedKey }).catch(() => {});
+    return;
+  }
+  writeLocal(q, matchedKey);
+}
+
+/**
+ * Read the search log.
+ *
+ * In shared mode the admin password is required — reviewing queries
+ * across the team is a leadership workflow, not a per-user feature.
+ */
+export async function getSearchLog(adminPassword?: string): Promise<SearchLogEntry[]> {
+  if (isSharedBackendEnabled()) {
+    if (!adminPassword) return [];
+    const data = await feedGet<{ entries: SearchLogEntry[] }>("/search-log", adminPassword);
+    return data?.entries || [];
+  }
+  return readLocal();
+}
+
+export async function clearSearchLog(adminPassword?: string): Promise<boolean> {
+  if (isSharedBackendEnabled()) {
+    if (!adminPassword) return false;
+    return feedDelete("/search-log", adminPassword);
+  }
+  if (typeof window === "undefined") return false;
   try {
     window.localStorage.removeItem(LOG_KEY);
+    return true;
   } catch {
-    // Silent fail
+    return false;
   }
 }

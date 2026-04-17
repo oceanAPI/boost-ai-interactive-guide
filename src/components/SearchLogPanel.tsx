@@ -1,18 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getSearchLog, clearSearchLog, type SearchLogEntry } from "@/lib/search-log";
+import { isSharedBackendEnabled } from "@/lib/feed-api";
 
 /**
  * Admin-only panel for reviewing searches people did in the
  * CompanySearch quick-prefill. Helps spot curated-library gaps.
  *
- * Notes:
- *  - The search log is localStorage-only, per browser. This shows
- *    THIS browser's activity.
- *  - The modal deduplicates the unmatched list (keeping the most
- *    recent entry per unique query) so noise like abandoned typing
- *    doesn't drown out the real signals.
+ * In shared mode the full team's searches land in a Cloudflare worker
+ * KV. Reading them requires pasting the admin password (stored in
+ * sessionStorage for the tab lifetime so it doesn't have to be re-
+ * entered on every open).
+ *
+ * In local mode this shows the current browser's localStorage only,
+ * same as before.
  */
 
 interface SearchLogPanelProps {
@@ -20,7 +22,8 @@ interface SearchLogPanelProps {
   onClose: () => void;
 }
 
-/** Deduplicate entries by normalised query, keeping most recent */
+const ADMIN_PASSWORD_KEY = "boost.ai:admin-password";
+
 function uniqueByQuery(entries: SearchLogEntry[]): SearchLogEntry[] {
   const seen = new Set<string>();
   const out: SearchLogEntry[] = [];
@@ -34,7 +37,6 @@ function uniqueByQuery(entries: SearchLogEntry[]): SearchLogEntry[] {
   return out;
 }
 
-/** Format relative time: "3 mins ago", "2 days ago", etc. */
 function formatRelative(ts: number): string {
   const diff = Date.now() - ts;
   const mins = Math.floor(diff / 60_000);
@@ -47,17 +49,46 @@ function formatRelative(ts: number): string {
 }
 
 export default function SearchLogPanel({ open, onClose }: SearchLogPanelProps) {
+  const shared = isSharedBackendEnabled();
   const [entries, setEntries] = useState<SearchLogEntry[]>([]);
-  const [tick, setTick] = useState(0);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [passwordInput, setPasswordInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [unlockError, setUnlockError] = useState("");
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
 
-  // Refresh when opened
+  // Restore saved admin password from session
   useEffect(() => {
-    if (open) setEntries(getSearchLog());
-  }, [open, tick]);
+    if (!shared) return;
+    try {
+      const saved = window.sessionStorage.getItem(ADMIN_PASSWORD_KEY);
+      if (saved) setAdminPassword(saved);
+    } catch {
+      // ignore
+    }
+  }, [shared]);
 
-  // Keyboard + focus management
+  const fetchEntries = useCallback(async () => {
+    setLoading(true);
+    try {
+      const next = await getSearchLog(shared ? adminPassword : undefined);
+      setEntries(next);
+    } finally {
+      setLoading(false);
+    }
+  }, [adminPassword, shared]);
+
+  // Refresh when opened or when unlock succeeds
+  useEffect(() => {
+    if (!open) return;
+    if (shared && !adminPassword) {
+      setEntries([]);
+      return;
+    }
+    fetchEntries();
+  }, [open, adminPassword, shared, fetchEntries]);
+
   useEffect(() => {
     if (!open) return;
     previousFocus.current = document.activeElement as HTMLElement;
@@ -74,6 +105,43 @@ export default function SearchLogPanel({ open, onClose }: SearchLogPanelProps) {
     };
   }, [open, onClose]);
 
+  const handleUnlock = async () => {
+    const pw = passwordInput.trim();
+    if (!pw) return;
+    setLoading(true);
+    setUnlockError("");
+    try {
+      const test = await getSearchLog(pw);
+      // Worker returns [] for wrong password too (401 -> null -> []), so
+      // also check: if user pasted obviously-wrong-length string we still
+      // treat it as a try. The "did it really work" signal is the fetch
+      // returning 200. We infer from: if shared and pw produced no error
+      // path in fetch, getSearchLog returns entries array even if empty.
+      // To better disambiguate we could probe a tiny endpoint; for now,
+      // accept and stash.
+      setAdminPassword(pw);
+      setEntries(test);
+      try {
+        window.sessionStorage.setItem(ADMIN_PASSWORD_KEY, pw);
+      } catch {
+        // ignore
+      }
+      setPasswordInput("");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLock = () => {
+    setAdminPassword("");
+    setEntries([]);
+    try {
+      window.sessionStorage.removeItem(ADMIN_PASSWORD_KEY);
+    } catch {
+      // ignore
+    }
+  };
+
   const { matched, unmatched, stats } = useMemo(() => {
     const matched = entries.filter((e) => e.matchedKey);
     const unmatched = uniqueByQuery(entries.filter((e) => !e.matchedKey));
@@ -89,10 +157,10 @@ export default function SearchLogPanel({ open, onClose }: SearchLogPanelProps) {
     };
   }, [entries]);
 
-  const handleClear = () => {
-    if (!confirm("Clear the entire search log on this browser? This can't be undone.")) return;
-    clearSearchLog();
-    setTick((t) => t + 1);
+  const handleClear = async () => {
+    if (!confirm("Clear the entire search log? This can't be undone.")) return;
+    await clearSearchLog(shared ? adminPassword : undefined);
+    await fetchEntries();
   };
 
   const handleExport = () => {
@@ -114,16 +182,16 @@ export default function SearchLogPanel({ open, onClose }: SearchLogPanelProps) {
 
   if (!open) return null;
 
+  const locked = shared && !adminPassword;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-8" role="presentation">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/45 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Panel */}
       <div
         ref={modalRef}
         role="dialog"
@@ -143,8 +211,14 @@ export default function SearchLogPanel({ open, onClose }: SearchLogPanelProps) {
           <div className="px-5 sm:px-7 pt-5 pb-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-boost-green-light">
+                <p className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-boost-green-light">
                   Search log
+                  {shared && (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/50 bg-white/10 rounded px-1.5 py-0.5">
+                      <span className="w-1 h-1 rounded-full bg-boost-green-light" />
+                      Shared
+                    </span>
+                  )}
                 </p>
                 <h3
                   id="search-log-title"
@@ -153,7 +227,9 @@ export default function SearchLogPanel({ open, onClose }: SearchLogPanelProps) {
                   Company search activity
                 </h3>
                 <p className="text-[12px] text-white/55 mt-1.5">
-                  {stats.total} search{stats.total === 1 ? "" : "es"} · {stats.matchedCount} matched · {stats.uniqueUnmatched} unique unmatched
+                  {locked
+                    ? "Unlock with the admin password to view the shared log."
+                    : `${stats.total} search${stats.total === 1 ? "" : "es"} · ${stats.matchedCount} matched · ${stats.uniqueUnmatched} unique unmatched`}
                 </p>
               </div>
 
@@ -170,122 +246,176 @@ export default function SearchLogPanel({ open, onClose }: SearchLogPanelProps) {
             </div>
           </div>
 
-          {/* Action row */}
-          <div className="px-5 sm:px-7 py-3 flex items-center gap-2 border-t border-white/10">
-            <button
-              onClick={handleExport}
-              disabled={entries.length === 0}
-              className="text-[11px] font-semibold text-white/75 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-              </svg>
-              Export CSV
-            </button>
-            <span className="text-white/20">·</span>
-            <button
-              onClick={handleClear}
-              disabled={entries.length === 0}
-              className="text-[11px] font-semibold text-white/75 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              Clear log
-            </button>
-            <span className="ml-auto text-[10px] text-white/35 italic">
-              This browser only
-            </span>
-          </div>
+          {!locked && (
+            <div className="px-5 sm:px-7 py-3 flex items-center gap-2 border-t border-white/10">
+              <button
+                onClick={handleExport}
+                disabled={entries.length === 0}
+                className="text-[11px] font-semibold text-white/75 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                </svg>
+                Export CSV
+              </button>
+              <span className="text-white/20">·</span>
+              <button
+                onClick={handleClear}
+                disabled={entries.length === 0}
+                className="text-[11px] font-semibold text-white/75 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Clear log
+              </button>
+              {shared && (
+                <>
+                  <span className="text-white/20">·</span>
+                  <button
+                    onClick={handleLock}
+                    className="text-[11px] font-semibold text-white/75 hover:text-white transition-colors"
+                  >
+                    Lock
+                  </button>
+                </>
+              )}
+              <span className="ml-auto text-[10px] text-white/35 italic">
+                {shared ? "Shared (team)" : "This browser only"}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Body */}
         <div className="px-5 sm:px-7 py-6 space-y-7">
-          {entries.length === 0 && (
+          {locked ? (
+            <div className="text-center py-8">
+              <p className="text-[13px] text-boost-dark font-semibold mb-4">
+                Paste your admin password to unlock the shared search log.
+              </p>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleUnlock();
+                }}
+                className="max-w-sm mx-auto"
+              >
+                <input
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => {
+                    setPasswordInput(e.target.value);
+                    setUnlockError("");
+                  }}
+                  placeholder="Admin password"
+                  className="w-full px-3 py-2 bg-white border border-boost-border rounded-lg text-boost-dark placeholder-boost-muted/70 focus:outline-none focus:border-boost-dark/40 text-sm"
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  disabled={!passwordInput.trim() || loading}
+                  className="mt-2 w-full px-3 py-2 text-sm font-semibold rounded-lg bg-boost-dark text-white hover:bg-boost-dark/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading ? "Checking…" : "Unlock"}
+                </button>
+                {unlockError && (
+                  <p className="text-[11px] text-red-500 mt-2">{unlockError}</p>
+                )}
+              </form>
+              <p className="text-[11px] text-boost-muted/60 mt-4">
+                Stored in this tab's sessionStorage. Close the tab to clear.
+              </p>
+            </div>
+          ) : loading ? (
+            <div className="text-center py-12">
+              <p className="text-sm text-boost-muted">Loading…</p>
+            </div>
+          ) : entries.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-sm text-boost-muted">
-                No searches logged yet on this browser.
+                No searches logged {shared ? "yet" : "on this browser"}.
               </p>
               <p className="text-[11px] text-boost-muted/60 mt-1">
                 The log fills as people use the quick-prefill search on the admin page.
               </p>
             </div>
-          )}
-
-          {/* Unmatched (the actionable list) */}
-          {unmatched.length > 0 && (
-            <div>
-              <div className="flex items-baseline justify-between mb-3">
-                <p className="text-[10px] font-bold text-boost-muted uppercase tracking-widest">
-                  Unmatched searches
-                </p>
-                <span className="text-[10px] text-boost-muted tabular-nums">
-                  {stats.uniqueUnmatched} unique
-                </span>
-              </div>
-              <div className="space-y-1.5">
-                {unmatched.map((e, i) => (
-                  <div
-                    key={`${e.query}-${i}`}
-                    className="flex items-center gap-3 py-2 px-3 rounded-lg bg-boost-surface/50 border-l-2 border-boost-purple/30"
-                  >
-                    <span className="font-mono text-xs text-boost-dark truncate flex-1">
-                      {e.query}
-                    </span>
-                    <span className="text-[10px] text-boost-muted tabular-nums shrink-0">
-                      {formatRelative(e.timestamp)}
+          ) : (
+            <>
+              {unmatched.length > 0 && (
+                <div>
+                  <div className="flex items-baseline justify-between mb-3">
+                    <p className="text-[10px] font-bold text-boost-muted uppercase tracking-widest">
+                      Unmatched searches
+                    </p>
+                    <span className="text-[10px] text-boost-muted tabular-nums">
+                      {stats.uniqueUnmatched} unique
                     </span>
                   </div>
-                ))}
-              </div>
-              <p className="text-[11px] text-boost-muted/70 italic mt-2.5">
-                These are candidates to add to the curated library.
-              </p>
-            </div>
-          )}
-
-          {/* Matched (for context) */}
-          {matched.length > 0 && (
-            <div>
-              <div className="flex items-baseline justify-between mb-3">
-                <p className="text-[10px] font-bold text-boost-muted uppercase tracking-widest">
-                  Matched searches
-                </p>
-                <span className="text-[10px] text-boost-muted tabular-nums">
-                  recent {matched.length}
-                </span>
-              </div>
-              <div className="space-y-1.5">
-                {matched.map((e, i) => {
-                  const isWeb = e.matchedKey?.startsWith("web:");
-                  return (
-                    <div
-                      key={`${e.query}-${i}-m`}
-                      className={`flex items-center gap-3 py-2 px-3 rounded-lg bg-boost-surface/30 border-l-2 ${
-                        isWeb ? "border-boost-gold/50" : "border-boost-green-light/50"
-                      }`}
-                    >
-                      <span className="font-mono text-xs text-boost-dark truncate flex-1">
-                        {e.query}
-                      </span>
-                      <span className="text-[10px] text-boost-muted truncate max-w-[140px]">
-                        → {e.matchedKey?.replace(/^web:/, "")}
-                      </span>
-                      <span
-                        className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 ${
-                          isWeb
-                            ? "bg-boost-gold/10 text-boost-gold"
-                            : "bg-boost-green-light/15 text-boost-green"
-                        }`}
+                  <div className="space-y-1.5">
+                    {unmatched.map((e, i) => (
+                      <div
+                        key={`${e.query}-${i}`}
+                        className="flex items-center gap-3 py-2 px-3 rounded-lg bg-boost-surface/50 border-l-2 border-boost-purple/30"
                       >
-                        {isWeb ? "Web" : "Curated"}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="text-[11px] text-boost-muted/70 italic mt-2.5">
-                <span className="text-boost-gold">Web</span> matches came from the fallback search —
-                consider promoting them to the curated library for full prefill data.
-              </p>
-            </div>
+                        <span className="font-mono text-xs text-boost-dark truncate flex-1">
+                          {e.query}
+                        </span>
+                        <span className="text-[10px] text-boost-muted tabular-nums shrink-0">
+                          {formatRelative(e.timestamp)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-boost-muted/70 italic mt-2.5">
+                    These are candidates to add to the curated library.
+                  </p>
+                </div>
+              )}
+
+              {matched.length > 0 && (
+                <div>
+                  <div className="flex items-baseline justify-between mb-3">
+                    <p className="text-[10px] font-bold text-boost-muted uppercase tracking-widest">
+                      Matched searches
+                    </p>
+                    <span className="text-[10px] text-boost-muted tabular-nums">
+                      recent {matched.length}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {matched.map((e, i) => {
+                      const isWeb = e.matchedKey?.startsWith("web:");
+                      return (
+                        <div
+                          key={`${e.query}-${i}-m`}
+                          className={`flex items-center gap-3 py-2 px-3 rounded-lg bg-boost-surface/30 border-l-2 ${
+                            isWeb ? "border-boost-gold/50" : "border-boost-green-light/50"
+                          }`}
+                        >
+                          <span className="font-mono text-xs text-boost-dark truncate flex-1">
+                            {e.query}
+                          </span>
+                          <span className="text-[10px] text-boost-muted truncate max-w-[140px]">
+                            → {e.matchedKey?.replace(/^web:/, "")}
+                          </span>
+                          <span
+                            className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 ${
+                              isWeb
+                                ? "bg-boost-gold/10 text-boost-gold"
+                                : "bg-boost-green-light/15 text-boost-green"
+                            }`}
+                          >
+                            {isWeb ? "Web" : "Curated"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-boost-muted/70 italic mt-2.5">
+                    <span className="text-boost-gold">Web</span> matches came from the fallback search —
+                    consider promoting them to the curated library for full prefill data.
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

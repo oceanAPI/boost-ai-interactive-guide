@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   addFeedback,
   getFeedback,
+  isShared,
   removeFeedback,
-  clearFeedback,
   type FeedbackEntry,
   type FeedbackAuthor,
 } from "@/lib/feedback-backlog";
 import { assetPath } from "@/lib/asset-path";
 
-/* ─── Pac-Man icon — official SVG from images_boost/other_svg_elements ─── */
+/* ─── Pac-Man icon ─── */
 function PacManSvg({ className = "" }: { className?: string }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -25,10 +25,10 @@ function PacManSvg({ className = "" }: { className?: string }) {
   );
 }
 
-/* ─── Pac-Man button — replaces the green checkmark circle on admin ─── */
+/* ─── Pac-Man button ─── */
 export function PacManFeedbackButton({
   onClick,
-  ariaLabel = "Open feedback backlog",
+  ariaLabel = "Open feed me log",
 }: {
   onClick: () => void;
   ariaLabel?: string;
@@ -69,15 +69,26 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   const [entries, setEntries] = useState<FeedbackEntry[]>([]);
   const [text, setText] = useState("");
   const [author, setAuthor] = useState<FeedbackAuthor>("me");
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  const shared = isShared();
 
-  const refresh = () => setEntries(getFeedback());
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const next = await getFeedback();
+      setEntries(next);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (open) refresh();
-  }, [open]);
+  }, [open, refresh]);
 
   useEffect(() => {
     if (!open) return;
@@ -95,26 +106,32 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     };
   }, [open, onClose]);
 
-  const handleSubmit = () => {
-    const entry = addFeedback(text, author);
-    if (entry) {
-      setText("");
-      refresh();
+  const handleSubmit = async () => {
+    if (submitting) return;
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setSubmitting(true);
+    try {
+      const entry = await addFeedback(trimmed, author);
+      if (entry) {
+        setText("");
+        await refresh();
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Cmd/Ctrl + Enter to submit from the textarea
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
       handleSubmit();
     }
   };
 
-  const handleClear = () => {
-    if (!confirm("Clear the entire feedback backlog on this browser? This can't be undone.")) return;
-    clearFeedback();
-    refresh();
+  const handleRemove = async (id: string) => {
+    await removeFeedback(id);
+    await refresh();
   };
 
   const sorted = [...entries].sort((a, b) => b.timestamp - a.timestamp);
@@ -123,14 +140,12 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-8" role="presentation">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/45 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Panel */}
       <div
         ref={modalRef}
         role="dialog"
@@ -154,16 +169,24 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
                   <span className="inline-block">
                     <PacManSvg className="w-3.5 h-3.5" />
                   </span>
-                  Feedback backlog
+                  Feed me log
+                  {shared && (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/50 bg-white/10 rounded px-1.5 py-0.5">
+                      <span className="w-1 h-1 rounded-full bg-boost-green-light" />
+                      Shared
+                    </span>
+                  )}
                 </p>
                 <h3
                   id="feedback-modal-title"
                   className="mt-1.5 text-xl sm:text-2xl font-bold text-white leading-tight"
                 >
-                  Yours &amp; mine — quick notes for later
+                  Nom nom nom — tell me how to grow
                 </h3>
                 <p className="text-[12px] text-white/55 mt-1.5">
-                  Anything that bugs you, anything we should try. Stored on this browser.
+                  {shared
+                    ? "Everyone on the team feeds the same log. Drop bugs, ideas, or polish notes — feed me and I’ll remember."
+                    : "Feed me bugs, ideas, polish notes. Stored on this browser until the shared backend is wired."}
                 </p>
               </div>
 
@@ -183,7 +206,6 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
         {/* Compose */}
         <div className="px-5 sm:px-7 py-5 border-b border-boost-border/60">
-          {/* Author chips */}
           <div className="flex items-center gap-1.5 mb-2.5">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-boost-muted mr-1">
               From
@@ -209,21 +231,21 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="What would you change? What should we try next?"
+            placeholder="What should we fix or try next?"
             rows={3}
             className="w-full px-3 py-2.5 bg-white border border-boost-border rounded-lg text-boost-dark placeholder-boost-muted/70 focus:outline-none focus:border-boost-muted/50 transition-colors text-[13px] leading-relaxed resize-none"
           />
           <div className="mt-2 flex items-center justify-between">
             <span className="text-[10px] text-boost-muted">
-              Tip: {typeof navigator !== "undefined" && /Mac/i.test(navigator.platform) ? "⌘" : "Ctrl"}+Enter to save
+              Tip: {typeof navigator !== "undefined" && /Mac/i.test(navigator.platform) ? "⌘" : "Ctrl"}+Enter to feed
             </span>
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={!text.trim()}
+              disabled={!text.trim() || submitting}
               className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-boost-green-light text-white hover:bg-boost-green disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              Add to backlog
+              {submitting ? "Feeding…" : "Feed it"}
             </button>
           </div>
         </div>
@@ -232,17 +254,12 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
         <div className="px-5 sm:px-7 py-5">
           <div className="flex items-baseline justify-between mb-3">
             <p className="text-[10px] font-bold text-boost-muted uppercase tracking-widest">
-              {entries.length > 0 ? `${entries.length} entr${entries.length === 1 ? "y" : "ies"}` : "No entries yet"}
+              {loading
+                ? "Loading…"
+                : entries.length > 0
+                  ? `${entries.length} entr${entries.length === 1 ? "y" : "ies"}`
+                  : "No entries yet"}
             </p>
-            {entries.length > 0 && (
-              <button
-                type="button"
-                onClick={handleClear}
-                className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors"
-              >
-                Clear all
-              </button>
-            )}
           </div>
           <div className="space-y-2.5">
             {sorted.map((e) => (
@@ -267,10 +284,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
                 </span>
                 <button
                   type="button"
-                  onClick={() => {
-                    removeFeedback(e.id);
-                    refresh();
-                  }}
+                  onClick={() => handleRemove(e.id)}
                   className="opacity-0 group-hover:opacity-100 text-boost-muted/60 hover:text-boost-dark transition-opacity shrink-0 mt-0.5"
                   aria-label="Delete entry"
                 >

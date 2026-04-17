@@ -1,0 +1,16 @@
+name = "feed-me-log"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# KV namespace binding. Create with:
+#   npx wrangler kv namespace create FEED_KV
+# then paste the returned id below.
+[[kv_namespaces]]
+binding = "FEED_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Non-secret vars. Set secrets (CLIENT_TOKEN, ADMIN_PASSWORD) with:
+#   npx wrangler secret put CLIENT_TOKEN
+#   npx wrangler secret put ADMIN_PASSWORD
+[vars]
+ALLOWED_ORIGINS = "https://oceanapi.github.io,http://localhost:3000"
