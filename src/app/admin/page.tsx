@@ -12,7 +12,14 @@ import HubSpotImportModal from "@/components/HubSpotImportModal";
 import CompanySearch from "@/components/CompanySearch";
 import SearchLogPanel from "@/components/SearchLogPanel";
 import type { DetectionResult } from "@/lib/company-detect";
-import { SLIDE_SECTIONS } from "@/lib/slide-sections";
+import {
+  SLIDE_SECTIONS,
+  SECTION_GROUPS,
+  SECTION_PRESETS,
+  estimateMinutes,
+  type SectionGroup,
+  type SectionPreset,
+} from "@/lib/slide-sections";
 import { CASE_STUDIES } from "@/data/case-studies";
 import type { GuideFormData, ChannelVolumes, IntegrationSelections, PricingModel, ResourceAllocation } from "@/lib/types";
 
@@ -302,6 +309,37 @@ export default function AdminPage() {
       return next;
     });
   };
+
+  /* ── Bulk actions on sections ── */
+  const applyPreset = (preset: SectionPreset) => {
+    const enabledSet = new Set(preset.enable);
+    setSectionItems((prev) => prev.map((item) => ({ ...item, enabled: enabledSet.has(item.id) })));
+  };
+
+  const setAllEnabled = (enabled: boolean) => {
+    setSectionItems((prev) => prev.map((item) => ({ ...item, enabled })));
+  };
+
+  const toggleGroupEnabled = (group: SectionGroup, enabled: boolean) => {
+    setSectionItems((prev) => prev.map((item) => (item.group === group ? { ...item, enabled } : item)));
+  };
+
+  /** Which preset (if any) does the current state exactly match? Lets us highlight the active preset pill. */
+  const activePresetKey = (() => {
+    const currentlyEnabled = new Set(sectionItems.filter((s) => s.enabled).map((s) => s.id));
+    for (const p of SECTION_PRESETS) {
+      const preset = new Set(p.enable);
+      if (
+        preset.size === currentlyEnabled.size &&
+        [...preset].every((id) => currentlyEnabled.has(id))
+      ) {
+        return p.key;
+      }
+    }
+    return null;
+  })();
+
+  const estimatedReadTime = estimateMinutes(sectionItems.filter((s) => s.enabled).map((s) => s.id));
 
   const toggleCaseStudy = (id: string) => {
     setForm((prev) => {
@@ -981,21 +1019,124 @@ export default function AdminPage() {
           title="Guide Sections"
           subtitle={
             hasSectionChanges
-              ? `${selectedSectionIds.length} of ${sectionItems.length} sections selected`
-              : "All sections included in default order"
+              ? `${selectedSectionIds.length} of ${sectionItems.length} sections · ~${estimatedReadTime} min`
+              : `${sectionItems.length} sections · ~${estimatedReadTime} min`
           }
           hasContent={hasSectionChanges}
         >
-          <p className="text-boost-muted text-sm mb-3">
-            Drag to reorder. Toggle sections on/off. Both Generate and Guide use this selection.
-          </p>
-          <div className="space-y-0.5">
+          {/* ── Preset pills ── */}
+          <div className="mb-5">
+            <p className="text-[11px] font-semibold text-boost-muted uppercase tracking-widest mb-2">
+              Start from a preset
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {SECTION_PRESETS.map((preset) => {
+                const active = activePresetKey === preset.key;
+                return (
+                  <button
+                    key={preset.key}
+                    type="button"
+                    onClick={() => applyPreset(preset)}
+                    title={preset.description}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                      active
+                        ? "bg-boost-dark text-white border-boost-dark"
+                        : "bg-white text-boost-muted border-boost-border hover:border-boost-dark/30 hover:text-boost-dark"
+                    }`}
+                  >
+                    {preset.label}
+                    <span className={`ml-1.5 text-[10px] ${active ? "text-white/60" : "text-boost-muted/70"} tabular-nums`}>
+                      {preset.enable.length}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {activePresetKey && (
+              <p className="text-[11px] text-boost-muted mt-2">
+                {SECTION_PRESETS.find((p) => p.key === activePresetKey)?.description}
+              </p>
+            )}
+          </div>
+
+          {/* ── Summary band ── */}
+          <div className="mb-4 flex items-center gap-3 flex-wrap text-xs">
+            <span className="inline-flex items-center gap-1.5 text-boost-dark">
+              <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light" />
+              <span className="font-semibold tabular-nums">{selectedSectionIds.length}</span>
+              <span className="text-boost-muted">of {sectionItems.length} enabled</span>
+            </span>
+            <span className="text-boost-border">·</span>
+            <span className="text-boost-muted tabular-nums">~{estimatedReadTime} min scan time</span>
+            <span className="ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setAllEnabled(true)}
+                className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors"
+              >
+                Enable all
+              </button>
+              <span className="text-boost-border">·</span>
+              <button
+                type="button"
+                onClick={() => setAllEnabled(false)}
+                className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors"
+              >
+                Disable all
+              </button>
+              <span className="text-boost-border">·</span>
+              <button
+                type="button"
+                onClick={() => setSectionItems(SLIDE_SECTIONS.map((s) => ({ ...s, enabled: s.defaultEnabled ?? true })))}
+                className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors"
+              >
+                Reset order
+              </button>
+            </span>
+          </div>
+
+          {/* ── Section list with group headers ── */}
+          <div className="space-y-0">
             {(() => {
               let displayNum = 0;
-              return sectionItems.map((item, index) => {
+              let lastGroup: SectionGroup | undefined;
+              const rows: React.ReactNode[] = [];
+
+              sectionItems.forEach((item, index) => {
+                // Insert group header when we cross into a new group
+                if (item.group && item.group !== lastGroup) {
+                  lastGroup = item.group;
+                  const groupLabel = SECTION_GROUPS.find((g) => g.key === item.group)?.label ?? item.group;
+                  const groupItems = sectionItems.filter((s) => s.group === item.group);
+                  const groupEnabledCount = groupItems.filter((s) => s.enabled).length;
+                  const allOn = groupEnabledCount === groupItems.length;
+                  rows.push(
+                    <div
+                      key={`group-${item.group}`}
+                      className="flex items-center gap-3 mt-5 first:mt-0 mb-1.5 px-2"
+                    >
+                      <p className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.12em]">
+                        {groupLabel}
+                      </p>
+                      <span className="text-[10px] text-boost-muted/60 tabular-nums">
+                        {groupEnabledCount}/{groupItems.length}
+                      </span>
+                      <div className="flex-1 h-px bg-boost-border/50" />
+                      <button
+                        type="button"
+                        onClick={() => toggleGroupEnabled(item.group!, !allOn)}
+                        className="text-[10px] text-boost-muted/80 hover:text-boost-dark transition-colors"
+                      >
+                        {allOn ? "Disable all" : "Enable all"}
+                      </button>
+                    </div>,
+                  );
+                }
+
                 if (item.enabled) displayNum++;
                 const num = item.enabled ? displayNum : null;
-                return (
+
+                rows.push(
                   <div
                     key={item.id}
                     draggable
@@ -1006,7 +1147,6 @@ export default function AdminPage() {
                     }}
                     onDragEnd={(e) => {
                       (e.currentTarget as HTMLElement).style.opacity = "1";
-                      // Clear all drop indicators
                       e.currentTarget.parentElement?.querySelectorAll("[data-drop-indicator]").forEach(
                         (el) => ((el as HTMLElement).style.opacity = "0"),
                       );
@@ -1014,7 +1154,6 @@ export default function AdminPage() {
                     onDragOver={(e) => {
                       e.preventDefault();
                       e.dataTransfer.dropEffect = "move";
-                      // Show drop indicator
                       const rect = e.currentTarget.getBoundingClientRect();
                       const midY = rect.top + rect.height / 2;
                       const indicator = e.currentTarget.querySelector("[data-drop-indicator]") as HTMLElement;
@@ -1042,13 +1181,12 @@ export default function AdminPage() {
                           return next;
                         });
                       }
-                      // Clear all drop indicators
                       e.currentTarget.parentElement?.querySelectorAll("[data-drop-indicator]").forEach(
                         (el) => ((el as HTMLElement).style.opacity = "0"),
                       );
                     }}
                     className={`relative flex items-center gap-3 py-2 px-2 rounded-lg transition-colors cursor-grab active:cursor-grabbing ${
-                      item.enabled ? "bg-white" : "bg-boost-surface/50"
+                      item.enabled ? "bg-white hover:bg-boost-surface/30" : "bg-boost-surface/40"
                     }`}
                   >
                     {/* Drop indicator line */}
@@ -1058,8 +1196,8 @@ export default function AdminPage() {
                       style={{ opacity: 0, top: "-1px" }}
                     />
 
-                    {/* Drag handle */}
-                    <span className="flex-shrink-0 text-boost-muted/40 hover:text-boost-muted transition-colors touch-none select-none">
+                    {/* Drag handle — more visible now */}
+                    <span className="flex-shrink-0 text-boost-muted/60 hover:text-boost-dark transition-colors touch-none select-none">
                       <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                         <circle cx="5" cy="3" r="1.2" /><circle cx="11" cy="3" r="1.2" />
                         <circle cx="5" cy="8" r="1.2" /><circle cx="11" cy="8" r="1.2" />
@@ -1067,25 +1205,24 @@ export default function AdminPage() {
                       </svg>
                     </span>
 
-                    {/* Checkbox */}
+                    {/* Toggle switch — much clearer on/off affordance than the checkbox */}
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleSection(item.id); }}
-                      className={`w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-all ${
-                        item.enabled
-                          ? "bg-boost-green-light border-boost-green-light"
-                          : "border-boost-border"
+                      aria-pressed={item.enabled}
+                      className={`relative flex-shrink-0 w-9 h-5 rounded-full transition-colors ${
+                        item.enabled ? "bg-boost-green-light" : "bg-boost-border"
                       }`}
                     >
-                      {item.enabled && (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      )}
+                      <span
+                        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                          item.enabled ? "translate-x-4" : "translate-x-0.5"
+                        }`}
+                      />
                     </button>
 
                     {/* Number badge */}
                     <span
-                      className={`w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0 ${
+                      className={`w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0 tabular-nums ${
                         item.enabled
                           ? "bg-boost-purple text-white"
                           : "bg-boost-border text-boost-muted"
@@ -1094,28 +1231,40 @@ export default function AdminPage() {
                       {num ?? "\u2014"}
                     </span>
 
-                    {/* Label */}
-                    <span
-                      className={`flex-1 text-sm select-none ${
-                        item.enabled ? "text-boost-dark font-medium" : "text-boost-muted"
-                      }`}
-                    >
-                      {item.label}
-                    </span>
-                  </div>
+                    {/* Label + hint */}
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                      <span
+                        className={`text-sm select-none truncate ${
+                          item.enabled ? "text-boost-dark font-medium" : "text-boost-muted"
+                        }`}
+                      >
+                        {item.label}
+                      </span>
+                      {item.minutes !== undefined && (
+                        <span className="text-[10px] text-boost-muted/60 tabular-nums shrink-0">
+                          ~{item.minutes}m
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Hint tooltip (shown on hover via native title) */}
+                    {item.hint && (
+                      <span
+                        className="shrink-0 text-boost-muted/40 hover:text-boost-dark transition-colors cursor-help"
+                        title={item.hint}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M12 16v-4M12 8h.01" />
+                        </svg>
+                      </span>
+                    )}
+                  </div>,
                 );
               });
+              return rows;
             })()}
           </div>
-          {hasSectionChanges && (
-            <button
-              onClick={() => setSectionItems(SLIDE_SECTIONS.map((s) => ({ ...s, enabled: s.defaultEnabled ?? true })))}
-              className="mt-3 text-xs text-boost-muted hover:text-boost-dark transition-colors"
-            >
-              Reset to defaults
-            </button>
-          )}
-
         </CollapsibleSection>
 
         {/* 9 — Case Study Selection */}
