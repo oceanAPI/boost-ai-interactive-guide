@@ -39,12 +39,16 @@ interface ClearbitSuggestion {
 }
 
 /**
- * Build a logo URL. Uses DuckDuckGo's icon service — Clearbit's Logo API was
- * deprecated post-HubSpot acquisition. DDG returns real 404s for unknown
- * domains so the <img onError> handler can cleanly reveal the fallback glyph.
+ * Build a logo URL using Brandfetch's public CDN — real brand logos for
+ * known companies, generic placeholder for unknowns (which is fine since
+ * Clearbit Autocomplete has already filtered to real companies).
+ *
+ * Previously tried Clearbit Logo API (deprecated post-HubSpot) and DDG
+ * icon service (returns placeholder chevrons for many domains instead
+ * of real 404s, which made the fallback look broken).
  */
 function logoFromDomain(domain: string): string {
-  return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+  return `https://cdn.brandfetch.io/${domain}`;
 }
 
 interface WikipediaSummary {

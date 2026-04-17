@@ -391,15 +391,20 @@ export const COMPANY_LOGO_DOMAINS: Record<string, string> = {
 
 /**
  * Resolve a logo URL for a company name. Returns null when the company isn't
- * in our domain map so the SpeakerRow can fall back to initials cleanly.
+ * in our domain map so the SpeakerRow falls back to initials cleanly.
  *
- * Uses DuckDuckGo's icon service (free, CORS-enabled, returns real 404s for
- * unknown domains so onError is a reliable fallback signal). Clearbit's
- * Logo API was deprecated post-HubSpot acquisition and no longer resolves.
+ * Uses Brandfetch's public CDN (cdn.brandfetch.io/{domain}) — returns real,
+ * high-resolution brand logos for known companies. Every domain in our curated
+ * COMPANY_LOGO_DOMAINS map has been verified to resolve to a real logo here.
+ *
+ * Previously tried:
+ *   - Clearbit Logo API → deprecated post-HubSpot acquisition, no longer resolves
+ *   - DuckDuckGo icon service → returns a generic chevron placeholder (not a 404)
+ *     for many domains, making the fallback look broken
  */
 export function logoUrlForCompany(company: string): string | null {
   const domain = COMPANY_LOGO_DOMAINS[company];
-  return domain ? `https://icons.duckduckgo.com/ip3/${domain}.ico` : null;
+  return domain ? `https://cdn.brandfetch.io/${domain}` : null;
 }
 
 /* ── Helpers ── */
