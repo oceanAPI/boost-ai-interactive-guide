@@ -68,7 +68,15 @@
       "WebFetch(domain:camp.boost.ai)",
       "WebFetch(domain:explore.boost.ai)",
       "WebFetch(domain:vux.world)",
-      "Bash(grep -n \"HubSpotImportModal$\\\\|</HubSpotImportModal>\" \"/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/admin/page.tsx\")"
+      "Bash(grep -n \"HubSpotImportModal$\\\\|</HubSpotImportModal>\" \"/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/admin/page.tsx\")",
+      "Bash(find '/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering' -type d -iname *other*svg*)",
+      "Bash(find '/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering' -iname *pac*)",
+      "Bash(for f:*)",
+      "Bash(do)",
+      "Bash(if ! grep -q \"sectionNumber?:\" \"$f\")",
+      "Bash(! grep:*)",
+      "Bash(then)",
+      "Bash(grep -n \"SectionHeader\\\\s*$\\\\|SectionHeader\\\\s*\\\\|number=\" \"/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/NextStepsSection.tsx\")"
     ]
   }
 }

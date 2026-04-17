@@ -58,6 +58,22 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
     ? SECTIONS.filter((s) => sectionIds.includes(s.id))
     : SECTIONS;
   const activeSectionSet = sectionIds ? new Set(sectionIds) : null;
+
+  /**
+   * Dynamic section numbers — the green "01 / 02 / 03…" label shown in each
+   * section header. Based on the current active-sections order so sections
+   * never render with duplicate numbers, even after presets / toggles /
+   * reorders on the admin page.
+   */
+  const sectionNumberById = useMemo(() => {
+    const map: Record<string, string> = {};
+    activeSections.forEach((s, i) => {
+      map[s.id] = String(i + 1).padStart(2, "0");
+    });
+    return map;
+  }, [activeSections]);
+  const sn = (id: string) => sectionNumberById[id] ?? "";
+
   const [activeSection, setActiveSection] = useState("hero");
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const isScrollingRef = useRef(false);
@@ -178,13 +194,14 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
               <OrchestratorSection
                 guide={guide}
                 onRegisterOpenAgent={handleRegisterOpenAgent}
+                sectionNumber={sn("orchestrator")}
               />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("topics")) && (
             <div id="topics" ref={(el) => { sectionRefs.current["topics"] = el; }}>
-              <TopicHubSection guide={guide} onNavigate={navigateTo} />
+              <TopicHubSection guide={guide} onNavigate={navigateTo} sectionNumber={sn("topics")} />
             </div>
           )}
 
@@ -201,14 +218,14 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
                 {SpecializedComponent ? (
                   <SpecializedComponent
                     guide={guide}
-                    sectionNumber={String(i + 4).padStart(2, "0")}
+                    sectionNumber={sn(topic.sectionId)}
                     headerBlocks={topic.headerContent}
                     contentBlocks={topic.content}
                   />
                 ) : (
                   <TopicSection
                     topic={topic}
-                    sectionNumber={String(i + 4).padStart(2, "0")}
+                    sectionNumber={sn(topic.sectionId)}
                   />
                 )}
               </div>
@@ -217,79 +234,79 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
 
           {(!activeSectionSet || activeSectionSet.has("platform-vision")) && (
             <div id="platform-vision" ref={(el) => { sectionRefs.current["platform-vision"] = el; }}>
-              <PlatformVisionSection guide={guide} />
+              <PlatformVisionSection guide={guide} sectionNumber={sn("platform-vision")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("voice")) && (
             <div id="voice" ref={(el) => { sectionRefs.current["voice"] = el; }}>
-              <VoiceSection guide={guide} />
+              <VoiceSection guide={guide} sectionNumber={sn("voice")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("demo")) && (
             <div id="demo" ref={(el) => { sectionRefs.current["demo"] = el; }}>
-              <DemoPreviewSection guide={guide} />
+              <DemoPreviewSection guide={guide} sectionNumber={sn("demo")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("impact")) && (
             <div id="impact" ref={(el) => { sectionRefs.current["impact"] = el; }}>
-              <ImpactSection guide={guide} />
+              <ImpactSection guide={guide} sectionNumber={sn("impact")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("trust-validation")) && (
             <div id="trust-validation" ref={(el) => { sectionRefs.current["trust-validation"] = el; }}>
-              <TrustValidationSection guide={guide} />
+              <TrustValidationSection guide={guide} sectionNumber={sn("trust-validation")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("case-studies")) && (
             <div id="case-studies" ref={(el) => { sectionRefs.current["case-studies"] = el; }}>
-              <CaseStudiesSection guide={guide} />
+              <CaseStudiesSection guide={guide} sectionNumber={sn("case-studies")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("community")) && (
             <div id="community" ref={(el) => { sectionRefs.current["community"] = el; }}>
-              <CommunitySection />
+              <CommunitySection sectionNumber={sn("community")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("boost-camp")) && (
             <div id="boost-camp" ref={(el) => { sectionRefs.current["boost-camp"] = el; }}>
-              <BoostCampSection />
+              <BoostCampSection sectionNumber={sn("boost-camp")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("commercial-offer")) && (
             <div id="commercial-offer" ref={(el) => { sectionRefs.current["commercial-offer"] = el; }}>
-              <CommercialOfferSection guide={guide} />
+              <CommercialOfferSection guide={guide} sectionNumber={sn("commercial-offer")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("roi")) && (
             <div id="roi" ref={(el) => { sectionRefs.current["roi"] = el; }}>
-              <ROISection guide={guide} />
+              <ROISection guide={guide} sectionNumber={sn("roi")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("scope-of-work")) && (
             <div id="scope-of-work" ref={(el) => { sectionRefs.current["scope-of-work"] = el; }}>
-              <ScopeOfWorkSection guide={guide} />
+              <ScopeOfWorkSection guide={guide} sectionNumber={sn("scope-of-work")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("next-steps")) && (
             <div id="next-steps" ref={(el) => { sectionRefs.current["next-steps"] = el; }}>
-              <NextStepsSection guide={guide} />
+              <NextStepsSection guide={guide} sectionNumber={sn("next-steps")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("custom")) && guide.custom_section?.title && (
             <div id="custom" ref={(el) => { sectionRefs.current["custom"] = el; }}>
-              <CustomSection guide={guide} />
+              <CustomSection guide={guide} sectionNumber={sn("custom")} />
             </div>
           )}
 

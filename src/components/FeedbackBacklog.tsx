@@ -9,36 +9,19 @@ import {
   type FeedbackEntry,
   type FeedbackAuthor,
 } from "@/lib/feedback-backlog";
+import { assetPath } from "@/lib/asset-path";
 
-/* ─── Pac-Man SVG ─── */
-/**
- * Green Pac-Man with a small white eye. Body uses `currentColor` so parent
- * text-colour drives the fill. Mouth angle is a modest wedge (~30°) so it
- * reads cleanly at small sizes. On hover we animate the mouth open/close.
- */
-function PacManSvg({ chomping, className = "" }: { chomping: boolean; className?: string }) {
+/* ─── Pac-Man icon — official SVG from images_boost/other_svg_elements ─── */
+function PacManSvg({ className = "" }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 32 32"
-      fill="currentColor"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={assetPath("/images/pac-man.svg")}
+      alt=""
       aria-hidden="true"
-    >
-      {/* Body — a circle with a wedge cut out on the right */}
-      <path
-        d={
-          chomping
-            ? /* Open mouth — wider wedge */
-              "M 16 16 L 31 7 A 15 15 0 1 1 31 25 Z"
-            : /* Resting mouth — narrow wedge */
-              "M 16 16 L 30 12 A 15 15 0 1 1 30 20 Z"
-        }
-        style={{ transition: "d 180ms ease-out" }}
-      />
-      {/* White eye */}
-      <circle cx="18" cy="9" r="1.8" fill="white" />
-    </svg>
+      className={className}
+      style={{ filter: "brightness(0) invert(1)" }}
+    />
   );
 }
 
@@ -50,16 +33,6 @@ export function PacManFeedbackButton({
   onClick: () => void;
   ariaLabel?: string;
 }) {
-  const [hover, setHover] = useState(false);
-  // Idle chomp animation — open/close every ~1s when not hovering
-  const [idleChomp, setIdleChomp] = useState(false);
-  useEffect(() => {
-    const interval = setInterval(() => setIdleChomp((c) => !c), 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const chomping = hover ? true : idleChomp;
-
   return (
     <button
       type="button"
@@ -67,12 +40,10 @@ export function PacManFeedbackButton({
         e.stopPropagation();
         onClick();
       }}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
       aria-label={ariaLabel}
-      className="flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 bg-boost-green-light text-white hover:scale-110 hover:bg-boost-green transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light/50"
+      className="flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 bg-boost-green-light hover:scale-110 hover:bg-boost-green transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light/50"
     >
-      <PacManSvg chomping={chomping} className="w-5 h-5" />
+      <PacManSvg className="w-5 h-5" />
     </button>
   );
 }
@@ -181,7 +152,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
               <div className="flex-1 min-w-0">
                 <p className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-boost-green-light">
                   <span className="inline-block">
-                    <PacManSvg chomping className="w-3.5 h-3.5 text-boost-green-light" />
+                    <PacManSvg className="w-3.5 h-3.5" />
                   </span>
                   Feedback backlog
                 </p>

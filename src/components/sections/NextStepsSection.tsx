@@ -8,8 +8,11 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 export default function NextStepsSection({
   guide,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  sectionNumber: _sectionNumber,
 }: {
   guide: GuideData;
+  sectionNumber?: string;
 }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [copied, setCopied] = useState(false);

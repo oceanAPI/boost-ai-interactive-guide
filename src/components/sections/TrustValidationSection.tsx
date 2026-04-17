@@ -262,7 +262,7 @@ function ProofCards({ visible }: { visible: boolean }) {
 }
 
 /* ─── Main section ─── */
-export default function TrustValidationSection({ guide }: { guide: GuideData }) {
+export default function TrustValidationSection({ guide, sectionNumber }: { guide: GuideData; sectionNumber?: string }) {
   const { ref: heroRef, isVisible: heroVisible } = useScrollReveal({ once: true });
   const { ref: mapRef, isVisible: mapVisible } = useScrollReveal({ once: true, threshold: 0.2 });
   const { ref: proofRef, isVisible: proofVisible } = useScrollReveal({ once: true });
@@ -270,30 +270,50 @@ export default function TrustValidationSection({ guide }: { guide: GuideData }) 
   const convCount = useCountUp({ target: 250, enabled: heroVisible, duration: 2000 });
   const deployCount = useCountUp({ target: 500, enabled: heroVisible, duration: 1800 });
 
-  // Animate through milestone steps when map becomes visible
-  const [activeStep, setActiveStep] = useState(-1);
+  /**
+   * Timeline loop behaviour:
+   *  1. When the map scrolls into view, land on the newest year first
+   *     (MILESTONES[last]) — that's the most impressive, high-recency state.
+   *  2. Pause ~1.5s so the user reads "where we are today".
+   *  3. Slowly cycle through all years from oldest → newest and loop.
+   *  4. Any click on a year freezes the cycle on that year — user wins.
+   */
+  const [activeStep, setActiveStep] = useState(MILESTONES.length - 1);
+  const [userOverride, setUserOverride] = useState(false);
   const stepTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const startTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
-    if (mapVisible && activeStep === -1) {
-      setActiveStep(0);
+    if (!mapVisible || userOverride) return;
+
+    // Brief "show newest first" pause, then start the cycle from the beginning
+    startTimerRef.current = setTimeout(() => {
+      if (userOverride) return;
       let step = 0;
+      setActiveStep(step);
       stepTimerRef.current = setInterval(() => {
-        step++;
-        if (step >= MILESTONES.length) {
-          clearInterval(stepTimerRef.current);
-          return;
-        }
+        step = (step + 1) % MILESTONES.length;
         setActiveStep(step);
-      }, 1800);
-    }
-    return () => clearInterval(stepTimerRef.current);
-  }, [mapVisible, activeStep]);
+      }, 2500); // slow cycle — read-time per year
+    }, 1500);
+
+    return () => {
+      clearTimeout(startTimerRef.current);
+      clearInterval(stepTimerRef.current);
+    };
+  }, [mapVisible, userOverride]);
+
+  const handleYearClick = (i: number) => {
+    clearInterval(stepTimerRef.current);
+    clearTimeout(startTimerRef.current);
+    setUserOverride(true);
+    setActiveStep(i);
+  };
 
   return (
     <section>
       <SectionHeader
-        number="07"
+        number={sectionNumber ?? "07"}
         title="Platform Credibility"
         subtitle="Enterprise conversational AI, purpose-built for regulated industries"
       />
@@ -346,14 +366,14 @@ export default function TrustValidationSection({ guide }: { guide: GuideData }) 
         <p className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.15em] mb-3">
           Global expansion
         </p>
-        {activeStep >= 0 && <WorldMap visibleStep={activeStep} />}
+        <WorldMap visibleStep={activeStep} />
 
         {/* Year timeline strip below map */}
         <div className="flex items-center gap-1 mt-3">
           {MILESTONES.map((m, i) => (
             <button
               key={m.year}
-              onClick={() => { clearInterval(stepTimerRef.current); setActiveStep(i); }}
+              onClick={() => handleYearClick(i)}
               className={`flex-1 py-1.5 rounded text-center transition-all ${
                 i <= activeStep
                   ? i === activeStep

@@ -6,7 +6,13 @@ import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import VideoModal, { getVideoThumb } from "@/components/VideoModal";
 
-export default function CustomSection({ guide }: { guide: GuideData }) {
+export default function CustomSection({
+  guide,
+  sectionNumber,
+}: {
+  guide: GuideData;
+  sectionNumber?: string;
+}) {
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [videoOpen, setVideoOpen] = useState(false);
 
@@ -21,7 +27,7 @@ export default function CustomSection({ guide }: { guide: GuideData }) {
 
   return (
     <section>
-      <SectionHeader title={cs.title} />
+      <SectionHeader title={cs.title} number={sectionNumber} />
 
       <div
         ref={ref}

@@ -506,13 +506,20 @@ function IntegrationsROI({
  *  MAIN SECTION
  * ═══════════════════════════════════════════════════════════════════ */
 
-export default function ScopeOfWorkSection({ guide }: { guide: GuideData }) {
+export default function ScopeOfWorkSection({
+  guide,
+  sectionNumber,
+}: {
+  guide: GuideData;
+  sectionNumber?: string;
+}) {
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
   return (
     <section>
       <SectionHeader
+        number={sectionNumber}
         title="Scope of Work"
         subtitle={`Implementation scope for ${guide.company_name || "your organization"}`}
       />

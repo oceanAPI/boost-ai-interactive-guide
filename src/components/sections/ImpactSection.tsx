@@ -462,7 +462,7 @@ function SavingsTimeline({ active, annualSavings, breakEvenMonths, currencySymbo
  *  MAIN SECTION
  * ═══════════════════════════════════════════════════════════════════ */
 
-export default function ImpactSection({ guide }: { guide: GuideData }) {
+export default function ImpactSection({ guide, sectionNumber }: { guide: GuideData; sectionNumber?: string }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [activeTab, setActiveTab] = useState<TabId>("csat");
 
@@ -509,7 +509,7 @@ export default function ImpactSection({ guide }: { guide: GuideData }) {
   return (
     <section>
       <SectionHeader
-        number="09"
+        number={sectionNumber ?? "09"}
         title="Business Impact"
         subtitle="What changes when AI handles your conversations"
       />

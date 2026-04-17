@@ -152,7 +152,7 @@ function Waveform({ active, small }: { active: boolean; small?: boolean }) {
 type AnalyzeStep = "idle" | "panel-open" | "reviewing" | "review-done";
 
 /* ─── Main section ─── */
-export default function VoiceSection({ guide }: { guide: GuideData }) {
+export default function VoiceSection({ guide, sectionNumber }: { guide: GuideData; sectionNumber?: string }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
 
   const [visibleMessages, setVisibleMessages] = useState(1);
@@ -226,7 +226,7 @@ export default function VoiceSection({ guide }: { guide: GuideData }) {
   return (
     <section>
       <SectionHeader
-        number="08"
+        number={sectionNumber ?? "08"}
         title="Voice Preview"
         subtitle="Outstanding CX doesn't start with Press 1"
       />

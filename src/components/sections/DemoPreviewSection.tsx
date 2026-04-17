@@ -92,7 +92,7 @@ const REVIEW_RESULTS = {
   },
 };
 
-export default function DemoPreviewSection({ guide }: { guide: GuideData }) {
+export default function DemoPreviewSection({ guide, sectionNumber }: { guide: GuideData; sectionNumber?: string }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
 
   /* ─── Script cycling: 0 = primary (automated), 1 = banking escalated ─── */
@@ -214,7 +214,7 @@ export default function DemoPreviewSection({ guide }: { guide: GuideData }) {
   return (
     <section>
       <SectionHeader
-        number="08"
+        number={sectionNumber ?? "08"}
         title="Chat Preview"
         subtitle={`See how ${guide.company_name}'s customers will experience the AI agent`}
       />

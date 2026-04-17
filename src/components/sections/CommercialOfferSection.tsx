@@ -98,7 +98,7 @@ const INVESTMENT_LINES = [
 ];
 
 /* ─── Main section ─── */
-export default function CommercialOfferSection({ guide }: { guide: GuideData }) {
+export default function CommercialOfferSection({ guide, sectionNumber }: { guide: GuideData; sectionNumber?: string }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [showAlternatives, setShowAlternatives] = useState(false);
 
@@ -132,7 +132,7 @@ export default function CommercialOfferSection({ guide }: { guide: GuideData }) 
   return (
     <section>
       <SectionHeader
-        number="10"
+        number={sectionNumber ?? "10"}
         title="Commercial Offer"
         subtitle={`Platform investment tailored to ${guide.company_name || "your organisation"}`}
       />

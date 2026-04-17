@@ -52,15 +52,16 @@ function TopicCard({
 interface TopicHubSectionProps {
   guide: GuideData;
   onNavigate: (sectionId: string) => void;
+  sectionNumber?: string;
 }
 
-export default function TopicHubSection({ guide, onNavigate }: TopicHubSectionProps) {
+export default function TopicHubSection({ guide, onNavigate, sectionNumber }: TopicHubSectionProps) {
   const topics = getTopicsForGuide();
 
   return (
     <section>
       <SectionHeader
-        number="03"
+        number={sectionNumber ?? "03"}
         title="Deep Dive"
         subtitle="Explore the key areas that make boost.ai the right choice for your organization"
       />

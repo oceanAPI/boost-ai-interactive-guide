@@ -22,6 +22,8 @@ import BoostCampSection from "@/components/sections/BoostCampSection";
 import CommercialOfferSection from "@/components/sections/CommercialOfferSection";
 import ROISection from "@/components/sections/ROISection";
 import NextStepsSection from "@/components/sections/NextStepsSection";
+import ScopeOfWorkSection from "@/components/sections/ScopeOfWorkSection";
+import CustomSection from "@/components/sections/CustomSection";
 import TopicSection from "@/components/sections/topics/TopicSection";
 
 /* ─── Topic data lookup ─── */
@@ -129,37 +131,43 @@ export default function SlideshowClient({
   /* ─── Slide renderer ─── */
   const slideContent = useMemo(() => {
     const id = sectionIds[currentIndex];
+    // Dynamic section number based on slide position in the current deck
+    const num = String(currentIndex + 1).padStart(2, "0");
 
     /* Fixed sections */
     switch (id) {
       case "hero":
         return <HeroSection guide={guide} />;
       case "orchestrator":
-        return <OrchestratorSection guide={guide} />;
+        return <OrchestratorSection guide={guide} sectionNumber={num} />;
       case "topics":
-        return <TopicHubSection guide={guide} onNavigate={handleTopicNavigate} />;
+        return <TopicHubSection guide={guide} onNavigate={handleTopicNavigate} sectionNumber={num} />;
       case "platform-vision":
-        return <PlatformVisionSection guide={guide} />;
+        return <PlatformVisionSection guide={guide} sectionNumber={num} />;
       case "voice":
-        return <VoiceSection guide={guide} />;
+        return <VoiceSection guide={guide} sectionNumber={num} />;
       case "demo":
-        return <DemoPreviewSection guide={guide} />;
+        return <DemoPreviewSection guide={guide} sectionNumber={num} />;
       case "impact":
-        return <ImpactSection guide={guide} />;
+        return <ImpactSection guide={guide} sectionNumber={num} />;
       case "trust-validation":
-        return <TrustValidationSection guide={guide} />;
+        return <TrustValidationSection guide={guide} sectionNumber={num} />;
       case "case-studies":
-        return <CaseStudiesSection guide={guide} />;
+        return <CaseStudiesSection guide={guide} sectionNumber={num} />;
       case "community":
-        return <CommunitySection />;
+        return <CommunitySection sectionNumber={num} />;
       case "boost-camp":
-        return <BoostCampSection />;
+        return <BoostCampSection sectionNumber={num} />;
       case "commercial-offer":
-        return <CommercialOfferSection guide={guide} />;
+        return <CommercialOfferSection guide={guide} sectionNumber={num} />;
       case "roi":
-        return <ROISection guide={guide} />;
+        return <ROISection guide={guide} sectionNumber={num} />;
+      case "scope-of-work":
+        return <ScopeOfWorkSection guide={guide} sectionNumber={num} />;
       case "next-steps":
-        return <NextStepsSection guide={guide} />;
+        return <NextStepsSection guide={guide} sectionNumber={num} />;
+      case "custom":
+        return <CustomSection guide={guide} sectionNumber={num} />;
     }
 
     /* Topic sections (topic-implementation, topic-integrations, etc.) */

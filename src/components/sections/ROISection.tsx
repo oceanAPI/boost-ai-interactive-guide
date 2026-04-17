@@ -9,8 +9,10 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 export default function ROISection({
   guide,
+  sectionNumber,
 }: {
   guide: GuideData;
+  sectionNumber?: string;
 }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
 
@@ -53,7 +55,7 @@ export default function ROISection({
   return (
     <section>
       <SectionHeader
-        number="08"
+        number={sectionNumber ?? "08"}
         title="ROI Calculator"
         subtitle={`Projected return on investment for ${guide.company_name}`}
       />

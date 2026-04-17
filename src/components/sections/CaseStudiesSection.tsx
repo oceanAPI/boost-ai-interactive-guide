@@ -321,7 +321,7 @@ function CaseStudyDetail({
 }
 
 /* ─── Main section ─── */
-export default function CaseStudiesSection({ guide }: { guide: GuideData }) {
+export default function CaseStudiesSection({ guide, sectionNumber }: { guide: GuideData; sectionNumber?: string }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
 
   // If AE selected specific case studies, use those in that order.
@@ -360,7 +360,7 @@ export default function CaseStudiesSection({ guide }: { guide: GuideData }) {
   return (
     <section>
       <SectionHeader
-        number="06"
+        number={sectionNumber ?? "06"}
         title="Proven Results"
         subtitle="Real outcomes from financial services organizations using boost.ai"
       />

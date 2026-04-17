@@ -51,7 +51,13 @@ function TabButton({
 }
 
 /* ─── Main section ─── */
-export default function PlatformVisionSection({ guide }: { guide: GuideData }) {
+export default function PlatformVisionSection({
+  guide,
+  sectionNumber,
+}: {
+  guide: GuideData;
+  sectionNumber?: string;
+}) {
   const content = getContent(
     "platform-vision",
     guide.areas_of_interest,
@@ -65,7 +71,7 @@ export default function PlatformVisionSection({ guide }: { guide: GuideData }) {
       <SectionHeader
         title="Platform & Vision"
         subtitle="What boost ships today, what's shipping this year, and the story that earns the right to call it self-improving."
-        number="Platform"
+        number={sectionNumber}
       />
 
       {/* Tab switcher */}

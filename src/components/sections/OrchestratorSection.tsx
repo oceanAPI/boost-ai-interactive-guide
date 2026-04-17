@@ -223,9 +223,11 @@ function MobileTopicGroup({
 export default function OrchestratorSection({
   guide,
   onRegisterOpenAgent,
+  sectionNumber,
 }: {
   guide: GuideData;
   onRegisterOpenAgent?: (fn: (agentKey: string) => void) => void;
+  sectionNumber?: string;
 }) {
   const [selectedAgent, setSelectedAgent] = useState<SpecialistAgent | null>(null);
   const [cameFromOrchestrator, setCameFromOrchestrator] = useState(false);
@@ -304,7 +306,7 @@ export default function OrchestratorSection({
   return (
     <section>
       <SectionHeader
-        number="02"
+        number={sectionNumber ?? "02"}
         title="Boost Agent Orchestrator"
         subtitle={`How boost.ai routes and resolves every interaction for ${guide.company_name}`}
       />
