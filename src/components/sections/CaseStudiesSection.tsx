@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import type { GuideData } from "@/lib/types";
 import { CASE_STUDIES, type CaseStudy } from "@/data/case-studies";
@@ -374,6 +374,7 @@ export default function CaseStudiesSection({ guide, sectionNumber }: { guide: Gu
   const [activeId, setActiveId] = useState(sorted[0]?.id ?? "");
   const [displayedId, setDisplayedId] = useState(activeId);
   const [fading, setFading] = useState(false);
+  const detailRef = useRef<HTMLDivElement>(null);
 
   const activeStudy = sorted.find((cs) => cs.id === displayedId) ?? sorted[0];
 
@@ -381,6 +382,20 @@ export default function CaseStudiesSection({ guide, sectionNumber }: { guide: Gu
     if (id === activeId) return;
     setFading(true);
     setActiveId(id);
+    // Pull the detail panel into view so the user sees the content
+    // change that was triggered by clicking the card above it. Only
+    // scroll when the detail is actually below the fold — otherwise
+    // we'd create a jarring scroll when it was already visible.
+    requestAnimationFrame(() => {
+      const el = detailRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const belowFold = rect.top > window.innerHeight * 0.6;
+      const aboveFold = rect.bottom < 0;
+      if (belowFold || aboveFold) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
     // Cross-fade: fade out, swap content, fade in
     const timer = setTimeout(() => {
       setDisplayedId(id);
@@ -419,7 +434,8 @@ export default function CaseStudiesSection({ guide, sectionNumber }: { guide: Gu
         {/* Expanded detail — always in the same DOM position, cross-fades */}
         {activeStudy && (
           <div
-            className="transition-opacity duration-250 ease-in-out"
+            ref={detailRef}
+            className="transition-opacity duration-250 ease-in-out scroll-mt-24"
             style={{ opacity: fading ? 0 : 1 }}
           >
             <CaseStudyDetail
