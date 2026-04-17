@@ -24,36 +24,21 @@ import { assetPath } from "@/lib/asset-path";
  *  a subtle tinted chip background; inactive is transparent with a
  *  muted dot + muted text.
  */
-const LABEL_META: Record<FeedbackLabel, { name: string; dotActive: string; textActive: string; bgActive: string; accentBorder: string }> = {
-  bug: {
-    name: "Bug",
-    dotActive: "bg-red-500",
-    textActive: "text-red-600",
-    bgActive: "bg-red-500/10 ring-1 ring-inset ring-red-500/30",
-    accentBorder: "border-red-500/60",
-  },
-  information: {
-    name: "Information",
-    dotActive: "bg-boost-muted",
-    textActive: "text-boost-dark",
-    bgActive: "bg-boost-surface ring-1 ring-inset ring-boost-border",
-    accentBorder: "border-boost-muted/60",
-  },
-  visual: {
-    name: "Visual",
-    dotActive: "bg-boost-purple",
-    textActive: "text-boost-purple",
-    bgActive: "bg-boost-purple/10 ring-1 ring-inset ring-boost-purple/30",
-    accentBorder: "border-boost-purple/60",
-  },
-  idea: {
-    name: "Idea",
-    dotActive: "bg-boost-green-light",
-    textActive: "text-boost-green",
-    bgActive: "bg-boost-green-light/15 ring-1 ring-inset ring-boost-green-light/40",
-    accentBorder: "border-boost-green-light",
-  },
+// Labels all share one palette to stay cohesive with the rest of the UI:
+// boost-purple for the active chip, boost-green-light for the dot.
+// No per-label rainbow tints — the label name itself is the signal.
+const LABEL_META: Record<FeedbackLabel, { name: string }> = {
+  bug: { name: "Bug" },
+  information: { name: "Information" },
+  visual: { name: "Visual" },
+  idea: { name: "Idea" },
 };
+
+// Active chip: solid purple box, white text, green-light dot.
+// One shared identity — the label name itself is the signal.
+const LABEL_CHIP_ACTIVE = "bg-boost-purple text-white";
+const LABEL_CHIP_DOT_ACTIVE = "bg-boost-green-light";
+const LABEL_ENTRY_ACCENT = "border-boost-purple/50";
 
 function truncateUrl(url: string, max = 48): string {
   if (url.length <= max) return url;
@@ -361,11 +346,11 @@ export function FeedbackModal({ open, onClose, pending = {} }: FeedbackModalProp
                   aria-pressed={active}
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors ${
                     active
-                      ? `${meta.bgActive} ${meta.textActive}`
+                      ? LABEL_CHIP_ACTIVE
                       : "text-boost-muted hover:text-boost-dark hover:bg-boost-surface/60"
                   }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${active ? meta.dotActive : "bg-boost-muted/40"}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${active ? LABEL_CHIP_DOT_ACTIVE : "bg-boost-muted/40"}`} />
                   {meta.name}
                 </button>
               );
@@ -630,11 +615,11 @@ export function FeedbackModal({ open, onClose, pending = {} }: FeedbackModalProp
                         aria-pressed={active}
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors ${
                           active
-                            ? `${meta.bgActive} ${meta.textActive}`
+                            ? LABEL_CHIP_ACTIVE
                             : "text-boost-muted hover:text-boost-dark hover:bg-boost-surface/60"
                         }`}
                       >
-                        <span className={`w-1.5 h-1.5 rounded-full ${active ? meta.dotActive : "bg-boost-muted/40"}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${active ? LABEL_CHIP_DOT_ACTIVE : "bg-boost-muted/40"}`} />
                         {meta.name}
                         {count > 0 && <span className="tabular-nums opacity-70">{count}</span>}
                       </button>
@@ -650,7 +635,7 @@ export function FeedbackModal({ open, onClose, pending = {} }: FeedbackModalProp
                     <div
                       key={e.id}
                       className={`group flex items-start gap-3 py-2.5 px-3 rounded-lg bg-boost-surface/50 border-l-2 ${
-                        labelMeta ? labelMeta.accentBorder : "border-boost-green-light/40"
+                        labelMeta ? LABEL_ENTRY_ACCENT : "border-boost-green-light/40"
                       }`}
                     >
                       <div className="flex-1 min-w-0">
@@ -660,8 +645,8 @@ export function FeedbackModal({ open, onClose, pending = {} }: FeedbackModalProp
                         {(e.label || e.sectionRef || e.meta) && (
                           <div className="mt-1.5 flex items-center flex-wrap gap-1.5 text-[10px]">
                             {labelMeta && (
-                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md uppercase tracking-[0.12em] ${labelMeta.bgActive} ${labelMeta.textActive} font-semibold`}>
-                                <span className={`w-1 h-1 rounded-full ${labelMeta.dotActive}`} />
+                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md uppercase tracking-[0.12em] ${LABEL_CHIP_ACTIVE} font-semibold`}>
+                                <span className={`w-1 h-1 rounded-full ${LABEL_CHIP_DOT_ACTIVE}`} />
                                 {labelMeta.name}
                               </span>
                             )}
