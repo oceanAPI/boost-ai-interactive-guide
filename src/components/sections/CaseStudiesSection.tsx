@@ -135,10 +135,26 @@ function CaseStudyCard({
           {isActive && <div className="absolute inset-0 ring-2 ring-inset ring-boost-green-light/40 rounded-lg" />}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <Badge variant={isRelevant ? "green" : "muted"} size="sm">{study.companyType}</Badge>
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className={`inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                isRelevant ? "text-boost-green" : "text-boost-muted"
+              }`}
+            >
+              <span
+                className={`w-1 h-1 rounded-full ${
+                  isRelevant ? "bg-boost-green" : "bg-boost-muted/50"
+                }`}
+              />
+              {study.companyType}
+            </span>
             {isRelevant && (
-              <span className="text-[9px] font-semibold text-boost-green-light uppercase tracking-wider">Your industry</span>
+              <>
+                <span className="text-boost-muted/30 text-[10px]">·</span>
+                <span className="text-[9px] font-bold text-boost-green-light uppercase tracking-[0.14em]">
+                  Your industry
+                </span>
+              </>
             )}
           </div>
           <p className="text-sm font-semibold text-boost-dark truncate">{study.companyDescription}</p>
@@ -194,10 +210,26 @@ function CaseStudyDetail({
         <div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-8">
           {/* Top: context */}
           <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              <Badge variant={isRelevant ? "green" : "muted"} size="sm">{study.companyType}</Badge>
+            <div className="flex items-center gap-3">
+              <span
+                className={`inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                  isRelevant ? "text-boost-green-light" : "text-white/55"
+                }`}
+              >
+                <span
+                  className={`w-1 h-1 rounded-full ${
+                    isRelevant ? "bg-boost-green-light" : "bg-white/40"
+                  }`}
+                />
+                {study.companyType}
+              </span>
               {study.channel !== "chat" && (
-                <span className="text-[10px] text-white/50 font-medium">{study.channel === "voice" ? "Voice" : "Chat + Voice"}</span>
+                <>
+                  <span className="text-white/20 text-[10px]">·</span>
+                  <span className="text-[10px] text-white/55 font-semibold uppercase tracking-[0.14em]">
+                    {study.channel === "voice" ? "Voice" : "Chat + Voice"}
+                  </span>
+                </>
               )}
             </div>
             {study.context && (

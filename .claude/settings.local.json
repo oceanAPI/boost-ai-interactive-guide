@@ -90,7 +90,17 @@
       "Bash(grep -oE 'id=\"\"\"\"_\\(is|no|se|fi|dk|gb|ie|de|fr|it|es|pt|be|nl|at|pl|tr|us|ca|mx|in|au|sg|ae|si|ch\\)\"\"\"\"[^>]*d=\"\"\"\"[^\"\"\"\"]{0,200}' \"/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/public/images/world-map.svg\")",
       "Bash(curl -s -H \"x-admin-password: Sebastian06\" https://feed-me-log.mikal-boost-ai.workers.dev/feedback)",
       "Bash(python3 -m json.tool)",
-      "Bash(curl -s -H \"x-admin-password: Sebastian06\" https://feed-me-log.mikal-boost-ai.workers.dev/search-log)"
+      "Bash(curl -s -H \"x-admin-password: Sebastian06\" https://feed-me-log.mikal-boost-ai.workers.dev/search-log)",
+      "Bash(curl -s http://localhost:3000/guide)",
+      "Bash(/dev/null echo:*)",
+      "Bash(find '/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering' -type d -iname *case_studies*)",
+      "Bash(head -5 echo --- find '/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering' -type d -iname *case*)",
+      "Bash(mkdir -p public/photos/case-studies public/logos)",
+      "Bash(SRC=\"images_boost/case_studies_images\")",
+      "Bash(DST=\"public/photos/case-studies\")",
+      "Bash(cp \"$SRC/A1 Slovenia/a1_slovenia_case_study_hero_image.png\" \"$DST/a1-slovenia.png\")",
+      "Bash(cp \"$SRC/Aspire/aspire_case_study_hero_image.png\" \"$DST/aspire-general-insurance.png\")",
+      "Bash(ls next.config*)"
     ]
   }
 }
