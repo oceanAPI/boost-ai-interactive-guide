@@ -106,6 +106,39 @@ function JourneyTimeline({ phases, visible }: { phases: CaseStudy["journey"]; vi
   );
 }
 
+/* ─── Company logo chip — white background, graceful broken-image fallback ─── */
+function CompanyLogoChip({
+  src,
+  alt,
+  size = "sm",
+  tone = "light",
+}: {
+  src?: string;
+  alt: string;
+  size?: "sm" | "md";
+  tone?: "light" | "dark";
+}) {
+  const [hidden, setHidden] = useState(false);
+  if (!src || hidden) return null;
+  const sizeClass = size === "md" ? "w-10 h-10" : "w-6 h-6";
+  const padClass = size === "md" ? "p-1.5" : "p-1";
+  const bgClass = tone === "dark"
+    ? "bg-white/92 ring-1 ring-white/20 shadow-md"
+    : "bg-white ring-1 ring-boost-border/60 shadow-sm";
+  return (
+    <div className={`${sizeClass} ${bgClass} ${padClass} rounded-md flex items-center justify-center overflow-hidden`}>
+      {/* Logo CDN images are simple static assets — bypass next/image */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        onError={() => setHidden(true)}
+        className="max-w-full max-h-full object-contain"
+      />
+    </div>
+  );
+}
+
 /* ─── Card selector row (always collapsed) ─── */
 function CaseStudyCard({
   study,
@@ -130,9 +163,17 @@ function CaseStudyCard({
           : "hover:bg-boost-surface"
       } ${isRelevant && !isActive ? "bg-boost-green-light/[0.03]" : ""}`}>
         {/* Thumbnail */}
-        <div className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0">
-          <Image src={assetPath(study.image)} alt={study.companyDescription} fill className="object-cover" sizes="64px" />
-          {isActive && <div className="absolute inset-0 ring-2 ring-inset ring-boost-green-light/40 rounded-lg" />}
+        <div className="relative w-16 h-16 shrink-0">
+          <div className="w-16 h-16 rounded-lg overflow-hidden">
+            <Image src={assetPath(study.image)} alt={study.companyDescription} width={64} height={64} className="w-full h-full object-cover" sizes="64px" />
+          </div>
+          {isActive && <div className="absolute inset-0 ring-2 ring-inset ring-boost-green-light/40 rounded-lg pointer-events-none" />}
+          {/* Company logo chip — overlay bottom-right corner */}
+          {study.logoUrl && (
+            <div className="absolute -bottom-1 -right-1">
+              <CompanyLogoChip src={study.logoUrl} alt={`${study.companyType} logo`} size="sm" tone="light" />
+            </div>
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -232,12 +273,17 @@ function CaseStudyDetail({
                 </>
               )}
             </div>
-            {study.context && (
-              <div className="hidden sm:flex items-center gap-4 text-[10px] text-white/40">
-                {study.context.size && <span>{study.context.size}</span>}
-                {study.context.employees && <span>{study.context.employees} employees</span>}
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              {study.context && (
+                <div className="hidden sm:flex items-center gap-4 text-[10px] text-white/40">
+                  {study.context.size && <span>{study.context.size}</span>}
+                  {study.context.employees && <span>{study.context.employees} employees</span>}
+                </div>
+              )}
+              {study.logoUrl && (
+                <CompanyLogoChip src={study.logoUrl} alt={`${study.companyType} logo`} size="md" tone="dark" />
+              )}
+            </div>
           </div>
 
           {/* Bottom: headline */}
