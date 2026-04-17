@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   BoostCampLocation,
   BoostCampEvent,
   EventSpeaker,
 } from "@/data/boost-camp-events";
+import { logoUrlForCompany } from "@/data/boost-camp-events";
 
-/* ─── Speaker row with initial badge + company pill ─── */
+/* ─── Speaker row — company logo on the left, clean typography on the right ─── */
 function SpeakerRow({ speaker }: { speaker: EventSpeaker }) {
+  const [logoFailed, setLogoFailed] = useState(false);
+  const logoUrl = logoUrlForCompany(speaker.company);
+  const showLogo = logoUrl && !logoFailed;
+
   const initials = speaker.name
     .split(" ")
     .map((n) => n[0])
@@ -16,38 +21,49 @@ function SpeakerRow({ speaker }: { speaker: EventSpeaker }) {
     .join("")
     .toUpperCase();
 
-  const kindColour =
+  // Tiny colour dot — subtle kind signal without a loud pill
+  const kindDot =
     speaker.kind === "customer"
-      ? "bg-boost-green-light/15 text-boost-green"
+      ? "bg-boost-green-light"
       : speaker.kind === "analyst"
-        ? "bg-boost-purple/10 text-boost-purple"
+        ? "bg-boost-purple"
         : speaker.kind === "partner"
-          ? "bg-boost-gold/15 text-boost-gold"
-          : "bg-boost-dark/10 text-boost-dark";
+          ? "bg-boost-gold"
+          : "bg-boost-muted";
 
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-boost-border/50 last:border-b-0">
-      {/* Initials badge */}
-      <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-boost-purple/15 to-boost-green-light/15 flex items-center justify-center">
-        <span className="text-[10px] font-bold text-boost-dark tracking-wider">
-          {initials}
-        </span>
+    <div className="flex items-start gap-3.5 py-3 border-b border-boost-border/50 last:border-b-0">
+      {/* Logo or initials — same footprint */}
+      <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-white border border-boost-border/60 flex items-center justify-center overflow-hidden">
+        {showLogo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logoUrl}
+            alt=""
+            className="w-full h-full object-contain p-1"
+            onError={() => setLogoFailed(true)}
+          />
+        ) : (
+          <span className="text-[10px] font-bold text-boost-muted/70 tracking-wider">
+            {initials}
+          </span>
+        )}
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline flex-wrap gap-x-2 gap-y-0.5">
-          <p className="text-sm font-semibold text-boost-dark leading-tight">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-boost-dark leading-tight truncate">
             {speaker.name}
           </p>
-          <span
-            className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${kindColour}`}
-          >
-            {speaker.kind === "boost" ? "boost.ai" : speaker.kind}
-          </span>
+          {/* Tiny kind dot — subtle, readable at glance without shouting */}
+          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${kindDot}`} aria-hidden="true" />
         </div>
         <p className="text-xs text-boost-muted mt-0.5">
-          {speaker.role} · <span className="text-boost-dark font-medium">{speaker.company}</span>
+          {speaker.role}
+          {speaker.name !== speaker.company && (
+            <> · <span className="text-boost-dark font-medium">{speaker.company}</span></>
+          )}
         </p>
         {speaker.topic && (
           <p className="text-[11px] text-boost-text-secondary italic mt-1 leading-relaxed">

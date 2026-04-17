@@ -39,12 +39,12 @@ interface ClearbitSuggestion {
 }
 
 /**
- * Build a logo URL using Clearbit's Logo API (separate service from Autocomplete).
- * Returns a URL that resolves to an SVG/PNG or 404. The UI has an <img onError>
- * handler that hides the image cleanly if the logo isn't available.
+ * Build a logo URL. Uses DuckDuckGo's icon service — Clearbit's Logo API was
+ * deprecated post-HubSpot acquisition. DDG returns real 404s for unknown
+ * domains so the <img onError> handler can cleanly reveal the fallback glyph.
  */
 function logoFromDomain(domain: string): string {
-  return `https://logo.clearbit.com/${domain}`;
+  return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
 }
 
 interface WikipediaSummary {

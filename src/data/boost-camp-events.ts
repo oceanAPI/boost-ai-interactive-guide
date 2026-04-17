@@ -362,6 +362,46 @@ export const BOOST_CAMP_LOCATIONS: BoostCampLocation[] = [
   },
 ];
 
+/**
+ * Company → domain mapping for speaker logo rendering.
+ *
+ * SpeakerRow looks up the speaker's company here to build a Clearbit
+ * Logo API URL (logo.clearbit.com/{domain}). Companies not in this
+ * map fall back to initials in the avatar circle.
+ *
+ * Keep this list lean — only add entries where you're confident the
+ * domain is correct. A missing entry just means initials, which is
+ * always fine.
+ */
+export const COMPANY_LOGO_DOMAINS: Record<string, string> = {
+  "Alm. Brand Group": "almbrand.dk",
+  "boost.ai": "boost.ai",
+  "Ciklum": "ciklum.com",
+  "Desert Financial Credit Union": "desertfinancial.com",
+  "DNB": "dnb.no",
+  "H&M": "hm.com",
+  "Icelandair": "icelandair.com",
+  "MSU Federal Credit Union": "msufcu.org",
+  "Nordea": "nordea.com",
+  "Sage": "sage.com",
+  "Skatteverket (Swedish Tax Authority)": "skatteverket.se",
+  "Telenor": "telenor.com",
+  "Vipps MobilePay": "vipps.no",
+};
+
+/**
+ * Resolve a logo URL for a company name. Returns null when the company isn't
+ * in our domain map so the SpeakerRow can fall back to initials cleanly.
+ *
+ * Uses DuckDuckGo's icon service (free, CORS-enabled, returns real 404s for
+ * unknown domains so onError is a reliable fallback signal). Clearbit's
+ * Logo API was deprecated post-HubSpot acquisition and no longer resolves.
+ */
+export function logoUrlForCompany(company: string): string | null {
+  const domain = COMPANY_LOGO_DOMAINS[company];
+  return domain ? `https://icons.duckduckgo.com/ip3/${domain}.ico` : null;
+}
+
 /* ── Helpers ── */
 
 /** Get all events, flattened across locations, sorted newest-first */
