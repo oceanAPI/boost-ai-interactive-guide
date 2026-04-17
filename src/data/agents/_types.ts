@@ -167,6 +167,79 @@ export const INDUSTRY_VARIANTS: Record<string, IndustryVariant[]> = {
       description: "App-only, mobile-native, no legacy branches",
     },
   ],
+  wealth_management: [
+    {
+      key: "wealth_management:private",
+      label: "Private / HNWI",
+      description: "High-net-worth individuals, full concierge, relationship-led",
+    },
+    {
+      key: "wealth_management:mass_affluent",
+      label: "Mass-affluent / Digital advice",
+      description: "Betterment, SigFig, Nutmeg — algorithmic + human-in-the-loop",
+    },
+    {
+      key: "wealth_management:institutional",
+      label: "Institutional",
+      description: "Pension funds, endowments, family offices",
+    },
+  ],
+  credit_union: [
+    {
+      key: "credit_union:community",
+      label: "Community",
+      description: "Local, small member base, trust-rooted relationship lending",
+    },
+    {
+      key: "credit_union:federal",
+      label: "Federal / National",
+      description: "Large footprint, full-service, competes directly with banks",
+    },
+    {
+      key: "credit_union:digital",
+      label: "Digital-first",
+      description: "App-native, younger members, often BaaS-partnered",
+    },
+  ],
+  fintech: [
+    {
+      key: "fintech:neobank",
+      label: "Neobank / Payments",
+      description: "Revolut, N26, Chime — consumer mobile-first banking",
+    },
+    {
+      key: "fintech:lending",
+      label: "Lending / BNPL",
+      description: "Klarna, Affirm, consumer and SMB lending platforms",
+    },
+    {
+      key: "fintech:wealth",
+      label: "Wealth / Trading",
+      description: "Robinhood, eToro — retail investing and brokerage",
+    },
+    {
+      key: "fintech:b2b",
+      label: "B2B / Embedded",
+      description: "Stripe, Plaid, Rapyd — infrastructure and embedded finance",
+    },
+  ],
+  pension: [
+    {
+      key: "pension:public",
+      label: "Public / State scheme",
+      description: "Government-run pensions, national retirement systems",
+    },
+    {
+      key: "pension:occupational",
+      label: "Occupational",
+      description: "Employer-sponsored DB / DC plans, workplace pensions",
+    },
+    {
+      key: "pension:personal",
+      label: "Personal / DC",
+      description: "Individual retirement accounts, mobile-led pension apps",
+    },
+  ],
 };
 
 /**

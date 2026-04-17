@@ -841,43 +841,61 @@ export default function AdminPage() {
           subtitle={hasPricing ? `${PRICING_MODELS.find(p => p.key === form.pricing_model)?.label} · ${form.conversation_cost}` : "Choose pricing model and enter cost baseline"}
           hasContent={hasPricing}
         >
-          <div className="space-y-5">
-            <div>
-              <FieldLabel>Pricing Model</FieldLabel>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {PRICING_MODELS.map((pm) => (
+          {/* Pricing model — chip row. Drives the ROI framing later in the guide. */}
+          <div className="mb-5">
+            <div className="mb-3">
+              <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+                How are they priced today?
+              </p>
+              <p className="text-xs text-boost-muted/80 mt-1">
+                Shapes the ROI story we show the customer.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {PRICING_MODELS.map((pm) => {
+                const active = form.pricing_model === pm.key;
+                return (
                   <button
                     key={pm.key}
+                    type="button"
                     onClick={() => updateField("pricing_model", pm.key)}
-                    className={`p-4 rounded-lg text-left transition-all ${
-                      form.pricing_model === pm.key
-                        ? "bg-boost-green-light/10 border-2 border-boost-green-light"
-                        : "bg-boost-surface border-2 border-transparent hover:border-boost-border"
+                    aria-pressed={active}
+                    title={pm.description}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                      active
+                        ? "bg-boost-green-light text-white"
+                        : "text-boost-muted hover:text-boost-dark bg-boost-surface/40 hover:bg-boost-surface ring-1 ring-inset ring-boost-border/50"
                     }`}
                   >
-                    <span className="font-semibold text-boost-dark text-sm block mb-1">
-                      {pm.label}
-                    </span>
-                    <p className="text-xs text-boost-muted">{pm.description}</p>
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        active ? "bg-white/80" : "bg-boost-muted/40"
+                      }`}
+                    />
+                    {pm.label}
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <FieldLabel>Cost per Conversation</FieldLabel>
-                <input
-                  type="text"
-                  value={form.conversation_cost}
-                  onChange={(e) => updateField("conversation_cost", e.target.value)}
-                  placeholder="e.g. $8.50"
-                  className={inputClass}
-                />
-                <p className="text-xs text-boost-muted mt-1">
-                  Current average cost to handle one customer conversation
-                </p>
-              </div>
+          </div>
+
+          {/* Cost baseline — a single labelled input; no column grid. */}
+          <div className="pt-4 border-t border-boost-border/60">
+            <div className="mb-3">
+              <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+                What does one conversation cost today?
+              </p>
+              <p className="text-xs text-boost-muted/80 mt-1">
+                Current average, including agent time and overhead. Used as the ROI baseline.
+              </p>
             </div>
+            <input
+              type="text"
+              value={form.conversation_cost}
+              onChange={(e) => updateField("conversation_cost", e.target.value)}
+              placeholder="e.g. $8.50, 55 NOK, €6.20"
+              className={`${inputClass} max-w-xs`}
+            />
           </div>
         </CollapsibleSection>
 
