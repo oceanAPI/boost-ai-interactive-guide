@@ -7,7 +7,6 @@ import {
   isShared,
   removeFeedback,
   type FeedbackEntry,
-  type FeedbackAuthor,
 } from "@/lib/feedback-backlog";
 import { assetPath } from "@/lib/asset-path";
 
@@ -68,7 +67,6 @@ interface FeedbackModalProps {
 export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   const [entries, setEntries] = useState<FeedbackEntry[]>([]);
   const [text, setText] = useState("");
-  const [author, setAuthor] = useState<FeedbackAuthor>("me");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -112,7 +110,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     if (!trimmed) return;
     setSubmitting(true);
     try {
-      const entry = await addFeedback(trimmed, author);
+      const entry = await addFeedback(trimmed);
       if (entry) {
         setText("");
         await refresh();
@@ -206,26 +204,6 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
         {/* Compose */}
         <div className="px-5 sm:px-7 py-5 border-b border-boost-border/60">
-          <div className="flex items-center gap-1.5 mb-2.5">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-boost-muted mr-1">
-              From
-            </span>
-            {(["me", "claude"] as const).map((a) => (
-              <button
-                key={a}
-                type="button"
-                onClick={() => setAuthor(a)}
-                className={`text-[11px] font-semibold px-2.5 py-1 rounded-full transition-all border ${
-                  author === a
-                    ? "bg-boost-dark text-white border-boost-dark"
-                    : "bg-white text-boost-muted border-boost-border hover:border-boost-dark/30 hover:text-boost-dark"
-                }`}
-              >
-                {a === "me" ? "Me" : "Claude"}
-              </button>
-            ))}
-          </div>
-
           <textarea
             ref={textareaRef}
             value={text}
@@ -267,15 +245,6 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
                 key={e.id}
                 className="group flex items-start gap-3 py-2.5 px-3 rounded-lg bg-boost-surface/50 border-l-2 border-boost-green-light/40"
               >
-                <span
-                  className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded mt-0.5 shrink-0 ${
-                    e.author === "claude"
-                      ? "bg-boost-purple/10 text-boost-purple"
-                      : "bg-boost-green-light/15 text-boost-green"
-                  }`}
-                >
-                  {e.author === "me" ? "Me" : e.author === "claude" ? "Claude" : e.author}
-                </span>
                 <p className="flex-1 text-[13px] text-boost-dark leading-relaxed whitespace-pre-wrap">
                   {e.text}
                 </p>
