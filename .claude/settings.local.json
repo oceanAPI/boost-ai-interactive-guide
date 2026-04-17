@@ -100,7 +100,17 @@
       "Bash(DST=\"public/photos/case-studies\")",
       "Bash(cp \"$SRC/A1 Slovenia/a1_slovenia_case_study_hero_image.png\" \"$DST/a1-slovenia.png\")",
       "Bash(cp \"$SRC/Aspire/aspire_case_study_hero_image.png\" \"$DST/aspire-general-insurance.png\")",
-      "Bash(ls next.config*)"
+      "Bash(ls next.config*)",
+      "WebFetch(domain:fibia.dk)",
+      "Bash(curl -sL -A \"Mozilla/5.0\" -o public/logos/fibia.svg \"https://fibia.dk/fibia-logo-dark.svg\")",
+      "WebFetch(domain:www.genesys.com)",
+      "Bash(curl -sL -A \"Mozilla/5.0\" \"https://www.genesys.com/\")",
+      "Bash(/usr/bin/curl -sL -A 'Mozilla/5.0' -o /tmp/_mark.svg -w '%{http_code}' 'https://www.genesys.com/media/Genesys_logo-mark.svg')",
+      "Bash(/usr/bin/curl -sL -A 'Mozilla/5.0' -o /tmp/_full.svg -w '%{http_code}' 'https://www.genesys.com/wp-content/themes/genesys-kraken/logo/genesys-com-full-color.svg')",
+      "Bash(/usr/bin/file /tmp/_mark.svg /tmp/_full.svg)",
+      "Bash(/usr/bin/wc -c /tmp/_mark.svg /tmp/_full.svg)",
+      "Bash(/usr/bin/curl -sL -A 'Mozilla/5.0' -o public/logos/genesys.svg 'https://www.genesys.com/media/Genesys_logo-mark.svg')",
+      "Bash(/usr/bin/ls -l public/logos/)"
     ]
   }
 }

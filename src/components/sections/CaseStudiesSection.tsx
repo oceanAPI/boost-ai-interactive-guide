@@ -130,7 +130,7 @@ function CompanyLogoChip({
       {/* Logo CDN images are simple static assets — bypass next/image */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={src}
+        src={assetPath(src)}
         alt={alt}
         onError={() => setHidden(true)}
         className="max-w-full max-h-full object-contain"
