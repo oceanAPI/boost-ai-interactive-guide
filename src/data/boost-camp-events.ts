@@ -170,9 +170,27 @@ export const BOOST_CAMP_LOCATIONS: BoostCampLocation[] = [
             kind: "customer",
           },
           {
+            name: "H&M",
+            role: "Customer case study",
+            company: "H&M",
+            kind: "customer",
+          },
+          {
             name: "Sage",
-            role: "Customer session",
+            role: "Customer case study",
             company: "Sage",
+            kind: "customer",
+          },
+          {
+            name: "Telenor",
+            role: "Customer case study",
+            company: "Telenor",
+            kind: "customer",
+          },
+          {
+            name: "Vipps MobilePay",
+            role: "Customer case study",
+            company: "Vipps MobilePay",
             kind: "customer",
           },
           {
