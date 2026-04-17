@@ -3,7 +3,7 @@ import type { SpecialistAgent } from "../_types";
 const agent: SpecialistAgent = {
   key: "wm_advisory",
   name: "Advisory & Planning",
-  icon: "graph-bar",
+  icon: "bar-chart",
   automationRate: 62,
   avgResolutionTime: "~5 min",
   topTopic: "Talk to my advisor",

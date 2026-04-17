@@ -86,34 +86,36 @@ function EventCard({ event }: { event: BoostCampEvent }) {
       {/* Left accent stripe */}
       <span className={`absolute left-0 top-1 bottom-1 w-[2px] rounded-full ${accent}`} />
 
-      {/* Event meta */}
-      <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mb-2">
-        <span className={`text-[10px] font-bold uppercase tracking-[0.12em] ${accentText}`}>
-          {isUpcoming ? "Upcoming" : "Past event"}
-        </span>
-        <span className="text-boost-border">·</span>
-        <span className="text-xs font-semibold text-boost-dark tabular-nums">
-          {event.year}
-        </span>
-        {event.date && (
-          <>
-            <span className="text-boost-border">·</span>
-            <span className="text-[11px] text-boost-muted">{event.date}</span>
-          </>
-        )}
+      {/* Header row — theme on left, BIG year on right */}
+      <div className="flex items-start justify-between gap-4 mb-1">
+        <div className="flex-1 min-w-0">
+          {/* Status pill */}
+          <span className={`inline-block text-[10px] font-bold uppercase tracking-[0.12em] ${accentText} mb-1.5`}>
+            {isUpcoming ? "Upcoming" : "Past event"}
+          </span>
+
+          {/* Theme */}
+          {event.theme && (
+            <h4 className="text-base sm:text-lg font-bold text-boost-dark leading-snug">
+              {event.theme}
+            </h4>
+          )}
+
+          {/* Date + venue on one compact line */}
+          <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-1 text-[11px] text-boost-muted">
+            {event.date && <span>{event.date}</span>}
+            {event.date && event.venue && <span className="text-boost-border">·</span>}
+            {event.venue && <span>{event.venue}</span>}
+          </div>
+        </div>
+
+        {/* Big year on the right — the headline visual anchor */}
+        <div className={`flex-shrink-0 text-right leading-none`}>
+          <p className={`text-3xl sm:text-4xl font-bold tabular-nums tracking-tight ${accentText}`}>
+            {event.year}
+          </p>
+        </div>
       </div>
-
-      {/* Theme */}
-      {event.theme && (
-        <h4 className="text-base sm:text-lg font-bold text-boost-dark leading-snug">
-          {event.theme}
-        </h4>
-      )}
-
-      {/* Venue */}
-      {event.venue && (
-        <p className="text-[11px] text-boost-muted mt-1">{event.venue}</p>
-      )}
 
       {/* Speakers list */}
       {event.speakers.length > 0 && (

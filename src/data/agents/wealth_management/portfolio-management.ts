@@ -3,7 +3,7 @@ import type { SpecialistAgent } from "../_types";
 const agent: SpecialistAgent = {
   key: "wm_portfolio",
   name: "Portfolio Management",
-  icon: "graph-bar",
+  icon: "bar-chart",
   automationRate: 78,
   avgResolutionTime: "~2 min",
   topTopic: "My portfolio performance",

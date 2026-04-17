@@ -3,7 +3,7 @@ import type { SpecialistAgent } from "../_types";
 const agent: SpecialistAgent = {
   key: "wm_trading",
   name: "Trading & Equities",
-  icon: "graph-bar",
+  icon: "bar-chart",
   automationRate: 75,
   avgResolutionTime: "~2.5 min",
   topTopic: "Place an order",

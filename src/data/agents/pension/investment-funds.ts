@@ -3,7 +3,7 @@ import type { SpecialistAgent } from "../_types";
 const agent: SpecialistAgent = {
   key: "pension_funds",
   name: "Investment Funds",
-  icon: "graph-bar",
+  icon: "bar-chart",
   automationRate: 78,
   avgResolutionTime: "~3 min",
   topTopic: "Switch my fund",

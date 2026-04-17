@@ -3,7 +3,7 @@ import type { SpecialistAgent } from "../_types";
 const agent: SpecialistAgent = {
   key: "wm_tax",
   name: "Tax & Reporting",
-  icon: "graph-bar",
+  icon: "bar-chart",
   automationRate: 82,
   avgResolutionTime: "~2 min",
   topTopic: "My tax documents",

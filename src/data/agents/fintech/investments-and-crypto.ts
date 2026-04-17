@@ -3,7 +3,7 @@ import type { SpecialistAgent } from "../_types";
 const agent: SpecialistAgent = {
   key: "ft_investments",
   name: "Investments & Crypto",
-  icon: "graph-bar",
+  icon: "bar-chart",
   automationRate: 80,
   avgResolutionTime: "~2 min",
   topTopic: "Buy a stock",

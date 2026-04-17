@@ -1098,7 +1098,6 @@ export default function AdminPage() {
           {/* ── Section list with group headers ── */}
           <div className="space-y-0">
             {(() => {
-              let displayNum = 0;
               let lastGroup: SectionGroup | undefined;
               const rows: React.ReactNode[] = [];
 
@@ -1132,9 +1131,6 @@ export default function AdminPage() {
                     </div>,
                   );
                 }
-
-                if (item.enabled) displayNum++;
-                const num = item.enabled ? displayNum : null;
 
                 rows.push(
                   <div
@@ -1219,17 +1215,6 @@ export default function AdminPage() {
                         }`}
                       />
                     </button>
-
-                    {/* Number badge */}
-                    <span
-                      className={`w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0 tabular-nums ${
-                        item.enabled
-                          ? "bg-boost-purple text-white"
-                          : "bg-boost-border text-boost-muted"
-                      }`}
-                    >
-                      {num ?? "\u2014"}
-                    </span>
 
                     {/* Label + hint */}
                     <div className="flex-1 min-w-0 flex items-center gap-2">

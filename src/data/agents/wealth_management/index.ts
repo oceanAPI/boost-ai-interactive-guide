@@ -26,7 +26,7 @@ export const WEALTH_MANAGEMENT_TOPIC_GROUPS: TopicGroup[] = [
   {
     key: "wealth_management_agents",
     label: "Wealth Management",
-    icon: "graph-bar",
+    icon: "bar-chart",
     agents: WEALTH_MANAGEMENT_AGENTS,
   },
 ];

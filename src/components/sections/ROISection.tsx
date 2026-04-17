@@ -25,8 +25,14 @@ export default function ROISection({
 
   // Interactive slider state
   const [volume, setVolume] = useState(totalVolumeFromGuide || 10000);
-  const [cost, setCost] = useState(costFromGuide || 8);
   const currency = detectCurrency(guide.conversation_cost);
+  // Nordic currencies (NOK/SEK/DKK) have ~10x higher nominal cost per conversation
+  // than USD/EUR/GBP, so slider bounds need to adapt.
+  const isNordic = /NOK|SEK|DKK|kr/i.test(currency);
+  const [cost, setCost] = useState(costFromGuide || (isNordic ? 55 : 8));
+  const costMin = isNordic ? 5 : 1;
+  const costMax = isNordic ? 300 : 30;
+  const costStep = isNordic ? 5 : 0.5;
   const fmt = (n: number) => formatWithCurrency(n, currency);
 
   const roi = useMemo(
@@ -65,14 +71,14 @@ export default function ROISection({
               <input
                 type="range"
                 min={500}
-                max={200000}
+                max={1000000}
                 step={500}
                 value={volume}
                 onChange={(e) => setVolume(parseInt(e.target.value))}
                 className="w-full accent-boost-green-light"
               />
               <div className="flex justify-between text-[10px] text-boost-muted mt-1">
-                <span>500</span><span>200K</span>
+                <span>500</span><span>1M</span>
               </div>
             </div>
             <div>
@@ -82,15 +88,15 @@ export default function ROISection({
               </div>
               <input
                 type="range"
-                min={1}
-                max={25}
-                step={0.5}
-                value={cost}
+                min={costMin}
+                max={costMax}
+                step={costStep}
+                value={Math.max(costMin, Math.min(costMax, cost))}
                 onChange={(e) => setCost(parseFloat(e.target.value))}
                 className="w-full accent-boost-green-light"
               />
               <div className="flex justify-between text-[10px] text-boost-muted mt-1">
-                <span>{currency}1</span><span>{currency}25</span>
+                <span>{currency}{costMin}</span><span>{currency}{costMax}</span>
               </div>
             </div>
           </div>

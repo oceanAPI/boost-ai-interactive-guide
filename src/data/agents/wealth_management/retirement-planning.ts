@@ -3,7 +3,7 @@ import type { SpecialistAgent } from "../_types";
 const agent: SpecialistAgent = {
   key: "wm_retirement",
   name: "Retirement Planning",
-  icon: "graph-bar",
+  icon: "bar-chart",
   automationRate: 68,
   avgResolutionTime: "~4 min",
   topTopic: "Roll over my 401k",

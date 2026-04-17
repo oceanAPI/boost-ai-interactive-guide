@@ -62,14 +62,14 @@ export interface VisionSpotlight {
 
 export const TEST_STUDIO_SPOTLIGHT: VisionSpotlight = {
   eyebrow: "Why we can credibly say self-improving",
-  heading: "Determinism, earned.",
+  heading: "AI you can prove. Not just promise.",
   paragraphs: [
-    "Every component in a boost conversation has a unique identifier. In Test Studio, generated content maps rule-based to what happened and where it went. We build determined-outcome test sets per agent — tests with a right answer, in a regulated industry context where that matters.",
-    "Anything that isn't \"should trigger Hook 1 of Agent 1\" becomes a negative test for that outcome — automatically catching false positives across the whole system. Batch-run, fast, low-token. New model? Batch-test it against your reference suite. Changed an agent's instructions? Pattern-detect the drift in LLM thinking before a single customer sees it.",
-    "Once reviewed and approved, the suggested-test-data engine continuously improves until it runs on its own — safely, inside the regulated-industry framework our customers actually live in.",
+    "Most platforms claim self-improvement. We built the architecture that actually earns it. Every conversation component in boost — every agent, guardrail, hook, every routing decision — carries a unique identifier. That means behaviour isn't a black box: it's a sequence of testable, trackable events with right answers.",
+    "Test Studio turns that into leverage. Define the outcome a regulated industry demands — this conversation should trigger the compliance guardrail, that one should swap to the claims agent, the other should never call the payment hook. Run thousands of these expectations in parallel against any model, any prompt change, any new agent, before a single customer sees the difference. Drift in LLM thinking gets caught at the test tier, not in production.",
+    "And because the system knows what a passing test looks like, it can suggest new ones. Review and approve the first few. As trust accrues, approval rates climb, and the test-suite expands itself — always inside the regulated-industry boundaries your legal team signed off on.",
   ],
   credibilityLine:
-    "Self-improving isn't a claim. It's a consequence of nine years of unique identifiers, hybrid architecture, and customers who wouldn't let us ship anything less.",
+    "Self-improving isn't a marketing claim. It's what happens when you spend nine years building a determinism-first architecture and your customers — banks, insurers, pension funds — won't let you ship anything less.",
   testSetExamples: [
     "should trigger guardrail",
     "should NOT trigger guardrail",

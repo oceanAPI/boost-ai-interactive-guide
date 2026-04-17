@@ -3,7 +3,7 @@ import type { SpecialistAgent } from "../_types";
 const agent: SpecialistAgent = {
   key: "wm_funds",
   name: "Investment Funds",
-  icon: "graph-bar",
+  icon: "bar-chart",
   automationRate: 79,
   avgResolutionTime: "~3 min",
   topTopic: "Switch my fund allocation",
