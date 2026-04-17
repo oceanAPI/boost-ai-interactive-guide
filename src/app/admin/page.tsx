@@ -34,6 +34,7 @@ function CollapsibleSection({
   subtitle,
   hasContent,
   defaultOpen,
+  autoOpenOnContent = true,
   children,
   /** Optional override for the status badge (e.g. the Pac-Man feedback button) */
   customBadge,
@@ -43,14 +44,16 @@ function CollapsibleSection({
   subtitle?: string;
   hasContent: boolean;
   defaultOpen?: boolean;
+  /** When false, the section stays collapsed even if hasContent flips true. Useful for settings-style sections users should open deliberately. */
+  autoOpenOnContent?: boolean;
   children: React.ReactNode;
   customBadge?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
 
   useEffect(() => {
-    if (hasContent) setOpen(true);
-  }, [hasContent]);
+    if (autoOpenOnContent && hasContent) setOpen(true);
+  }, [hasContent, autoOpenOnContent]);
 
   return (
     <section className="bg-white rounded-xl border border-boost-border shadow-sm overflow-hidden">
@@ -1050,6 +1053,7 @@ export default function AdminPage() {
               : `${sectionItems.length} sections · ~${estimatedReadTime} min`
           }
           hasContent={hasSectionChanges}
+          autoOpenOnContent={false}
         >
           {/* ── Preset pills ── */}
           <div className="mb-5">
@@ -1125,13 +1129,16 @@ export default function AdminPage() {
           {/* ── Section list with group headers ── */}
           <div className="space-y-0">
             {(() => {
-              let lastGroup: SectionGroup | undefined;
+              // Track which groups have already had their header rendered.
+              // Using a Set (instead of just "lastGroup") means a group header
+              // only renders ONCE — at the first occurrence of that group —
+              // even if reordering has scattered items across the list.
+              const renderedGroups = new Set<SectionGroup>();
               const rows: React.ReactNode[] = [];
 
               sectionItems.forEach((item, index) => {
-                // Insert group header when we cross into a new group
-                if (item.group && item.group !== lastGroup) {
-                  lastGroup = item.group;
+                if (item.group && !renderedGroups.has(item.group)) {
+                  renderedGroups.add(item.group);
                   const groupLabel = SECTION_GROUPS.find((g) => g.key === item.group)?.label ?? item.group;
                   const groupItems = sectionItems.filter((s) => s.group === item.group);
                   const groupEnabledCount = groupItems.filter((s) => s.enabled).length;
