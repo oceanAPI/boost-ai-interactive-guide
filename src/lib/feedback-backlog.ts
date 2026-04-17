@@ -14,11 +14,64 @@ import { feedDelete, feedGet, feedPost, isSharedBackendEnabled } from "./feed-ap
 
 export type FeedbackAuthor = "me" | "claude" | (string & {});
 
+export type FeedbackLabel = "bug" | "information" | "visual" | "idea";
+
+export const FEEDBACK_LABELS: readonly FeedbackLabel[] = ["bug", "information", "visual", "idea"];
+
+export interface FeedbackMeta {
+  url: string;
+  pathname: string;
+  route: "Admin" | "Guide" | "Slideshow" | "Other";
+  params: Record<string, string>;
+  viewport: { w: number; h: number };
+  devicePixelRatio: number;
+  userAgent: string;
+  guideState?: unknown;
+  /**
+   * Scroll position at the moment the modal was triggered. Lets a reviewer
+   * know how far down the page the reporter was.
+   */
+  scroll?: { x: number; y: number };
+  /**
+   * The id of the section the user was most likely engaged with at
+   * trigger time. Detected in priority order: cursor position (most
+   * reliable), keyboard focus, then viewport overlap (fallback).
+   * Only populated when the page has `div[id]` anchors (guide / slides).
+   */
+  nearestSection?: string;
+  /**
+   * All section ids with any overlap with the viewport, ordered by how
+   * much of the viewport they cover (most visible first). Useful when the
+   * reporter was at the seam between two sections.
+   */
+  sectionsInView?: string[];
+  /**
+   * How `nearestSection` was determined. "hover" and "focus" are
+   * high-confidence signals — the user was actively engaged with that
+   * section. "viewport" is a fallback inference and should be treated
+   * as a weaker signal.
+   */
+  nearestSectionSource?: "hover" | "focus" | "viewport";
+  capturedAt: number;
+}
+
 export interface FeedbackEntry {
   id: string;
   text: string;
   author: FeedbackAuthor;
   timestamp: number;
+  // Optional context added with the section-scoped / labeled flow.
+  // All three are additive — older entries simply leave them undefined.
+  label?: FeedbackLabel;
+  sectionRef?: string;
+  meta?: FeedbackMeta;
+}
+
+export interface AddFeedbackOptions {
+  author?: FeedbackAuthor;
+  label?: FeedbackLabel;
+  sectionRef?: string;
+  meta?: FeedbackMeta;
 }
 
 const KEY = "boost.ai:feedback-backlog";
@@ -90,10 +143,21 @@ export async function getFeedback(adminPassword?: string): Promise<FeedbackEntry
 
 export async function addFeedback(
   text: string,
-  author: FeedbackAuthor = "me",
+  options: AddFeedbackOptions = {},
 ): Promise<FeedbackEntry | null> {
   const trimmed = text.trim();
   if (!trimmed) return null;
+
+  const author = options.author ?? "me";
+  const { label, sectionRef, meta } = options;
+
+  // Only attach the fields that are actually defined — avoids littering
+  // entries with explicit undefineds (which don't round-trip through JSON
+  // but make TS noisier).
+  const extras: Partial<Pick<FeedbackEntry, "label" | "sectionRef" | "meta">> = {};
+  if (label) extras.label = label;
+  if (sectionRef) extras.sectionRef = sectionRef;
+  if (meta) extras.meta = meta;
 
   let entry: FeedbackEntry | null = null;
 
@@ -101,6 +165,7 @@ export async function addFeedback(
     const remote = await feedPost<{ entry: FeedbackEntry }>("/feedback", {
       text: trimmed.slice(0, 2000),
       author,
+      ...extras,
     });
     if (remote?.entry) entry = remote.entry;
   }
@@ -113,6 +178,7 @@ export async function addFeedback(
       text: trimmed.slice(0, 2000),
       author,
       timestamp: Date.now(),
+      ...extras,
     };
   }
 

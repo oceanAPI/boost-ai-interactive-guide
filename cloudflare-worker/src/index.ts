@@ -43,7 +43,18 @@ interface FeedbackEntry {
   text: string;
   author: string;
   timestamp: number;
+  // Optional contextual fields added with the section-scoped / labeled
+  // flow. Older entries without these are still valid.
+  label?: string;
+  sectionRef?: string;
+  meta?: unknown;
 }
+
+// "copy" kept for back-compat with entries stored before the rename to
+// "information"; new submissions should use "information".
+const ALLOWED_LABELS: readonly string[] = ["bug", "copy", "information", "visual", "idea"];
+const MAX_META_BYTES = 8 * 1024;
+const MAX_SECTION_REF_CHARS = 128;
 
 interface SearchEntry {
   query: string;
@@ -138,16 +149,45 @@ export default {
           if (!requireClientToken(req, env)) return respond({ error: "unauthorized" }, { status: 401 });
           if (!checkRate(ip)) return respond({ error: "rate_limited" }, { status: 429 });
 
-          const body = (await req.json().catch(() => null)) as { text?: string; author?: string } | null;
+          const body = (await req.json().catch(() => null)) as {
+            text?: string;
+            author?: string;
+            label?: string;
+            sectionRef?: string;
+            meta?: unknown;
+          } | null;
           const text = body?.text?.trim().slice(0, 2000) || "";
           const author = (body?.author || "me").slice(0, 32);
           if (!text) return respond({ error: "empty_text" }, { status: 400 });
+
+          // Validate + size-cap optional context fields. Anything
+          // invalid is silently dropped so a malformed client can't
+          // corrupt the store — the core text + author still get
+          // recorded.
+          const extras: Partial<Pick<FeedbackEntry, "label" | "sectionRef" | "meta">> = {};
+          if (typeof body?.label === "string" && ALLOWED_LABELS.includes(body.label)) {
+            extras.label = body.label;
+          }
+          if (typeof body?.sectionRef === "string" && body.sectionRef.length > 0) {
+            extras.sectionRef = body.sectionRef.slice(0, MAX_SECTION_REF_CHARS);
+          }
+          if (body?.meta !== undefined && body?.meta !== null) {
+            try {
+              const serialized = JSON.stringify(body.meta);
+              if (serialized.length <= MAX_META_BYTES) {
+                extras.meta = body.meta;
+              }
+            } catch {
+              // non-serializable meta — drop
+            }
+          }
 
           const entry: FeedbackEntry = {
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
             text,
             author,
             timestamp: Date.now(),
+            ...extras,
           };
           const list = await readList<FeedbackEntry>(env.FEED_KV, FEEDBACK_KEY);
           list.push(entry);

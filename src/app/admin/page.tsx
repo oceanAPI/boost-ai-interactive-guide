@@ -12,10 +12,9 @@ import HubSpotImportModal from "@/components/HubSpotImportModal";
 import CompanySearch from "@/components/CompanySearch";
 import SearchLogPanel from "@/components/SearchLogPanel";
 import { CustomerDossierCard } from "@/components/admin/CustomerDossierCard";
-import {
-  PacManFeedbackButton,
-  FeedbackModal,
-} from "@/components/FeedbackBacklog";
+import { PacManFeedbackButton } from "@/components/FeedbackBacklog";
+import { useFeedbackTrigger } from "@/hooks/useFeedbackTrigger";
+import { SectionReportPill } from "@/components/SectionReportPill";
 import type { DetectionResult } from "@/lib/company-detect";
 import {
   SLIDE_SECTIONS,
@@ -64,8 +63,14 @@ function CollapsibleSection({
     if (openSignal !== undefined && openSignal > 0) setOpen(true);
   }, [openSignal]);
 
+  // Stable, human-readable section id derived from the title. Used by
+  // the report pill so reviewers can see which admin group the comment
+  // is attached to (e.g. "admin/company-information").
+  const sectionId = `admin/${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
+
   return (
     <section className="bg-white rounded-xl border border-boost-border shadow-sm overflow-hidden">
+      <SectionReportPill sectionId={sectionId} displayName={title} />
       {/* Role=button instead of <button> so we can nest real interactive
           elements (like the Pac-Man feedback trigger) inside without
           breaking HTML button-nesting rules. */}
@@ -374,7 +379,7 @@ export default function AdminPage() {
   const [showSalesforce, setShowSalesforce] = useState(false);
   const [showHubspot, setShowHubspot] = useState(false);
   const [showSearchLog, setShowSearchLog] = useState(false);
-  const [showFeedback, setShowFeedback] = useState(false);
+  const { openWith: openFeedback } = useFeedbackTrigger();
   /** Preset-nudge modal: shown when user hits Generate on an untouched default guide. */
   const [showPresetNudge, setShowPresetNudge] = useState(false);
   /** Used to programmatically open Guide Sections from the preset nudge. Incrementing forces CollapsibleSection to expand. */
@@ -592,7 +597,7 @@ export default function AdminPage() {
           hasContent={hasCompanyInfo}
           defaultOpen={true}
           customBadge={
-            <PacManFeedbackButton onClick={() => setShowFeedback(true)} />
+            <PacManFeedbackButton onClick={() => openFeedback()} />
           }
         >
           {/* Pattern-library quick prefill */}
@@ -1672,11 +1677,7 @@ export default function AdminPage() {
         onClose={() => setShowSearchLog(false)}
       />
 
-      {/* Feedback backlog (Pac-Man hiding the backlog behind the little green guy) */}
-      <FeedbackModal
-        open={showFeedback}
-        onClose={() => setShowFeedback(false)}
-      />
+      {/* Feedback backlog modal is mounted globally by <FeedbackProvider /> in root layout. */}
 
       {/* Preset nudge — soft speed-bump when generating an untouched default guide */}
       {showPresetNudge && (

@@ -1,14 +1,64 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   addFeedback,
+  FEEDBACK_LABELS,
   getFeedback,
   isShared,
   removeFeedback,
   type FeedbackEntry,
+  type FeedbackLabel,
 } from "@/lib/feedback-backlog";
+import { captureMeta } from "@/lib/feedback-meta";
+import {
+  FeedbackTriggerContext,
+  type FeedbackTriggerValue,
+  type PendingContext,
+} from "@/hooks/useFeedbackTrigger";
 import { assetPath } from "@/lib/asset-path";
+
+/* ─── Label palette ─────────────────────────────────────────────
+ *  Small colored dot + uppercase tracked text, matching the modal's
+ *  header grammar (see `FEED ME LOG` caption above). Active state adds
+ *  a subtle tinted chip background; inactive is transparent with a
+ *  muted dot + muted text.
+ */
+const LABEL_META: Record<FeedbackLabel, { name: string; dotActive: string; textActive: string; bgActive: string; accentBorder: string }> = {
+  bug: {
+    name: "Bug",
+    dotActive: "bg-red-500",
+    textActive: "text-red-600",
+    bgActive: "bg-red-500/10 ring-1 ring-inset ring-red-500/30",
+    accentBorder: "border-red-500/60",
+  },
+  information: {
+    name: "Information",
+    dotActive: "bg-boost-muted",
+    textActive: "text-boost-dark",
+    bgActive: "bg-boost-surface ring-1 ring-inset ring-boost-border",
+    accentBorder: "border-boost-muted/60",
+  },
+  visual: {
+    name: "Visual",
+    dotActive: "bg-boost-purple",
+    textActive: "text-boost-purple",
+    bgActive: "bg-boost-purple/10 ring-1 ring-inset ring-boost-purple/30",
+    accentBorder: "border-boost-purple/60",
+  },
+  idea: {
+    name: "Idea",
+    dotActive: "bg-boost-green-light",
+    textActive: "text-boost-green",
+    bgActive: "bg-boost-green-light/15 ring-1 ring-inset ring-boost-green-light/40",
+    accentBorder: "border-boost-green-light",
+  },
+};
+
+function truncateUrl(url: string, max = 48): string {
+  if (url.length <= max) return url;
+  return url.slice(0, max) + "…";
+}
 
 /** Shared sessionStorage key with SearchLogPanel — unlock once, read both. */
 const ADMIN_PASSWORD_KEY = "boost.ai:admin-password";
@@ -65,9 +115,11 @@ function formatRelative(ts: number): string {
 interface FeedbackModalProps {
   open: boolean;
   onClose: () => void;
+  /** Pre-filled context from the trigger (section pill / shortcut). Optional. */
+  pending?: PendingContext;
 }
 
-export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
+export function FeedbackModal({ open, onClose, pending = {} }: FeedbackModalProps) {
   const shared = isShared();
   const [entries, setEntries] = useState<FeedbackEntry[]>([]);
   const [text, setText] = useState("");
@@ -76,6 +128,9 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   const [adminPassword, setAdminPassword] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [showUnlock, setShowUnlock] = useState(false);
+  const [selectedLabel, setSelectedLabel] = useState<FeedbackLabel | undefined>(undefined);
+  const [filterLabel, setFilterLabel] = useState<FeedbackLabel | "all">("all");
+  const [showMetaJson, setShowMetaJson] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
@@ -110,6 +165,18 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     if (open) refresh();
   }, [open, refresh]);
 
+  // Seed label from pending context when the modal opens.
+  // Reset local state on close so the next open starts clean.
+  useEffect(() => {
+    if (open) {
+      setSelectedLabel(pending.label);
+    } else {
+      setSelectedLabel(undefined);
+      setText("");
+      setShowMetaJson(false);
+    }
+  }, [open, pending.label]);
+
   useEffect(() => {
     if (!open) return;
     previousFocus.current = document.activeElement as HTMLElement;
@@ -138,9 +205,24 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     if (!trimmed) return;
     setSubmitting(true);
     try {
-      const entry = await addFeedback(trimmed);
+      // Re-capture meta at submit time if the modal is contextual but
+      // the pending.meta is missing (e.g. opened from a stale trigger).
+      // If pending.meta is present, respect it — it was captured when
+      // the user actually hit the trigger, not now.
+      const meta = pending.meta
+        ? pending.meta
+        : pending.sectionRef
+          ? captureMeta()
+          : undefined;
+
+      const entry = await addFeedback(trimmed, {
+        label: selectedLabel,
+        sectionRef: pending.sectionRef,
+        meta,
+      });
       if (entry) {
         setText("");
+        setSelectedLabel(undefined);
         await refresh();
       }
     } finally {
@@ -183,8 +265,17 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     }
   };
 
-  const sorted = [...entries].sort((a, b) => b.timestamp - a.timestamp);
+  const sorted = useMemo(
+    () => [...entries].sort((a, b) => b.timestamp - a.timestamp),
+    [entries],
+  );
+  const filtered = useMemo(
+    () => (filterLabel === "all" ? sorted : sorted.filter((e) => e.label === filterLabel)),
+    [sorted, filterLabel],
+  );
   const locked = shared && !adminPassword;
+
+  const hasContext = Boolean(pending.meta) || Boolean(pending.sectionRef);
 
   if (!open) return null;
 
@@ -256,26 +347,179 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
         {/* Compose — always accessible, even when log is locked */}
         <div className="px-5 sm:px-7 py-5 border-b border-boost-border/60">
+          {/* Label pills (single-select, optional) */}
+          <div className="mb-3 flex items-center flex-wrap gap-1.5">
+            <span className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em] mr-1">Label</span>
+            {FEEDBACK_LABELS.map((lbl) => {
+              const meta = LABEL_META[lbl];
+              const active = selectedLabel === lbl;
+              return (
+                <button
+                  key={lbl}
+                  type="button"
+                  onClick={() => setSelectedLabel(active ? undefined : lbl)}
+                  aria-pressed={active}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                    active
+                      ? `${meta.bgActive} ${meta.textActive}`
+                      : "text-boost-muted hover:text-boost-dark hover:bg-boost-surface/60"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${active ? meta.dotActive : "bg-boost-muted/40"}`} />
+                  {meta.name}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Log path — all reproducer context nested in a single disclosure.
+              Summary line distills the most important identifiers (route,
+              section, viewport); the open state shows the full breakdown
+              plus the raw JSON for copy-paste into a GitHub issue. */}
+          {hasContext && (() => {
+            const nearestSrc = pending.meta?.nearestSectionSource;
+            const isInferred = !pending.sectionRef && nearestSrc === "viewport";
+            const displaySection =
+              pending.sectionRef ||
+              (pending.meta?.nearestSection ? `${isInferred ? "~" : ""}${pending.meta.nearestSection}` : null);
+            const summaryBits = [
+              pending.meta?.route,
+              displaySection ? `§ ${displaySection}` : null,
+              pending.meta?.viewport ? `${pending.meta.viewport.w}×${pending.meta.viewport.h}` : null,
+            ].filter(Boolean);
+            return (
+              <details className="group mb-3 rounded-lg border border-boost-border/60 bg-boost-surface/20">
+                <summary className="flex items-center justify-between gap-2 px-3 py-2 cursor-pointer hover:bg-boost-surface/40 rounded-lg transition-colors select-none list-none">
+                  <span className="inline-flex items-center gap-2">
+                    <svg
+                      className="w-3 h-3 text-boost-muted transition-transform group-open:rotate-90"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                    <span className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+                      Log path
+                    </span>
+                  </span>
+                  <span className="text-[10px] text-boost-muted truncate tabular-nums">
+                    {summaryBits.join(" · ")}
+                  </span>
+                </summary>
+                <div className="px-3 pb-3 pt-1 space-y-2">
+                  {/* Breakdown of the identifying signals */}
+                  <div className="flex items-center flex-wrap gap-1.5 text-[10px]">
+                    {pending.meta?.route && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white text-boost-dark font-semibold uppercase tracking-[0.14em] ring-1 ring-inset ring-boost-border">
+                        {pending.meta.route}
+                      </span>
+                    )}
+                    {pending.sectionRef && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-boost-green-light/15 text-boost-dark font-semibold uppercase tracking-[0.14em] ring-1 ring-inset ring-boost-green-light/40">
+                        § {pending.sectionRef}
+                      </span>
+                    )}
+                    {!pending.sectionRef && pending.meta?.nearestSection && (() => {
+                      const src = pending.meta.nearestSectionSource;
+                      const inferred = src === "viewport";
+                      const title = src === "hover"
+                        ? "Cursor was over this section when the report was triggered"
+                        : src === "focus"
+                          ? "Keyboard focus was in this section when the report was triggered"
+                          : "Inferred from viewport overlap — cursor wasn't over any section";
+                      return (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-semibold uppercase tracking-[0.14em] ${
+                            inferred
+                              ? "bg-boost-surface/60 text-boost-muted/80 italic ring-1 ring-inset ring-boost-border/60"
+                              : "bg-white text-boost-dark ring-1 ring-inset ring-boost-border"
+                          }`}
+                          title={title}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                          {inferred && <span aria-hidden="true">~</span>}
+                          {pending.meta.nearestSection}
+                        </span>
+                      );
+                    })()}
+                    {pending.meta?.viewport && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white text-boost-muted tabular-nums ring-1 ring-inset ring-boost-border">
+                        {pending.meta.viewport.w}×{pending.meta.viewport.h}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* URL — reproducer. The entire app state lives in query params, so
+                      a single click restores the scene for the reviewer. */}
+                  {pending.meta?.url && (
+                    <div className="flex items-center gap-1.5 text-[10px] bg-white rounded-md px-2 py-1.5 ring-1 ring-inset ring-boost-border">
+                      <span className="text-[9px] font-semibold text-boost-muted uppercase tracking-[0.14em] shrink-0">URL</span>
+                      <span className="font-mono text-boost-dark/80 truncate flex-1">{truncateUrl(pending.meta.url, 80)}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          try { navigator.clipboard?.writeText(pending.meta!.url); } catch { /* ignore */ }
+                        }}
+                        className="text-boost-muted hover:text-boost-dark transition-colors shrink-0"
+                        title="Copy URL"
+                        aria-label="Copy reproducer URL"
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Full JSON — for reviewers who need more than the summary chips. */}
+                  {pending.meta && (
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShowMetaJson((v) => !v)}
+                        className="inline-flex items-center gap-1 text-[10px] text-boost-muted hover:text-boost-dark transition-colors font-semibold uppercase tracking-[0.14em]"
+                        aria-expanded={showMetaJson}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${showMetaJson ? "rotate-90" : ""}`}>
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                        Raw meta
+                      </button>
+                      {showMetaJson && (
+                        <pre className="mt-1.5 max-h-40 overflow-auto bg-white rounded p-2 text-[10px] text-boost-muted font-mono whitespace-pre-wrap break-all ring-1 ring-inset ring-boost-border">
+                          {JSON.stringify(pending.meta, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </details>
+            );
+          })()}
+
           <textarea
             ref={textareaRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="What should we fix or try next?"
+            placeholder={hasContext ? "What went wrong? (optional)" : "What should we fix or try next?"}
             rows={3}
             className="w-full px-3 py-2.5 bg-white border border-boost-border rounded-lg text-boost-dark placeholder-boost-muted/70 focus:outline-none focus:border-boost-muted/50 transition-colors text-[13px] leading-relaxed resize-none"
           />
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-[10px] text-boost-muted">
-              Tip: {typeof navigator !== "undefined" && /Mac/i.test(navigator.platform) ? "⌘" : "Ctrl"}+Enter to feed
-            </span>
+          <div className="mt-2 flex items-center justify-end">
             <button
               type="button"
               onClick={handleSubmit}
               disabled={!text.trim() || submitting}
               className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-boost-green-light text-white hover:bg-boost-green disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              {submitting ? "Feeding…" : "Feed it"}
+              {submitting ? "Feeding…" : "Feed me"}
             </button>
           </div>
         </div>
@@ -345,7 +589,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
                   {loading
                     ? "Loading…"
                     : entries.length > 0
-                      ? `${entries.length} entr${entries.length === 1 ? "y" : "ies"}`
+                      ? `${filtered.length} of ${entries.length} entr${entries.length === 1 ? "y" : "ies"}`
                       : "No entries yet"}
                 </p>
                 {shared && adminPassword && (
@@ -358,36 +602,218 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
                   </button>
                 )}
               </div>
-              <div className="space-y-2.5">
-                {sorted.map((e) => (
-                  <div
-                    key={e.id}
-                    className="group flex items-start gap-3 py-2.5 px-3 rounded-lg bg-boost-surface/50 border-l-2 border-boost-green-light/40"
+
+              {/* Label filter */}
+              {entries.length > 0 && (
+                <div className="mb-3 flex items-center flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setFilterLabel("all")}
+                    aria-pressed={filterLabel === "all"}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors ${
+                      filterLabel === "all"
+                        ? "bg-boost-dark text-white"
+                        : "bg-boost-surface/60 text-boost-muted hover:text-boost-dark"
+                    }`}
                   >
-                    <p className="flex-1 text-[13px] text-boost-dark leading-relaxed whitespace-pre-wrap">
-                      {e.text}
-                    </p>
-                    <span className="text-[10px] text-boost-muted tabular-nums shrink-0 mt-1">
-                      {formatRelative(e.timestamp)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemove(e.id)}
-                      className="opacity-0 group-hover:opacity-100 text-boost-muted/60 hover:text-boost-dark transition-opacity shrink-0 mt-0.5"
-                      aria-label="Delete entry"
+                    All
+                  </button>
+                  {FEEDBACK_LABELS.map((lbl) => {
+                    const meta = LABEL_META[lbl];
+                    const active = filterLabel === lbl;
+                    const count = sorted.filter((e) => e.label === lbl).length;
+                    return (
+                      <button
+                        key={lbl}
+                        type="button"
+                        onClick={() => setFilterLabel(active ? "all" : lbl)}
+                        aria-pressed={active}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+                          active
+                            ? `${meta.bgActive} ${meta.textActive}`
+                            : "text-boost-muted hover:text-boost-dark hover:bg-boost-surface/60"
+                        }`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${active ? meta.dotActive : "bg-boost-muted/40"}`} />
+                        {meta.name}
+                        {count > 0 && <span className="tabular-nums opacity-70">{count}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="space-y-2.5">
+                {filtered.map((e) => {
+                  const labelMeta = e.label ? LABEL_META[e.label] : undefined;
+                  return (
+                    <div
+                      key={e.id}
+                      className={`group flex items-start gap-3 py-2.5 px-3 rounded-lg bg-boost-surface/50 border-l-2 ${
+                        labelMeta ? labelMeta.accentBorder : "border-boost-green-light/40"
+                      }`}
                     >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] text-boost-dark leading-relaxed whitespace-pre-wrap">
+                          {e.text}
+                        </p>
+                        {(e.label || e.sectionRef || e.meta) && (
+                          <div className="mt-1.5 flex items-center flex-wrap gap-1.5 text-[10px]">
+                            {labelMeta && (
+                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md uppercase tracking-[0.12em] ${labelMeta.bgActive} ${labelMeta.textActive} font-semibold`}>
+                                <span className={`w-1 h-1 rounded-full ${labelMeta.dotActive}`} />
+                                {labelMeta.name}
+                              </span>
+                            )}
+                            {e.sectionRef && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-boost-green-light/15 text-boost-dark font-semibold">
+                                § {e.sectionRef}
+                              </span>
+                            )}
+                            {!e.sectionRef && e.meta?.nearestSection && (() => {
+                              const src = e.meta.nearestSectionSource;
+                              const isInferred = src === "viewport" || !src;
+                              const title = src === "hover"
+                                ? "Cursor was over this section"
+                                : src === "focus"
+                                  ? "Keyboard focus was in this section"
+                                  : "Inferred from viewport overlap";
+                              return (
+                                <span
+                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full font-semibold ${
+                                    isInferred
+                                      ? "bg-boost-surface/70 text-boost-muted italic"
+                                      : "bg-boost-surface text-boost-dark"
+                                  }`}
+                                  title={title}
+                                >
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                    <circle cx="12" cy="12" r="3" />
+                                  </svg>
+                                  {isInferred && <span aria-hidden="true">~</span>}
+                                  {e.meta.nearestSection}
+                                </span>
+                              );
+                            })()}
+                            {e.meta?.route && !e.sectionRef && !e.meta?.nearestSection && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-boost-surface text-boost-muted font-semibold uppercase tracking-widest">
+                                {e.meta.route}
+                              </span>
+                            )}
+                            {e.meta?.url && (
+                              <a
+                                href={e.meta.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-boost-dark/5 text-boost-dark hover:bg-boost-dark hover:text-white transition-colors font-semibold"
+                                title="Open reproducer URL in new tab"
+                              >
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                                  <polyline points="15 3 21 3 21 9" />
+                                  <line x1="10" y1="14" x2="21" y2="3" />
+                                </svg>
+                                Reproduce
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-boost-muted tabular-nums shrink-0 mt-1">
+                        {formatRelative(e.timestamp)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemove(e.id)}
+                        className="opacity-0 group-hover:opacity-100 text-boost-muted/60 hover:text-boost-dark transition-opacity shrink-0 mt-0.5"
+                        aria-label="Delete entry"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6" />
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+/* ─── Global provider ─────────────────────────────────────
+ * Owns the feedback modal state app-wide and hosts the
+ * global keyboard shortcut (Cmd/Ctrl+.) that opens it with
+ * auto-captured meta. Section pills and any other UI surface
+ * uses useFeedbackTrigger() to open the modal with pre-filled
+ * context.
+ */
+
+export function FeedbackProvider({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState<PendingContext>({});
+  const openRef = useRef(open);
+
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
+  const openWith = useCallback((ctx: PendingContext = {}) => {
+    setPending(ctx);
+    setOpen(true);
+  }, []);
+
+  const close = useCallback(() => {
+    setOpen(false);
+    setPending({});
+  }, []);
+
+  // Global shortcut: Cmd/Ctrl+. (period). Hardened:
+  // - never throws into the event loop
+  // - preventDefault only on exact match
+  // - respects native input cancel semantics
+  // - re-entry guard via openRef
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      try {
+        if (!(e.metaKey || e.ctrlKey)) return;
+        if (e.shiftKey || e.altKey) return;
+        if (e.key !== ".") return;
+        const el = document.activeElement as HTMLElement | null;
+        if (
+          el &&
+          (el.tagName === "INPUT" ||
+            el.tagName === "TEXTAREA" ||
+            el.isContentEditable)
+        ) {
+          return;
+        }
+        if (openRef.current) return;
+        e.preventDefault();
+        openWith({ meta: captureMeta() });
+      } catch (err) {
+        // Swallow so we never break the host page's input loop.
+        console.warn("feedback shortcut handler error", err);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [openWith]);
+
+  const value = useMemo<FeedbackTriggerValue>(
+    () => ({ open, pending, openWith, close }),
+    [open, pending, openWith, close],
+  );
+
+  return (
+    <FeedbackTriggerContext.Provider value={value}>
+      {children}
+      <FeedbackModal open={open} onClose={close} pending={pending} />
+    </FeedbackTriggerContext.Provider>
   );
 }

@@ -24,6 +24,7 @@ import ScopeOfWorkSection from "@/components/sections/ScopeOfWorkSection";
 import CustomSection from "@/components/sections/CustomSection";
 import NextStepsSection from "@/components/sections/NextStepsSection";
 import { TOPIC_COMPONENTS } from "@/data/topics/registry";
+import { SectionReportPill } from "@/components/SectionReportPill";
 
 const topicSections = getTopicSections();
 
@@ -205,12 +206,14 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
         <div className="max-w-5xl mx-auto px-4 sm:px-8 py-6 space-y-12 sm:space-y-16">
           {(!activeSectionSet || activeSectionSet.has("hero")) && (
             <div id="hero" ref={(el) => { sectionRefs.current["hero"] = el; }}>
+              <SectionReportPill sectionId="hero" displayName="Overview" />
               <HeroSection guide={guide} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("orchestrator")) && (
             <div id="orchestrator" ref={(el) => { sectionRefs.current["orchestrator"] = el; }}>
+              <SectionReportPill sectionId="orchestrator" displayName="Agent Orchestrator" />
               <OrchestratorSection
                 guide={guide}
                 onRegisterOpenAgent={handleRegisterOpenAgent}
@@ -221,6 +224,7 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
 
           {(!activeSectionSet || activeSectionSet.has("topics")) && (
             <div id="topics" ref={(el) => { sectionRefs.current["topics"] = el; }}>
+              <SectionReportPill sectionId="topics" displayName="Deep Dive" />
               <TopicHubSection guide={guide} onNavigate={navigateTo} sectionNumber={sn("topics")} />
             </div>
           )}
@@ -235,6 +239,7 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
                 id={topic.sectionId}
                 ref={(el) => { sectionRefs.current[topic.sectionId] = el; }}
               >
+                <SectionReportPill sectionId={topic.sectionId} displayName={topic.name} />
                 {SpecializedComponent ? (
                   <SpecializedComponent
                     guide={guide}
@@ -254,78 +259,91 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
 
           {(!activeSectionSet || activeSectionSet.has("platform-vision")) && (
             <div id="platform-vision" ref={(el) => { sectionRefs.current["platform-vision"] = el; }}>
+              <SectionReportPill sectionId="platform-vision" displayName="Platform & Vision" />
               <PlatformVisionSection guide={guide} sectionNumber={sn("platform-vision")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("voice")) && (
             <div id="voice" ref={(el) => { sectionRefs.current["voice"] = el; }}>
+              <SectionReportPill sectionId="voice" displayName="Voice" />
               <VoiceSection guide={guide} sectionNumber={sn("voice")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("demo")) && (
             <div id="demo" ref={(el) => { sectionRefs.current["demo"] = el; }}>
+              <SectionReportPill sectionId="demo" displayName="Demo Preview" />
               <DemoPreviewSection guide={guide} sectionNumber={sn("demo")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("impact")) && (
             <div id="impact" ref={(el) => { sectionRefs.current["impact"] = el; }}>
+              <SectionReportPill sectionId="impact" displayName="Impact" />
               <ImpactSection guide={guide} sectionNumber={sn("impact")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("trust-validation")) && (
             <div id="trust-validation" ref={(el) => { sectionRefs.current["trust-validation"] = el; }}>
+              <SectionReportPill sectionId="trust-validation" displayName="Trust & Validation" />
               <TrustValidationSection guide={guide} sectionNumber={sn("trust-validation")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("case-studies")) && (
             <div id="case-studies" ref={(el) => { sectionRefs.current["case-studies"] = el; }}>
+              <SectionReportPill sectionId="case-studies" displayName="Case Studies" />
               <CaseStudiesSection guide={guide} sectionNumber={sn("case-studies")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("community")) && (
             <div id="community" ref={(el) => { sectionRefs.current["community"] = el; }}>
+              <SectionReportPill sectionId="community" displayName="Community" />
               <CommunitySection sectionNumber={sn("community")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("boost-camp")) && (
             <div id="boost-camp" ref={(el) => { sectionRefs.current["boost-camp"] = el; }}>
+              <SectionReportPill sectionId="boost-camp" displayName="Boost Camp" />
               <BoostCampSection sectionNumber={sn("boost-camp")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("commercial-offer")) && (
             <div id="commercial-offer" ref={(el) => { sectionRefs.current["commercial-offer"] = el; }}>
+              <SectionReportPill sectionId="commercial-offer" displayName="Commercial Offer" />
               <CommercialOfferSection guide={guide} sectionNumber={sn("commercial-offer")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("roi")) && (
             <div id="roi" ref={(el) => { sectionRefs.current["roi"] = el; }}>
+              <SectionReportPill sectionId="roi" displayName="ROI" />
               <ROISection guide={guide} sectionNumber={sn("roi")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("scope-of-work")) && (
             <div id="scope-of-work" ref={(el) => { sectionRefs.current["scope-of-work"] = el; }}>
+              <SectionReportPill sectionId="scope-of-work" displayName="Scope of Work" />
               <ScopeOfWorkSection guide={guide} sectionNumber={sn("scope-of-work")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("next-steps")) && (
             <div id="next-steps" ref={(el) => { sectionRefs.current["next-steps"] = el; }}>
+              <SectionReportPill sectionId="next-steps" displayName="Next Steps" />
               <NextStepsSection guide={guide} sectionNumber={sn("next-steps")} />
             </div>
           )}
 
           {(!activeSectionSet || activeSectionSet.has("custom")) && guide.custom_section?.title && (
             <div id="custom" ref={(el) => { sectionRefs.current["custom"] = el; }}>
+              <SectionReportPill sectionId="custom" displayName="Custom Section" />
               <CustomSection guide={guide} sectionNumber={sn("custom")} />
             </div>
           )}
