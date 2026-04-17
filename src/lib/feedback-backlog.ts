@@ -61,13 +61,20 @@ export function isShared(): boolean {
   return isSharedBackendEnabled();
 }
 
-/** Fetch the full list — shared across browsers when the worker is set. */
-export async function getFeedback(): Promise<FeedbackEntry[]> {
+/**
+ * Fetch the full list.
+ *
+ * In shared mode the admin password is required — feedback reads are
+ * owner-only. Without it we return an empty list so the UI can render
+ * an unlock prompt.
+ *
+ * In local mode (no worker wired), localStorage is returned.
+ */
+export async function getFeedback(adminPassword?: string): Promise<FeedbackEntry[]> {
   if (isSharedBackendEnabled()) {
-    const data = await feedGet<{ entries: FeedbackEntry[] }>("/feedback");
-    if (data?.entries) return data.entries;
-    // Fall through to local if the fetch failed — avoids the UI going
-    // blank on a worker hiccup.
+    if (!adminPassword) return [];
+    const data = await feedGet<{ entries: FeedbackEntry[] }>("/feedback", adminPassword);
+    return data?.entries || [];
   }
   return readLocal();
 }
@@ -98,9 +105,10 @@ export async function addFeedback(
   return local;
 }
 
-export async function removeFeedback(id: string): Promise<void> {
+export async function removeFeedback(id: string, adminPassword?: string): Promise<void> {
   if (isSharedBackendEnabled()) {
-    const ok = await feedDelete(`/feedback/${encodeURIComponent(id)}`);
+    if (!adminPassword) return;
+    const ok = await feedDelete(`/feedback/${encodeURIComponent(id)}`, adminPassword);
     if (ok) return;
   }
   writeLocal(readLocal().filter((e) => e.id !== id));

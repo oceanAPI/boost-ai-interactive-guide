@@ -10,6 +10,9 @@ import {
 } from "@/lib/feedback-backlog";
 import { assetPath } from "@/lib/asset-path";
 
+/** Shared sessionStorage key with SearchLogPanel — unlock once, read both. */
+const ADMIN_PASSWORD_KEY = "boost.ai:admin-password";
+
 /* ─── Pac-Man icon ─── */
 function PacManSvg({ className = "" }: { className?: string }) {
   return (
@@ -65,24 +68,43 @@ interface FeedbackModalProps {
 }
 
 export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
+  const shared = isShared();
   const [entries, setEntries] = useState<FeedbackEntry[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [passwordInput, setPasswordInput] = useState("");
+  const [showUnlock, setShowUnlock] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
-  const shared = isShared();
+
+  // Restore admin password from sessionStorage (shared with search log panel)
+  useEffect(() => {
+    if (!shared) return;
+    try {
+      const saved = window.sessionStorage.getItem(ADMIN_PASSWORD_KEY);
+      if (saved) setAdminPassword(saved);
+    } catch {
+      // ignore
+    }
+  }, [shared]);
 
   const refresh = useCallback(async () => {
+    if (shared && !adminPassword) {
+      setEntries([]);
+      return;
+    }
     setLoading(true);
     try {
-      const next = await getFeedback();
+      const next = await getFeedback(shared ? adminPassword : undefined);
       setEntries(next);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [adminPassword, shared]);
 
   useEffect(() => {
     if (open) refresh();
@@ -103,6 +125,12 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
       previousFocus.current?.focus();
     };
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (showUnlock) {
+      setTimeout(() => passwordInputRef.current?.focus(), 50);
+    }
+  }, [showUnlock]);
 
   const handleSubmit = async () => {
     if (submitting) return;
@@ -128,11 +156,35 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   };
 
   const handleRemove = async (id: string) => {
-    await removeFeedback(id);
+    await removeFeedback(id, shared ? adminPassword : undefined);
     await refresh();
   };
 
+  const handleUnlock = async () => {
+    const pw = passwordInput.trim();
+    if (!pw) return;
+    setAdminPassword(pw);
+    try {
+      window.sessionStorage.setItem(ADMIN_PASSWORD_KEY, pw);
+    } catch {
+      // ignore
+    }
+    setPasswordInput("");
+    setShowUnlock(false);
+  };
+
+  const handleLock = () => {
+    setAdminPassword("");
+    setEntries([]);
+    try {
+      window.sessionStorage.removeItem(ADMIN_PASSWORD_KEY);
+    } catch {
+      // ignore
+    }
+  };
+
   const sorted = [...entries].sort((a, b) => b.timestamp - a.timestamp);
+  const locked = shared && !adminPassword;
 
   if (!open) return null;
 
@@ -183,7 +235,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
                 </h3>
                 <p className="text-[12px] text-white/55 mt-1.5">
                   {shared
-                    ? "Everyone on the team feeds the same log. Drop bugs, ideas, or polish notes — feed me and I’ll remember."
+                    ? "Drop bugs, ideas, or polish notes. Anyone on the team can feed me — only the owner reads the log."
                     : "Feed me bugs, ideas, polish notes. Stored on this browser until the shared backend is wired."}
                 </p>
               </div>
@@ -202,7 +254,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
           </div>
         </div>
 
-        {/* Compose */}
+        {/* Compose — always accessible, even when log is locked */}
         <div className="px-5 sm:px-7 py-5 border-b border-boost-border/60">
           <textarea
             ref={textareaRef}
@@ -228,43 +280,112 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
           </div>
         </div>
 
-        {/* Entries */}
+        {/* Log view — locked by default in shared mode */}
         <div className="px-5 sm:px-7 py-5">
-          <div className="flex items-baseline justify-between mb-3">
-            <p className="text-[10px] font-bold text-boost-muted uppercase tracking-widest">
-              {loading
-                ? "Loading…"
-                : entries.length > 0
-                  ? `${entries.length} entr${entries.length === 1 ? "y" : "ies"}`
-                  : "No entries yet"}
-            </p>
-          </div>
-          <div className="space-y-2.5">
-            {sorted.map((e) => (
-              <div
-                key={e.id}
-                className="group flex items-start gap-3 py-2.5 px-3 rounded-lg bg-boost-surface/50 border-l-2 border-boost-green-light/40"
+          {locked && !showUnlock ? (
+            <div className="text-center py-6">
+              <p className="text-[13px] text-boost-muted mb-3">
+                Log is private to the owner.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowUnlock(true)}
+                className="text-[11px] font-semibold text-boost-dark hover:text-boost-green transition-colors inline-flex items-center gap-1.5"
               >
-                <p className="flex-1 text-[13px] text-boost-dark leading-relaxed whitespace-pre-wrap">
-                  {e.text}
-                </p>
-                <span className="text-[10px] text-boost-muted tabular-nums shrink-0 mt-1">
-                  {formatRelative(e.timestamp)}
-                </span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0110 0v4" />
+                </svg>
+                Unlock with admin password
+              </button>
+            </div>
+          ) : locked && showUnlock ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleUnlock();
+              }}
+              className="max-w-sm mx-auto py-3"
+            >
+              <input
+                ref={passwordInputRef}
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                placeholder="Admin password"
+                className="w-full px-3 py-2 bg-white border border-boost-border rounded-lg text-boost-dark placeholder-boost-muted/70 focus:outline-none focus:border-boost-dark/40 text-sm"
+              />
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={!passwordInput.trim()}
+                  className="flex-1 px-3 py-2 text-sm font-semibold rounded-lg bg-boost-dark text-white hover:bg-boost-dark/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Unlock
+                </button>
                 <button
                   type="button"
-                  onClick={() => handleRemove(e.id)}
-                  className="opacity-0 group-hover:opacity-100 text-boost-muted/60 hover:text-boost-dark transition-opacity shrink-0 mt-0.5"
-                  aria-label="Delete entry"
+                  onClick={() => {
+                    setShowUnlock(false);
+                    setPasswordInput("");
+                  }}
+                  className="px-3 py-2 text-sm font-semibold rounded-lg text-boost-muted hover:text-boost-dark hover:bg-boost-surface transition-colors"
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6" />
-                  </svg>
+                  Cancel
                 </button>
               </div>
-            ))}
-          </div>
+              <p className="text-[10px] text-boost-muted/60 mt-2 text-center">
+                Stored in this tab's sessionStorage. Close the tab to clear.
+              </p>
+            </form>
+          ) : (
+            <>
+              <div className="flex items-baseline justify-between mb-3">
+                <p className="text-[10px] font-bold text-boost-muted uppercase tracking-widest">
+                  {loading
+                    ? "Loading…"
+                    : entries.length > 0
+                      ? `${entries.length} entr${entries.length === 1 ? "y" : "ies"}`
+                      : "No entries yet"}
+                </p>
+                {shared && adminPassword && (
+                  <button
+                    type="button"
+                    onClick={handleLock}
+                    className="text-[10px] font-semibold text-boost-muted hover:text-boost-dark transition-colors"
+                  >
+                    Lock
+                  </button>
+                )}
+              </div>
+              <div className="space-y-2.5">
+                {sorted.map((e) => (
+                  <div
+                    key={e.id}
+                    className="group flex items-start gap-3 py-2.5 px-3 rounded-lg bg-boost-surface/50 border-l-2 border-boost-green-light/40"
+                  >
+                    <p className="flex-1 text-[13px] text-boost-dark leading-relaxed whitespace-pre-wrap">
+                      {e.text}
+                    </p>
+                    <span className="text-[10px] text-boost-muted tabular-nums shrink-0 mt-1">
+                      {formatRelative(e.timestamp)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(e.id)}
+                      className="opacity-0 group-hover:opacity-100 text-boost-muted/60 hover:text-boost-dark transition-opacity shrink-0 mt-0.5"
+                      aria-label="Delete entry"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

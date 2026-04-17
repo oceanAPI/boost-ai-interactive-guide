@@ -156,20 +156,19 @@ export default {
         }
 
         if (req.method === "GET") {
-          // Reads gated by client token so the whole team sees the shared
-          // backlog, not admin-only.
-          if (!requireClientToken(req, env)) return respond({ error: "unauthorized" }, { status: 401 });
+          // Reads locked behind admin password so the feedback list stays
+          // private to the owner. Anyone with the public client token can
+          // still write.
+          if (!requireAdmin(req, env, url)) return respond({ error: "unauthorized" }, { status: 401 });
           const list = await readList<FeedbackEntry>(env.FEED_KV, FEEDBACK_KEY);
           return respond({ entries: list });
         }
       }
 
-      /* feedback delete by id — client token or admin password */
+      /* feedback delete by id — admin only */
       const feedbackIdMatch = url.pathname.match(/^\/feedback\/([^/]+)$/);
       if (feedbackIdMatch && req.method === "DELETE") {
-        if (!requireClientToken(req, env) && !requireAdmin(req, env, url)) {
-          return respond({ error: "unauthorized" }, { status: 401 });
-        }
+        if (!requireAdmin(req, env, url)) return respond({ error: "unauthorized" }, { status: 401 });
         const id = decodeURIComponent(feedbackIdMatch[1]);
         const list = await readList<FeedbackEntry>(env.FEED_KV, FEEDBACK_KEY);
         await writeList(
