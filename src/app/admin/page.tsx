@@ -128,6 +128,40 @@ function FieldLabel({
 const inputClass =
   "w-full px-3 py-2 bg-white border border-boost-border rounded-lg text-boost-dark placeholder-boost-lavender focus:outline-none focus:ring-2 focus:ring-boost-green-light focus:border-transparent transition-colors";
 
+/** Inline SVG icons per preset — matches the sales context each preset targets. */
+const PRESET_ICONS: Record<string, React.ReactNode> = {
+  full: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 2 7 12 12 22 7 12 2" />
+      <polyline points="2 17 12 22 22 17" />
+      <polyline points="2 12 12 17 22 12" />
+    </svg>
+  ),
+  executive: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="2" />
+      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+    </svg>
+  ),
+  technical: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  ),
+  commercial: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="1" x2="12" y2="23" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </svg>
+  ),
+  demo: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="5 3 19 12 5 21 5 3" />
+    </svg>
+  ),
+};
+
 const PRICING_MODELS: { key: PricingModel; label: string; description: string }[] = [
   {
     key: "fixed",
@@ -312,6 +346,9 @@ export default function AdminPage() {
   const [sectionItems, setSectionItems] = useState(() =>
     SLIDE_SECTIONS.map((s) => ({ ...s, enabled: s.defaultEnabled ?? true })),
   );
+  /** Remembers which preset the user last applied so we can show
+   * "Edited from X" even after they've tweaked individual toggles. */
+  const [lastAppliedPresetKey, setLastAppliedPresetKey] = useState<string | null>("full");
 
   const toggleSection = (id: string) => {
     setSectionItems((prev) =>
@@ -341,6 +378,7 @@ export default function AdminPage() {
   const applyPreset = (preset: SectionPreset) => {
     const enabledSet = new Set(preset.enable);
     setSectionItems((prev) => prev.map((item) => ({ ...item, enabled: enabledSet.has(item.id) })));
+    setLastAppliedPresetKey(preset.key);
   };
 
   const setAllEnabled = (enabled: boolean) => {
@@ -1056,79 +1094,161 @@ export default function AdminPage() {
           hasContent={hasSectionChanges}
           autoOpenOnContent={false}
         >
-          {/* ── Preset pills ── */}
+          {/* ── Preset cards — the primary UX for picking sections ── */}
           <div className="mb-5">
             <p className="text-[11px] font-semibold text-boost-muted uppercase tracking-widest mb-2">
-              Start from a preset
+              Pick a starting point
             </p>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {SECTION_PRESETS.map((preset) => {
                 const active = activePresetKey === preset.key;
+                const presetMinutes = estimateMinutes(preset.enable);
+                // Pick up to 4 section labels to tease what's inside
+                const previewLabels = preset.enable
+                  .slice(0, 4)
+                  .map((id) => SLIDE_SECTIONS.find((s) => s.id === id)?.label)
+                  .filter(Boolean) as string[];
+                const extra = preset.enable.length - previewLabels.length;
+                const icon = PRESET_ICONS[preset.key] ?? PRESET_ICONS.full;
                 return (
                   <button
                     key={preset.key}
                     type="button"
                     onClick={() => applyPreset(preset)}
-                    title={preset.description}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                    className={`group relative text-left p-4 rounded-xl border transition-all ${
                       active
-                        ? "bg-boost-dark text-white border-boost-dark"
-                        : "bg-white text-boost-muted border-boost-border hover:border-boost-dark/30 hover:text-boost-dark"
+                        ? "border-boost-green-light bg-boost-green-light/[0.06] shadow-sm ring-1 ring-boost-green-light/40"
+                        : "border-boost-border bg-white hover:border-boost-dark/30 hover:shadow-sm"
                     }`}
                   >
-                    {preset.label}
-                    <span className={`ml-1.5 text-[10px] ${active ? "text-white/60" : "text-boost-muted/70"} tabular-nums`}>
-                      {preset.enable.length}
-                    </span>
+                    {active && (
+                      <span
+                        className="absolute top-3 right-3 w-5 h-5 rounded-full bg-boost-green-light text-white flex items-center justify-center"
+                        aria-label="Selected preset"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </span>
+                    )}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className={`flex items-center justify-center w-7 h-7 rounded-lg transition-colors ${
+                          active
+                            ? "bg-boost-green-light text-white"
+                            : "bg-boost-surface text-boost-dark/70 group-hover:text-boost-dark"
+                        }`}
+                      >
+                        {icon}
+                      </span>
+                      <span className="text-sm font-semibold text-boost-dark">{preset.label}</span>
+                    </div>
+                    <p className="text-[11px] text-boost-muted leading-snug mb-2.5 pr-5 h-[2.5em]">
+                      {preset.description}
+                    </p>
+                    <div className="flex items-center gap-3 text-[10px] text-boost-muted mb-2.5">
+                      <span className="inline-flex items-center gap-1 font-semibold text-boost-dark/80 tabular-nums">
+                        {preset.enable.length}
+                        <span className="font-normal text-boost-muted">sections</span>
+                      </span>
+                      <span className="text-boost-border">·</span>
+                      <span className="tabular-nums">~{presetMinutes} min</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {previewLabels.map((label) => (
+                        <span
+                          key={label}
+                          className={`text-[10px] px-1.5 py-0.5 rounded ${
+                            active
+                              ? "bg-white text-boost-dark/70 border border-boost-green-light/30"
+                              : "bg-boost-surface text-boost-muted"
+                          }`}
+                        >
+                          {label}
+                        </span>
+                      ))}
+                      {extra > 0 && (
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded tabular-nums ${
+                            active ? "text-boost-green" : "text-boost-muted"
+                          }`}
+                        >
+                          +{extra}
+                        </span>
+                      )}
+                    </div>
                   </button>
                 );
               })}
             </div>
-            {activePresetKey && (
-              <p className="text-[11px] text-boost-muted mt-2">
-                {SECTION_PRESETS.find((p) => p.key === activePresetKey)?.description}
-              </p>
-            )}
           </div>
 
-          {/* ── Summary band ── */}
-          <div className="mb-4 flex items-center gap-3 flex-wrap text-xs">
+          {/* ── Summary band — shows current real state (may differ from preset) ── */}
+          <div className="mb-2 flex items-center gap-2 flex-wrap text-xs px-1">
             <span className="inline-flex items-center gap-1.5 text-boost-dark">
               <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light" />
               <span className="font-semibold tabular-nums">{selectedSectionIds.length}</span>
-              <span className="text-boost-muted">of {sectionItems.length} enabled</span>
+              <span className="text-boost-muted">sections</span>
             </span>
             <span className="text-boost-border">·</span>
             <span className="text-boost-muted tabular-nums">~{estimatedReadTime} min scan time</span>
-            <span className="ml-auto flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setAllEnabled(true)}
-                className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors"
-              >
-                Enable all
-              </button>
-              <span className="text-boost-border">·</span>
-              <button
-                type="button"
-                onClick={() => setAllEnabled(false)}
-                className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors"
-              >
-                Disable all
-              </button>
-              <span className="text-boost-border">·</span>
-              <button
-                type="button"
-                onClick={() => setSectionItems(SLIDE_SECTIONS.map((s) => ({ ...s, enabled: s.defaultEnabled ?? true })))}
-                className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors"
-              >
-                Reset order
-              </button>
-            </span>
+            {lastAppliedPresetKey && !activePresetKey && (
+              <span className="ml-auto text-[11px] text-boost-muted italic">
+                Edited from {SECTION_PRESETS.find((p) => p.key === lastAppliedPresetKey)?.label}
+              </span>
+            )}
           </div>
 
-          {/* ── Section list with group headers ── */}
-          <div className="space-y-0">
+          {/* ── Advanced: customise individual sections (hidden by default) ── */}
+          <details className="group mt-4 rounded-lg border border-boost-border/60 bg-boost-surface/20">
+            <summary className="flex items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-boost-dark/80 cursor-pointer hover:text-boost-dark select-none list-none">
+              <span className="inline-flex items-center gap-2">
+                <svg
+                  className="w-3.5 h-3.5 text-boost-muted transition-transform group-open:rotate-90"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+                Customise sections
+              </span>
+              <span className="text-[11px] font-normal text-boost-muted">
+                Toggle, reorder, or hide individual sections
+              </span>
+            </summary>
+            <div className="p-3 border-t border-boost-border/60 bg-white rounded-b-lg">
+              <div className="mb-3 flex items-center gap-2 flex-wrap text-xs">
+                <span className="flex items-center gap-2 ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => setAllEnabled(true)}
+                    className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors"
+                  >
+                    Enable all
+                  </button>
+                  <span className="text-boost-border">·</span>
+                  <button
+                    type="button"
+                    onClick={() => setAllEnabled(false)}
+                    className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors"
+                  >
+                    Disable all
+                  </button>
+                  <span className="text-boost-border">·</span>
+                  <button
+                    type="button"
+                    onClick={() => setSectionItems(SLIDE_SECTIONS.map((s) => ({ ...s, enabled: s.defaultEnabled ?? true })))}
+                    className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors"
+                  >
+                    Reset order
+                  </button>
+                </span>
+              </div>
+
+              {/* ── Section list with group headers ── */}
+              <div className="space-y-0">
             {(() => {
               // Track which groups have already had their header rendered.
               // Using a Set (instead of just "lastGroup") means a group header
@@ -1284,7 +1404,9 @@ export default function AdminPage() {
               });
               return rows;
             })()}
-          </div>
+              </div>
+            </div>
+          </details>
         </CollapsibleSection>
 
         {/* 9 — Case Study Selection */}
