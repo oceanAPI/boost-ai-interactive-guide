@@ -73,11 +73,23 @@ const MILESTONES: Milestone[] = [
     ],
   },
   {
-    year: "2025", label: "Agentic platform",
+    year: "2025", label: "Agentic platform · global reach",
     markers: [
       { x: 73, y: 55, label: "Singapore", size: "md" },
       { x: 82, y: 67, label: "Sydney" },
       { x: 67, y: 38, label: "Dubai" },
+      // Country additions — boost now available in 23 markets
+      { x: 42, y: 17, label: "Reykjavík" },        // Iceland
+      { x: 45, y: 35, label: "Lisbon" },           // Portugal
+      { x: 47, y: 34, label: "Madrid" },           // Spain
+      { x: 50.5, y: 30, label: "Brussels" },       // Belgium
+      { x: 53, y: 33, label: "Rome" },             // Italy
+      { x: 54, y: 30, label: "Ljubljana" },        // Slovenia
+      { x: 54, y: 28, label: "Vienna" },           // Austria
+      { x: 55, y: 27, label: "Warsaw" },           // Poland
+      { x: 58, y: 33, label: "Istanbul" },         // Turkey
+      { x: 22, y: 44, label: "Mexico City" },      // Mexico
+      { x: 68, y: 44, label: "Mumbai" },           // India
     ],
   },
 ];
