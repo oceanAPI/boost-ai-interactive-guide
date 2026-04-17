@@ -7,7 +7,7 @@ compatibility_date = "2025-01-01"
 # then paste the returned id below.
 [[kv_namespaces]]
 binding = "FEED_KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "8f14a9597d4f44c9bdcc4841d934f450"
 
 # Non-secret vars. Set secrets (CLIENT_TOKEN, ADMIN_PASSWORD) with:
 #   npx wrangler secret put CLIENT_TOKEN

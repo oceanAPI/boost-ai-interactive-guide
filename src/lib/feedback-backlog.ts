@@ -62,19 +62,28 @@ export function isShared(): boolean {
 }
 
 /**
- * Fetch the full list.
+ * Fetch feedback entries.
  *
- * In shared mode the admin password is required — feedback reads are
- * owner-only. Without it we return an empty list so the UI can render
- * an unlock prompt.
+ * In shared mode:
+ *   - WITH admin password → full server list (everyone's entries)
+ *   - WITHOUT admin password → THIS browser's own submissions only,
+ *     from localStorage. Means the submitter sees their own entries
+ *     without exposing the full shared log to non-admins.
  *
- * In local mode (no worker wired), localStorage is returned.
+ * In local mode (no worker wired), localStorage is returned as-is.
  */
 export async function getFeedback(adminPassword?: string): Promise<FeedbackEntry[]> {
-  if (isSharedBackendEnabled()) {
-    if (!adminPassword) return [];
+  if (isSharedBackendEnabled() && adminPassword) {
     const data = await feedGet<{ entries: FeedbackEntry[] }>("/feedback", adminPassword);
-    return data?.entries || [];
+    const remote = data?.entries || [];
+    // Merge in this browser's local mirror to mask KV eventual-consistency
+    // delay — freshly-written entries show up immediately instead of
+    // needing a lock/unlock cycle to force a re-fetch.
+    const localMirror = readLocal();
+    const byId = new Map<string, FeedbackEntry>();
+    for (const e of remote) byId.set(e.id, e);
+    for (const e of localMirror) if (!byId.has(e.id)) byId.set(e.id, e);
+    return Array.from(byId.values()).sort((a, b) => a.timestamp - b.timestamp);
   }
   return readLocal();
 }
@@ -86,30 +95,40 @@ export async function addFeedback(
   const trimmed = text.trim();
   if (!trimmed) return null;
 
+  let entry: FeedbackEntry | null = null;
+
   if (isSharedBackendEnabled()) {
     const remote = await feedPost<{ entry: FeedbackEntry }>("/feedback", {
       text: trimmed.slice(0, 2000),
       author,
     });
-    if (remote?.entry) return remote.entry;
-    // fall through to local echo if remote failed
+    if (remote?.entry) entry = remote.entry;
   }
 
-  const local: FeedbackEntry = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    text: trimmed.slice(0, 2000),
-    author,
-    timestamp: Date.now(),
-  };
-  writeLocal([...readLocal(), local]);
-  return local;
+  // Fall back to a purely local entry if the remote post failed (offline,
+  // rate-limited, etc.) so the user still sees their submission show up.
+  if (!entry) {
+    entry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      text: trimmed.slice(0, 2000),
+      author,
+      timestamp: Date.now(),
+    };
+  }
+
+  // Always mirror locally — this is what the submitter's browser shows
+  // when they're not unlocked. Keeps "I wrote something → I see it"
+  // working without leaking the full shared log.
+  writeLocal([...readLocal(), entry]);
+  return entry;
 }
 
 export async function removeFeedback(id: string, adminPassword?: string): Promise<void> {
-  if (isSharedBackendEnabled()) {
-    if (!adminPassword) return;
-    const ok = await feedDelete(`/feedback/${encodeURIComponent(id)}`, adminPassword);
-    if (ok) return;
-  }
+  // Always clean the local mirror so the submitter's own view stays in
+  // sync after deletes.
   writeLocal(readLocal().filter((e) => e.id !== id));
+
+  if (isSharedBackendEnabled() && adminPassword) {
+    await feedDelete(`/feedback/${encodeURIComponent(id)}`, adminPassword);
+  }
 }

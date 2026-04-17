@@ -76,7 +76,21 @@
       "Bash(if ! grep -q \"sectionNumber?:\" \"$f\")",
       "Bash(! grep:*)",
       "Bash(then)",
-      "Bash(grep -n \"SectionHeader\\\\s*$\\\\|SectionHeader\\\\s*\\\\|number=\" \"/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/NextStepsSection.tsx\")"
+      "Bash(grep -n \"SectionHeader\\\\s*$\\\\|SectionHeader\\\\s*\\\\|number=\" \"/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/NextStepsSection.tsx\")",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(curl -s https://oceanapi.github.io/boost-ai-interactive-guide/admin/)",
+      "Bash(curl -sI https://oceanapi.github.io/boost-ai-interactive-guide/admin/)",
+      "Bash(curl -sI https://oceanapi.github.io/boost-ai-interactive-guide/admin)",
+      "Bash(curl -sI https://oceanapi.github.io/boost-ai-interactive-guide/admin.html)",
+      "Bash(curl -s https://oceanapi.github.io/boost-ai-interactive-guide/admin)",
+      "Bash(grep -oE /boost-ai-interactive-guide/_next/static/chunks/[^\"\"]+.js /tmp/admin.html)",
+      "Bash(npx wrangler:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -H \"x-client-token: k7xF9vN2pQ8rT4wL6zB3mY1hJ5sA0cD\" https://feed-me-log.mikal-boost-ai.workers.dev/feedback)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -X POST -H \"content-type: application/json\" -H \"x-client-token: k7xF9vN2pQ8rT4wL6zB3mY1hJ5sA0cD\" -d '{\"\"text\"\":\"\"post-lock write smoke test\"\"}' https://feed-me-log.mikal-boost-ai.workers.dev/feedback)",
+      "Bash(grep -oE 'id=\"\"\"\"_\\(is|no|se|fi|dk|gb|ie|de|fr|it|es|pt|be|nl|at|pl|tr|us|ca|mx|in|au|sg|ae|si|ch\\)\"\"\"\"[^>]*d=\"\"\"\"[^\"\"\"\"]{0,200}' \"/Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/public/images/world-map.svg\")",
+      "Bash(curl -s -H \"x-admin-password: Sebastian06\" https://feed-me-log.mikal-boost-ai.workers.dev/feedback)",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -H \"x-admin-password: Sebastian06\" https://feed-me-log.mikal-boost-ai.workers.dev/search-log)"
     ]
   }
 }

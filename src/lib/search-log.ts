@@ -57,8 +57,9 @@ export function logSearch(query: string, matchedKey: string | null): void {
   if (isSharedBackendEnabled()) {
     // Fire and forget — don't block the UI on the round-trip.
     feedPost("/search-log", { query: q, matchedKey }).catch(() => {});
-    return;
   }
+  // Always mirror locally so the searcher's own browser shows their
+  // recent queries even when the full shared log is password-gated.
   writeLocal(q, matchedKey);
 }
 
@@ -69,11 +70,25 @@ export function logSearch(query: string, matchedKey: string | null): void {
  * across the team is a leadership workflow, not a per-user feature.
  */
 export async function getSearchLog(adminPassword?: string): Promise<SearchLogEntry[]> {
-  if (isSharedBackendEnabled()) {
-    if (!adminPassword) return [];
+  if (isSharedBackendEnabled() && adminPassword) {
     const data = await feedGet<{ entries: SearchLogEntry[] }>("/search-log", adminPassword);
-    return data?.entries || [];
+    const remote = data?.entries || [];
+    // Merge this browser's local mirror to mask KV eventual-consistency
+    // delay — a search run by the admin in this tab appears instantly
+    // instead of needing a lock/unlock cycle.
+    const localMirror = readLocal();
+    const seen = new Set(remote.map((e) => `${e.timestamp}:${e.query}`));
+    const merged = [...remote];
+    for (const e of localMirror) {
+      const key = `${e.timestamp}:${e.query}`;
+      if (!seen.has(key)) {
+        merged.push(e);
+        seen.add(key);
+      }
+    }
+    return merged.sort((a, b) => a.timestamp - b.timestamp);
   }
+  // Locked or local mode — return this browser's own search history.
   return readLocal();
 }
 
