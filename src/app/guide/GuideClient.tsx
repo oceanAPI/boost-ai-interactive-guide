@@ -149,12 +149,32 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
         const sectionIds = SECTIONS.map((s) => s.id);
         let bestId = sectionIds[0];
 
-        for (const id of sectionIds) {
-          const el = sectionRefs.current[id];
-          if (el) {
-            const top = el.getBoundingClientRect().top;
-            if (top <= triggerY) {
+        // Bottom-of-page edge case: when the browser can't scroll further
+        // (scrollY + viewport >= document height), the last visible section
+        // may never reach the trigger line. Fall back to "last rendered
+        // section the user can actually see" in that case.
+        const atBottom =
+          window.scrollY + window.innerHeight >= document.body.scrollHeight - 4;
+
+        if (atBottom) {
+          // Walk the list from the END, pick the first one whose element is
+          // rendered and at least partially visible.
+          for (let i = sectionIds.length - 1; i >= 0; i--) {
+            const id = sectionIds[i];
+            const el = sectionRefs.current[id];
+            if (el && el.getBoundingClientRect().top < window.innerHeight) {
               bestId = id;
+              break;
+            }
+          }
+        } else {
+          for (const id of sectionIds) {
+            const el = sectionRefs.current[id];
+            if (el) {
+              const top = el.getBoundingClientRect().top;
+              if (top <= triggerY) {
+                bestId = id;
+              }
             }
           }
         }
