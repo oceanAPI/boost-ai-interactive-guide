@@ -11,6 +11,7 @@ import SalesforceImportModal from "@/components/SalesforceImportModal";
 import HubSpotImportModal from "@/components/HubSpotImportModal";
 import CompanySearch from "@/components/CompanySearch";
 import SearchLogPanel from "@/components/SearchLogPanel";
+import { CustomerDossierCard } from "@/components/admin/CustomerDossierCard";
 import {
   PacManFeedbackButton,
   FeedbackModal,
@@ -260,6 +261,10 @@ export default function AdminPage() {
   };
 
   const [lastPrefilled, setLastPrefilled] = useState<string | null>(null);
+  /** Captured from result.match.logoUrl at prefill time — feeds the Customer Dossier card. */
+  const [prefilledLogo, setPrefilledLogo] = useState<string | null>(null);
+  /** Short description for the Customer Dossier card — match.summary, fallback to match.category. */
+  const [prefilledSummary, setPrefilledSummary] = useState<string | null>(null);
 
   const applyCompanyPattern = (result: DetectionResult) => {
     const prefill = result.prefill || {};
@@ -284,6 +289,14 @@ export default function AdminPage() {
     setLastPrefilled(
       result.source === "web" ? `${label} (web best-guess)` : label,
     );
+    setPrefilledLogo(result.match?.logoUrl || null);
+    setPrefilledSummary(result.match?.summary || result.match?.category || null);
+  };
+
+  const dismissPrefillChip = () => {
+    setLastPrefilled(null);
+    // Keep prefilledLogo/Summary so the dossier visuals remain — only the
+    // "prefilled from X" chip disappears. The AE can still edit every field.
   };
 
   const toggleVariant = (key: string) => {
@@ -602,85 +615,101 @@ export default function AdminPage() {
                 </span>
               </button>
             </div>
-            {lastPrefilled && (
-              <div className="mt-2 flex items-center gap-2 text-xs">
-                <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-boost-green-light/10 text-boost-green font-medium">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  Prefilled from {lastPrefilled}
-                </span>
-                <span className="text-boost-muted">
-                  — edit any field below to override
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setLastPrefilled(null)}
-                  className="ml-auto text-boost-muted hover:text-boost-dark transition-colors"
-                  aria-label="Dismiss"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M18 6L6 18M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <FieldLabel>Company Name *</FieldLabel>
-              <input
-                type="text"
-                value={form.company_name}
-                onChange={(e) => updateField("company_name", e.target.value)}
-                placeholder="e.g. Hartford Insurance"
-                className={inputClass}
-              />
+          {/* Customer Dossier — visual brief that builds itself from prefill or manual entry */}
+          <CustomerDossierCard
+            companyName={form.company_name}
+            companyUrl={form.company_url}
+            contactName={form.contact_name}
+            contactRole={form.contact_role}
+            startDate={form.start_date}
+            logoUrl={prefilledLogo}
+            summary={prefilledSummary}
+            prefilledLabel={lastPrefilled}
+            onDismissPrefill={dismissPrefillChip}
+          />
+
+          {/* Edit details — raw text inputs. Open by default when form is empty
+              (newbies land here), closed by default when a prefill has run. */}
+          <details
+            className="group mt-4 rounded-lg border border-boost-border/60 bg-boost-surface/20"
+            open={!form.company_name}
+          >
+            <summary className="flex items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-boost-dark/80 cursor-pointer hover:text-boost-dark select-none list-none">
+              <span className="inline-flex items-center gap-2">
+                <svg
+                  className="w-3.5 h-3.5 text-boost-muted transition-transform group-open:rotate-90"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+                Edit details
+              </span>
+              <span className="text-[11px] font-normal text-boost-muted">
+                Company, contact, kickoff date
+              </span>
+            </summary>
+            <div className="p-4 border-t border-boost-border/60 bg-white rounded-b-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <FieldLabel>Company Name *</FieldLabel>
+                  <input
+                    type="text"
+                    value={form.company_name}
+                    onChange={(e) => updateField("company_name", e.target.value)}
+                    placeholder="e.g. Hartford Insurance"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <FieldLabel optional>Company Website</FieldLabel>
+                  <input
+                    type="url"
+                    value={form.company_url}
+                    onChange={(e) => updateField("company_url", e.target.value)}
+                    placeholder="https://example.com"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <FieldLabel optional>Contact Name</FieldLabel>
+                  <input
+                    type="text"
+                    value={form.contact_name}
+                    onChange={(e) => updateField("contact_name", e.target.value)}
+                    placeholder="e.g. Jane Smith"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <FieldLabel optional>Contact Role</FieldLabel>
+                  <input
+                    type="text"
+                    value={form.contact_role}
+                    onChange={(e) => updateField("contact_role", e.target.value)}
+                    placeholder="e.g. VP Customer Experience"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <FieldLabel>Projected Start Date</FieldLabel>
+                  <input
+                    type="date"
+                    value={form.start_date}
+                    onChange={(e) => updateField("start_date", e.target.value)}
+                    className={`${inputClass} max-w-xs`}
+                  />
+                  <p className="text-xs text-boost-muted mt-1">
+                    Sets the starting point for the implementation roadmap
+                  </p>
+                </div>
+              </div>
             </div>
-            <div>
-              <FieldLabel optional>Company Website</FieldLabel>
-              <input
-                type="url"
-                value={form.company_url}
-                onChange={(e) => updateField("company_url", e.target.value)}
-                placeholder="https://example.com"
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <FieldLabel optional>Contact Name</FieldLabel>
-              <input
-                type="text"
-                value={form.contact_name}
-                onChange={(e) => updateField("contact_name", e.target.value)}
-                placeholder="e.g. Jane Smith"
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <FieldLabel optional>Contact Role</FieldLabel>
-              <input
-                type="text"
-                value={form.contact_role}
-                onChange={(e) => updateField("contact_role", e.target.value)}
-                placeholder="e.g. VP Customer Experience"
-                className={inputClass}
-              />
-            </div>
-          </div>
-          <div className="mt-4">
-            <FieldLabel>Projected Start Date</FieldLabel>
-            <input
-              type="date"
-              value={form.start_date}
-              onChange={(e) => updateField("start_date", e.target.value)}
-              className={`${inputClass} max-w-xs`}
-            />
-            <p className="text-xs text-boost-muted mt-1">
-              Sets the starting point for the implementation roadmap
-            </p>
-          </div>
+          </details>
         </CollapsibleSection>
 
         {/* 2 — Areas of Interest */}

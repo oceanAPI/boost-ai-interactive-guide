@@ -5,6 +5,7 @@ import Image from "next/image";
 import type { GuideData } from "@/lib/types";
 import { CASE_STUDIES, type CaseStudy } from "@/data/case-studies";
 import { SectionHeader, Badge } from "@/components/ui";
+import { CompanyLogoChip } from "@/components/ui/CompanyLogoChip";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { assetPath } from "@/lib/asset-path";
 import VideoModal from "@/components/VideoModal";
@@ -102,39 +103,6 @@ function JourneyTimeline({ phases, visible }: { phases: CaseStudy["journey"]; vi
           );
         })}
       </div>
-    </div>
-  );
-}
-
-/* ─── Company logo chip — white background, graceful broken-image fallback ─── */
-function CompanyLogoChip({
-  src,
-  alt,
-  size = "sm",
-  tone = "light",
-}: {
-  src?: string;
-  alt: string;
-  size?: "sm" | "md";
-  tone?: "light" | "dark";
-}) {
-  const [hidden, setHidden] = useState(false);
-  if (!src || hidden) return null;
-  const sizeClass = size === "md" ? "w-10 h-10" : "w-6 h-6";
-  const padClass = size === "md" ? "p-1.5" : "p-1";
-  const bgClass = tone === "dark"
-    ? "bg-white/92 ring-1 ring-white/20 shadow-md"
-    : "bg-white ring-1 ring-boost-border/60 shadow-sm";
-  return (
-    <div className={`${sizeClass} ${bgClass} ${padClass} rounded-md flex items-center justify-center overflow-hidden`}>
-      {/* Logo CDN images are simple static assets — bypass next/image */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={assetPath(src)}
-        alt={alt}
-        onError={() => setHidden(true)}
-        className="max-w-full max-h-full object-contain"
-      />
     </div>
   );
 }
