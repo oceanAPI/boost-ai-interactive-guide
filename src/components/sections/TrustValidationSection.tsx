@@ -30,65 +30,75 @@ interface Milestone {
   markers: MapMarker[];
 }
 
+/**
+ * Marker coordinates are container percentages (0-100).
+ *
+ * Derived from the world-map.svg viewBox + country centroids measured
+ * via getBBox() against each ISO-2 path id, then converted to
+ * container-% using the image's `object-contain` rendering (horizontal
+ * letterbox of 11.15% each side because the SVG's native aspect ratio
+ * is 1.71 inside a 2.2-wide container). Tuned further for city offset
+ * from country centroid (e.g. Oslo sits southeast in Norway).
+ */
 const MILESTONES: Milestone[] = [
   {
     year: "2016", label: "Founded in Norway",
     markers: [
-      { x: 51.5, y: 22, label: "Stavanger", size: "lg" },
+      { x: 50, y: 22, label: "Stavanger", size: "lg" },
     ],
   },
   {
     year: "2019", label: "Nordic scale",
     markers: [
-      { x: 52.5, y: 21, label: "Stockholm" },
-      { x: 51, y: 20, label: "Oslo" },
-      { x: 52, y: 24.5, label: "Copenhagen" },
-      { x: 55, y: 20, label: "Helsinki" },
-      { x: 44, y: 14, label: "Reykjavík" },
+      { x: 53, y: 23, label: "Stockholm" },
+      { x: 51.5, y: 21, label: "Oslo" },
+      { x: 51, y: 29, label: "Copenhagen" },
+      { x: 55, y: 22, label: "Helsinki" },
+      { x: 43, y: 23, label: "Reykjavík" },
     ],
   },
   {
     year: "2021", label: "Global expansion",
     markers: [
-      { x: 49, y: 28.5, label: "London", size: "md" },
-      { x: 28, y: 33, label: "New York", size: "md" },
-      { x: 51.5, y: 30, label: "Frankfurt" },
-      { x: 50, y: 31, label: "Paris" },
-      { x: 51, y: 28.5, label: "Amsterdam" },
+      { x: 48, y: 32, label: "London", size: "md" },
+      { x: 29, y: 33, label: "New York", size: "md" },
+      { x: 50, y: 33, label: "Frankfurt" },
+      { x: 49, y: 34, label: "Paris" },
+      { x: 50, y: 32, label: "Amsterdam" },
     ],
   },
   {
     year: "2023", label: "GenAI + compliance",
     markers: [
-      { x: 25, y: 36, label: "Washington DC" },
-      { x: 47, y: 28, label: "Dublin" },
-      { x: 52, y: 31.5, label: "Zurich" },
-      { x: 46.5, y: 38, label: "Lisbon" },     // Portugal
-      { x: 48, y: 37, label: "Madrid" },       // Spain
-      { x: 52.5, y: 37, label: "Rome" },       // Italy
-      { x: 51, y: 29.5, label: "Brussels" },   // Belgium
+      { x: 28, y: 36, label: "Washington DC" },
+      { x: 47, y: 31, label: "Dublin" },
+      { x: 50, y: 36, label: "Zurich" },
+      { x: 44, y: 42, label: "Lisbon" },      // Portugal
+      { x: 47, y: 43, label: "Madrid" },      // Spain
+      { x: 51, y: 39, label: "Rome" },        // Italy
+      { x: 49, y: 33, label: "Brussels" },    // Belgium
     ],
   },
   {
     year: "2024", label: "Voice AI",
     markers: [
-      { x: 22, y: 30, label: "Toronto" },
-      { x: 55.5, y: 22, label: "Tallinn" },
-      { x: 55, y: 24, label: "Riga" },
-      { x: 82, y: 70, label: "Sydney" },       // Australia
+      { x: 28, y: 29, label: "Toronto" },
+      { x: 55, y: 24, label: "Tallinn" },
+      { x: 55, y: 26, label: "Riga" },
+      { x: 82, y: 83, label: "Sydney" },      // Australia
     ],
   },
   {
     year: "2025", label: "Agentic platform · global reach",
     markers: [
-      { x: 73, y: 58, label: "Singapore", size: "md" },
-      { x: 63, y: 42, label: "Dubai" },
-      { x: 53, y: 34, label: "Ljubljana" },    // Slovenia
-      { x: 53.5, y: 32, label: "Vienna" },     // Austria
-      { x: 55, y: 29, label: "Warsaw" },       // Poland
-      { x: 57, y: 36, label: "Istanbul" },     // Turkey
-      { x: 24, y: 51, label: "Mexico City" },  // Mexico
-      { x: 66, y: 43, label: "Mumbai" },       // India
+      { x: 73, y: 62, label: "Singapore", size: "md" },
+      { x: 62, y: 49, label: "Dubai" },
+      { x: 52, y: 36, label: "Ljubljana" },   // Slovenia
+      { x: 52, y: 35, label: "Vienna" },      // Austria
+      { x: 53, y: 32, label: "Warsaw" },      // Poland
+      { x: 55, y: 40, label: "Istanbul" },    // Turkey
+      { x: 24, y: 48, label: "Mexico City" }, // Mexico
+      { x: 66, y: 50, label: "Mumbai" },      // India
     ],
   },
 ];
