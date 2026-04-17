@@ -890,23 +890,24 @@ export default function AdminPage() {
             {/* Knowledge management */}
             <div className="flex items-center gap-3">
               <button
+                type="button"
                 onClick={() =>
                   updateResource(
                     "knowledge_management",
                     !form.resources.knowledge_management,
                   )
                 }
-                className={`w-10 h-6 rounded-full transition-colors relative ${
+                className={`w-10 h-6 rounded-full transition-colors relative p-0 border-0 ${
                   form.resources.knowledge_management
                     ? "bg-boost-green-light"
                     : "bg-boost-border"
                 }`}
               >
                 <span
-                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
                     form.resources.knowledge_management
                       ? "translate-x-4"
-                      : "translate-x-0.5"
+                      : "translate-x-0"
                   }`}
                 />
               </button>
