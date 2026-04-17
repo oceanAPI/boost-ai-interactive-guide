@@ -1,0 +1,318 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import {
+  addFeedback,
+  getFeedback,
+  removeFeedback,
+  clearFeedback,
+  type FeedbackEntry,
+  type FeedbackAuthor,
+} from "@/lib/feedback-backlog";
+
+/* ─── Pac-Man SVG ─── */
+/**
+ * Green Pac-Man with a small white eye. Body uses `currentColor` so parent
+ * text-colour drives the fill. Mouth angle is a modest wedge (~30°) so it
+ * reads cleanly at small sizes. On hover we animate the mouth open/close.
+ */
+function PacManSvg({ chomping, className = "" }: { chomping: boolean; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+    >
+      {/* Body — a circle with a wedge cut out on the right */}
+      <path
+        d={
+          chomping
+            ? /* Open mouth — wider wedge */
+              "M 16 16 L 31 7 A 15 15 0 1 1 31 25 Z"
+            : /* Resting mouth — narrow wedge */
+              "M 16 16 L 30 12 A 15 15 0 1 1 30 20 Z"
+        }
+        style={{ transition: "d 180ms ease-out" }}
+      />
+      {/* White eye */}
+      <circle cx="18" cy="9" r="1.8" fill="white" />
+    </svg>
+  );
+}
+
+/* ─── Pac-Man button — replaces the green checkmark circle on admin ─── */
+export function PacManFeedbackButton({
+  onClick,
+  ariaLabel = "Open feedback backlog",
+}: {
+  onClick: () => void;
+  ariaLabel?: string;
+}) {
+  const [hover, setHover] = useState(false);
+  // Idle chomp animation — open/close every ~1s when not hovering
+  const [idleChomp, setIdleChomp] = useState(false);
+  useEffect(() => {
+    const interval = setInterval(() => setIdleChomp((c) => !c), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const chomping = hover ? true : idleChomp;
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      aria-label={ariaLabel}
+      className="flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 bg-boost-green-light text-white hover:scale-110 hover:bg-boost-green transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light/50"
+    >
+      <PacManSvg chomping={chomping} className="w-5 h-5" />
+    </button>
+  );
+}
+
+/* ─── Feedback modal ─── */
+function formatRelative(ts: number): string {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+interface FeedbackModalProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
+  const [entries, setEntries] = useState<FeedbackEntry[]>([]);
+  const [text, setText] = useState("");
+  const [author, setAuthor] = useState<FeedbackAuthor>("me");
+  const modalRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
+
+  const refresh = () => setEntries(getFeedback());
+
+  useEffect(() => {
+    if (open) refresh();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    previousFocus.current = document.activeElement as HTMLElement;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    document.body.style.overflow = "hidden";
+    setTimeout(() => textareaRef.current?.focus(), 50);
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = "";
+      previousFocus.current?.focus();
+    };
+  }, [open, onClose]);
+
+  const handleSubmit = () => {
+    const entry = addFeedback(text, author);
+    if (entry) {
+      setText("");
+      refresh();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Cmd/Ctrl + Enter to submit from the textarea
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  const handleClear = () => {
+    if (!confirm("Clear the entire feedback backlog on this browser? This can't be undone.")) return;
+    clearFeedback();
+    refresh();
+  };
+
+  const sorted = [...entries].sort((a, b) => b.timestamp - a.timestamp);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-8" role="presentation">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/45 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Panel */}
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="feedback-modal-title"
+        tabIndex={-1}
+        className="relative bg-white rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border border-boost-border max-w-xl w-full h-full sm:h-auto sm:max-h-[calc(100vh-4rem)] overflow-y-auto focus:outline-none"
+      >
+        {/* Header */}
+        <div
+          className="sticky top-0 z-10 sm:rounded-t-2xl"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(75,30,82,0.97) 0%, rgba(55,22,62,1) 100%)",
+          }}
+        >
+          <div className="px-5 sm:px-7 pt-5 pb-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-boost-green-light">
+                  <span className="inline-block">
+                    <PacManSvg chomping className="w-3.5 h-3.5 text-boost-green-light" />
+                  </span>
+                  Feedback backlog
+                </p>
+                <h3
+                  id="feedback-modal-title"
+                  className="mt-1.5 text-xl sm:text-2xl font-bold text-white leading-tight"
+                >
+                  Yours &amp; mine — quick notes for later
+                </h3>
+                <p className="text-[12px] text-white/55 mt-1.5">
+                  Anything that bugs you, anything we should try. Stored on this browser.
+                </p>
+              </div>
+
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:bg-white/10 hover:text-white/90 transition-colors flex-shrink-0 -mt-0.5"
+                aria-label="Close"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Compose */}
+        <div className="px-5 sm:px-7 py-5 border-b border-boost-border/60">
+          {/* Author chips */}
+          <div className="flex items-center gap-1.5 mb-2.5">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-boost-muted mr-1">
+              From
+            </span>
+            {(["me", "claude"] as const).map((a) => (
+              <button
+                key={a}
+                type="button"
+                onClick={() => setAuthor(a)}
+                className={`text-[11px] font-semibold px-2.5 py-1 rounded-full transition-all border ${
+                  author === a
+                    ? "bg-boost-dark text-white border-boost-dark"
+                    : "bg-white text-boost-muted border-boost-border hover:border-boost-dark/30 hover:text-boost-dark"
+                }`}
+              >
+                {a === "me" ? "Me" : "Claude"}
+              </button>
+            ))}
+          </div>
+
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="What would you change? What should we try next?"
+            rows={3}
+            className="w-full px-3 py-2.5 bg-white border border-boost-border rounded-lg text-boost-dark placeholder-boost-muted/70 focus:outline-none focus:border-boost-muted/50 transition-colors text-[13px] leading-relaxed resize-none"
+          />
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-[10px] text-boost-muted">
+              Tip: {typeof navigator !== "undefined" && /Mac/i.test(navigator.platform) ? "⌘" : "Ctrl"}+Enter to save
+            </span>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!text.trim()}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-boost-green-light text-white hover:bg-boost-green disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Add to backlog
+            </button>
+          </div>
+        </div>
+
+        {/* Entries */}
+        <div className="px-5 sm:px-7 py-5">
+          <div className="flex items-baseline justify-between mb-3">
+            <p className="text-[10px] font-bold text-boost-muted uppercase tracking-widest">
+              {entries.length > 0 ? `${entries.length} entr${entries.length === 1 ? "y" : "ies"}` : "No entries yet"}
+            </p>
+            {entries.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClear}
+                className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+          <div className="space-y-2.5">
+            {sorted.map((e) => (
+              <div
+                key={e.id}
+                className="group flex items-start gap-3 py-2.5 px-3 rounded-lg bg-boost-surface/50 border-l-2 border-boost-green-light/40"
+              >
+                <span
+                  className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded mt-0.5 shrink-0 ${
+                    e.author === "claude"
+                      ? "bg-boost-purple/10 text-boost-purple"
+                      : "bg-boost-green-light/15 text-boost-green"
+                  }`}
+                >
+                  {e.author === "me" ? "Me" : e.author === "claude" ? "Claude" : e.author}
+                </span>
+                <p className="flex-1 text-[13px] text-boost-dark leading-relaxed whitespace-pre-wrap">
+                  {e.text}
+                </p>
+                <span className="text-[10px] text-boost-muted tabular-nums shrink-0 mt-1">
+                  {formatRelative(e.timestamp)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    removeFeedback(e.id);
+                    refresh();
+                  }}
+                  className="opacity-0 group-hover:opacity-100 text-boost-muted/60 hover:text-boost-dark transition-opacity shrink-0 mt-0.5"
+                  aria-label="Delete entry"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -11,6 +11,10 @@ import SalesforceImportModal from "@/components/SalesforceImportModal";
 import HubSpotImportModal from "@/components/HubSpotImportModal";
 import CompanySearch from "@/components/CompanySearch";
 import SearchLogPanel from "@/components/SearchLogPanel";
+import {
+  PacManFeedbackButton,
+  FeedbackModal,
+} from "@/components/FeedbackBacklog";
 import type { DetectionResult } from "@/lib/company-detect";
 import {
   SLIDE_SECTIONS,
@@ -31,6 +35,8 @@ function CollapsibleSection({
   hasContent,
   defaultOpen,
   children,
+  /** Optional override for the status badge (e.g. the Pac-Man feedback button) */
+  customBadge,
 }: {
   number: number;
   title: string;
@@ -38,6 +44,7 @@ function CollapsibleSection({
   hasContent: boolean;
   defaultOpen?: boolean;
   children: React.ReactNode;
+  customBadge?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
 
@@ -51,15 +58,19 @@ function CollapsibleSection({
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 p-5 text-left hover:bg-boost-surface/50 transition-colors"
       >
-        <span
-          className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm flex-shrink-0 ${
-            hasContent
-              ? "bg-boost-green-light text-white"
-              : "bg-boost-surface text-boost-muted border border-boost-border"
-          }`}
-        >
-          {hasContent ? "✓" : number}
-        </span>
+        {customBadge ? (
+          customBadge
+        ) : (
+          <span
+            className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm flex-shrink-0 ${
+              hasContent
+                ? "bg-boost-green-light text-white"
+                : "bg-boost-surface text-boost-muted border border-boost-border"
+            }`}
+          >
+            {hasContent ? "✓" : number}
+          </span>
+        )}
         <div className="flex-1 min-w-0">
           <h2 className="text-base font-semibold text-boost-dark">{title}</h2>
           {subtitle && !open && (
@@ -280,6 +291,7 @@ export default function AdminPage() {
   const [showSalesforce, setShowSalesforce] = useState(false);
   const [showHubspot, setShowHubspot] = useState(false);
   const [showSearchLog, setShowSearchLog] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   /* ─── Guide sections (inline picker) ─── */
   const [sectionItems, setSectionItems] = useState(() =>
@@ -474,6 +486,9 @@ export default function AdminPage() {
           title="Company Information"
           hasContent={hasCompanyInfo}
           defaultOpen={true}
+          customBadge={
+            <PacManFeedbackButton onClick={() => setShowFeedback(true)} />
+          }
         >
           {/* Pattern-library quick prefill */}
           <div className="mb-5 pb-5 border-b border-boost-border">
@@ -1205,13 +1220,13 @@ export default function AdminPage() {
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleSection(item.id); }}
                       aria-pressed={item.enabled}
-                      className={`relative flex-shrink-0 w-9 h-5 rounded-full transition-colors ${
+                      className={`relative flex-shrink-0 w-9 h-5 rounded-full transition-colors p-0 border-0 ${
                         item.enabled ? "bg-boost-green-light" : "bg-boost-border"
                       }`}
                     >
                       <span
-                        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                          item.enabled ? "translate-x-4" : "translate-x-0.5"
+                        className={`absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                          item.enabled ? "translate-x-4" : "translate-x-0"
                         }`}
                       />
                     </button>
@@ -1437,6 +1452,12 @@ export default function AdminPage() {
       <SearchLogPanel
         open={showSearchLog}
         onClose={() => setShowSearchLog(false)}
+      />
+
+      {/* Feedback backlog (Pac-Man hiding the backlog behind the little green guy) */}
+      <FeedbackModal
+        open={showFeedback}
+        onClose={() => setShowFeedback(false)}
       />
     </div>
   );
