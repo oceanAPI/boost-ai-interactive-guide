@@ -393,6 +393,27 @@ function CaseStudyDetail({
             </div>
           </>
         )}
+
+        {/* Read full case study link — every study carries a sourceUrl back to boost.ai */}
+        {study.sourceUrl && (
+          <>
+            <div className="h-px bg-boost-border" />
+            <div className="px-6 sm:px-8 py-4">
+              <a
+                href={study.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-boost-muted hover:text-boost-dark transition-colors group"
+              >
+                <span>Read full case study on boost.ai</span>
+                <svg className="w-3 h-3 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </a>
+            </div>
+          </>
+        )}
       </div>
     </>
   );

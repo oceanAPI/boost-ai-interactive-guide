@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { assetPath } from "@/lib/asset-path";
 import { INTEGRATION_CATEGORIES } from "@/data/integrations";
@@ -35,6 +35,7 @@ function CollapsibleSection({
   hasContent,
   defaultOpen,
   autoOpenOnContent = true,
+  openSignal,
   children,
   /** Optional override for the status badge (e.g. the Pac-Man feedback button) */
   customBadge,
@@ -46,6 +47,8 @@ function CollapsibleSection({
   defaultOpen?: boolean;
   /** When false, the section stays collapsed even if hasContent flips true. Useful for settings-style sections users should open deliberately. */
   autoOpenOnContent?: boolean;
+  /** Incrementing this value forces the section open. Parent uses it to programmatically expand from elsewhere in the UI (e.g. the Generate-time preset nudge that points the user here). */
+  openSignal?: number;
   children: React.ReactNode;
   customBadge?: React.ReactNode;
 }) {
@@ -54,6 +57,11 @@ function CollapsibleSection({
   useEffect(() => {
     if (autoOpenOnContent && hasContent) setOpen(true);
   }, [hasContent, autoOpenOnContent]);
+
+  // External open trigger (e.g. from the Generate preset nudge)
+  useEffect(() => {
+    if (openSignal !== undefined && openSignal > 0) setOpen(true);
+  }, [openSignal]);
 
   return (
     <section className="bg-white rounded-xl border border-boost-border shadow-sm overflow-hidden">
@@ -324,10 +332,23 @@ export default function AdminPage() {
     });
   };
 
-  const handleSubmit = () => {
+  /** Actual generate — called after any pre-checks (e.g. preset nudge) pass. */
+  const proceedWithGenerate = () => {
     const encoded = encodeGuideData(form);
     const sections = selectedSectionIds.join(",");
     router.push(`/guide?data=${encoded}&sections=${sections}`);
+  };
+
+  const handleSubmit = () => {
+    // Soft nudge: if the user has never picked a preset card AND has
+    // never manually touched a section toggle/reorder, they're about
+    // to send the full default guide — often unintentionally. Ask
+    // once, don't block.
+    if (lastAppliedPresetKey === null && !hasTouchedSections) {
+      setShowPresetNudge(true);
+      return;
+    }
+    proceedWithGenerate();
   };
 
   const handleStartPresentation = () => {
@@ -341,16 +362,29 @@ export default function AdminPage() {
   const [showHubspot, setShowHubspot] = useState(false);
   const [showSearchLog, setShowSearchLog] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  /** Preset-nudge modal: shown when user hits Generate on an untouched default guide. */
+  const [showPresetNudge, setShowPresetNudge] = useState(false);
+  /** Used to programmatically open Guide Sections from the preset nudge. Incrementing forces CollapsibleSection to expand. */
+  const [guideSectionsOpenSignal, setGuideSectionsOpenSignal] = useState(0);
+  const guideSectionsRef = useRef<HTMLDivElement>(null);
 
   /* ─── Guide sections (inline picker) ─── */
   const [sectionItems, setSectionItems] = useState(() =>
     SLIDE_SECTIONS.map((s) => ({ ...s, enabled: s.defaultEnabled ?? true })),
   );
   /** Remembers which preset the user last applied so we can show
-   * "Edited from X" even after they've tweaked individual toggles. */
-  const [lastAppliedPresetKey, setLastAppliedPresetKey] = useState<string | null>("full");
+   * "Edited from X" even after they've tweaked individual toggles.
+   * `null` means the user has not deliberately picked a preset yet —
+   * the sections are still at their default values. We use that to
+   * decide whether to nudge at Generate time. */
+  const [lastAppliedPresetKey, setLastAppliedPresetKey] = useState<string | null>(null);
+  /** Flips true the first time the user manually mutates the section
+   * list (toggle, reorder, bulk action). Combined with
+   * lastAppliedPresetKey for the Generate-time nudge. */
+  const [hasTouchedSections, setHasTouchedSections] = useState(false);
 
   const toggleSection = (id: string) => {
+    setHasTouchedSections(true);
     setSectionItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, enabled: !item.enabled } : item)),
     );
@@ -358,6 +392,7 @@ export default function AdminPage() {
 
   const moveSectionUp = (index: number) => {
     if (index <= 0) return;
+    setHasTouchedSections(true);
     setSectionItems((prev) => {
       const next = [...prev];
       [next[index - 1], next[index]] = [next[index], next[index - 1]];
@@ -367,6 +402,7 @@ export default function AdminPage() {
 
   const moveSectionDown = (index: number) => {
     if (index >= sectionItems.length - 1) return;
+    setHasTouchedSections(true);
     setSectionItems((prev) => {
       const next = [...prev];
       [next[index], next[index + 1]] = [next[index + 1], next[index]];
@@ -379,13 +415,16 @@ export default function AdminPage() {
     const enabledSet = new Set(preset.enable);
     setSectionItems((prev) => prev.map((item) => ({ ...item, enabled: enabledSet.has(item.id) })));
     setLastAppliedPresetKey(preset.key);
+    setHasTouchedSections(true);
   };
 
   const setAllEnabled = (enabled: boolean) => {
+    setHasTouchedSections(true);
     setSectionItems((prev) => prev.map((item) => ({ ...item, enabled })));
   };
 
   const toggleGroupEnabled = (group: SectionGroup, enabled: boolean) => {
+    setHasTouchedSections(true);
     setSectionItems((prev) => prev.map((item) => (item.group === group ? { ...item, enabled } : item)));
   };
 
@@ -1083,6 +1122,7 @@ export default function AdminPage() {
         </CollapsibleSection>
 
         {/* 8 — Guide Sections */}
+        <div ref={guideSectionsRef} className="scroll-mt-20">
         <CollapsibleSection
           number={8}
           title="Guide Sections"
@@ -1093,6 +1133,7 @@ export default function AdminPage() {
           }
           hasContent={hasSectionChanges}
           autoOpenOnContent={false}
+          openSignal={guideSectionsOpenSignal}
         >
           {/* ── Preset cards — the primary UX for picking sections ── */}
           <div className="mb-5">
@@ -1239,7 +1280,11 @@ export default function AdminPage() {
                   <span className="text-boost-border">·</span>
                   <button
                     type="button"
-                    onClick={() => setSectionItems(SLIDE_SECTIONS.map((s) => ({ ...s, enabled: s.defaultEnabled ?? true })))}
+                    onClick={() => {
+                      setHasTouchedSections(true);
+                      setLastAppliedPresetKey(null);
+                      setSectionItems(SLIDE_SECTIONS.map((s) => ({ ...s, enabled: s.defaultEnabled ?? true })));
+                    }}
                     className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors"
                   >
                     Reset order
@@ -1325,6 +1370,7 @@ export default function AdminPage() {
                       let toIndex = e.clientY < midY ? index : index + 1;
                       if (fromIndex < toIndex) toIndex--;
                       if (fromIndex !== toIndex && !isNaN(fromIndex)) {
+                        setHasTouchedSections(true);
                         setSectionItems((prev) => {
                           const next = [...prev];
                           const [moved] = next.splice(fromIndex, 1);
@@ -1408,6 +1454,7 @@ export default function AdminPage() {
             </div>
           </details>
         </CollapsibleSection>
+        </div>
 
         {/* 9 — Case Study Selection */}
         <CollapsibleSection
@@ -1601,6 +1648,58 @@ export default function AdminPage() {
         open={showFeedback}
         onClose={() => setShowFeedback(false)}
       />
+
+      {/* Preset nudge — soft speed-bump when generating an untouched default guide */}
+      {showPresetNudge && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="presentation">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowPresetNudge(false)}
+            aria-hidden="true"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="preset-nudge-title"
+            className="relative bg-white rounded-2xl shadow-2xl border border-boost-border max-w-md w-full p-6"
+          >
+            <h3 id="preset-nudge-title" className="text-lg font-bold text-boost-dark leading-tight">
+              Send the full guide?
+            </h3>
+            <p className="text-sm text-boost-muted mt-2 leading-relaxed">
+              You haven't picked a focused preset. This will send all {sectionItems.length} sections
+              (~{estimatedReadTime} min to read). A focused preset like Executive or Commercial is
+              often a tighter fit for a specific meeting.
+            </p>
+            <div className="mt-5 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPresetNudge(false);
+                  proceedWithGenerate();
+                }}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-lg bg-boost-dark text-white hover:bg-boost-dark/90 transition-colors"
+              >
+                Use full guide
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPresetNudge(false);
+                  // Force Guide Sections open, then scroll it into view
+                  setGuideSectionsOpenSignal((n) => n + 1);
+                  requestAnimationFrame(() => {
+                    guideSectionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  });
+                }}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-lg bg-white border border-boost-border text-boost-dark hover:bg-boost-surface transition-colors"
+              >
+                Pick a preset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
