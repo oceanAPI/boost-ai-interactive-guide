@@ -728,32 +728,47 @@ export default function AdminPage() {
           }
           hasContent={hasAreas}
         >
-          <p className="text-boost-muted text-sm mb-4">
-            Select the industries / verticals this customer operates in. If none
-            are selected, a general financial services guide will be generated.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {INDUSTRIES.map((ind) => (
-              <button
-                key={ind.key}
-                onClick={() => toggleArea(ind.key)}
-                className={`p-4 rounded-lg text-left transition-all ${
-                  form.areas_of_interest.includes(ind.key)
-                    ? "bg-boost-green-light/10 border-2 border-boost-green-light"
-                    : "bg-boost-surface border-2 border-transparent hover:border-boost-border"
-                }`}
-              >
-                <span className="font-medium text-boost-dark text-sm block mb-1">
-                  {ind.label}
-                </span>
-                <p className="text-xs text-boost-muted line-clamp-2">
-                  {ind.description}
-                </p>
-              </button>
-            ))}
+          {/* Prompt — tracked uppercase + soft helper. Matches the
+              "Feed me log" header grammar. */}
+          <div className="mb-4">
+            <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+              Which industries does this customer operate in?
+            </p>
+            <p className="text-xs text-boost-muted/80 mt-1">
+              Leave empty for a general financial-services guide.
+            </p>
           </div>
 
-          {/* ── Variant pickers — one per enabled industry that has variants ── */}
+          {/* Industry chips — compact wrap row. Active = solid boost-green-light + white. */}
+          <div className="flex flex-wrap gap-1.5">
+            {INDUSTRIES.map((ind) => {
+              const active = form.areas_of_interest.includes(ind.key);
+              return (
+                <button
+                  key={ind.key}
+                  type="button"
+                  onClick={() => toggleArea(ind.key)}
+                  aria-pressed={active}
+                  title={ind.description}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                    active
+                      ? "bg-boost-green-light text-white"
+                      : "text-boost-muted hover:text-boost-dark bg-boost-surface/40 hover:bg-boost-surface ring-1 ring-inset ring-boost-border/50"
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      active ? "bg-white/80" : "bg-boost-muted/40"
+                    }`}
+                  />
+                  {ind.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Variants — inline per active industry. Purple chip grammar
+              mirrors the Feed me log label chips. */}
           {form.areas_of_interest
             .filter((areaKey) => INDUSTRY_VARIANTS[areaKey]?.length)
             .map((areaKey) => {
@@ -765,21 +780,15 @@ export default function AdminPage() {
               return (
                 <div
                   key={`variants-${areaKey}`}
-                  className="mt-5 pt-5 border-t border-boost-border"
+                  className="mt-5 pt-4 border-t border-boost-border/60"
                 >
-                  <div className="flex items-baseline justify-between mb-3">
-                    <div>
-                      <p className="text-sm font-semibold text-boost-dark">
-                        {industry?.label} variant
-                      </p>
-                      <p className="text-xs text-boost-muted">
-                        {selectedForIndustry.length > 0
-                          ? `Filtering to ${selectedForIndustry.length} variant${selectedForIndustry.length > 1 ? "s" : ""} — agents tagged for these (plus universal ones) will show`
-                          : "Optional — narrows agents to a specific flavour of " + (industry?.label.toLowerCase() ?? "industry")}
-                      </p>
-                    </div>
+                  <div className="flex items-center justify-between mb-2.5">
+                    <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+                      {industry?.label} · Variant
+                    </p>
                     {selectedForIndustry.length > 0 && (
                       <button
+                        type="button"
                         onClick={() =>
                           updateField(
                             "selected_variants",
@@ -788,13 +797,13 @@ export default function AdminPage() {
                             ),
                           )
                         }
-                        className="text-xs text-boost-muted hover:text-boost-dark transition-colors shrink-0"
+                        className="text-[10px] text-boost-muted hover:text-boost-dark transition-colors"
                       >
                         Clear
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {variants.map((v) => {
                       const selected = (form.selected_variants || []).includes(v.key);
                       return (
@@ -802,20 +811,20 @@ export default function AdminPage() {
                           key={v.key}
                           type="button"
                           onClick={() => toggleVariant(v.key)}
-                          className={`p-3 rounded-lg text-left transition-all border-2 ${
+                          aria-pressed={selected}
+                          title={v.description}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors ${
                             selected
-                              ? "bg-boost-green-light/10 border-boost-green-light"
-                              : "bg-boost-surface/50 border-transparent hover:border-boost-border"
+                              ? "bg-boost-purple text-white"
+                              : "text-boost-muted hover:text-boost-dark bg-boost-surface/40 hover:bg-boost-surface ring-1 ring-inset ring-boost-border/50"
                           }`}
                         >
-                          <span className="text-xs font-semibold text-boost-dark block leading-tight">
-                            {v.label}
-                          </span>
-                          {v.description && (
-                            <p className="text-[11px] text-boost-muted mt-1 leading-snug">
-                              {v.description}
-                            </p>
-                          )}
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              selected ? "bg-boost-green-light" : "bg-boost-muted/40"
+                            }`}
+                          />
+                          {v.label}
                         </button>
                       );
                     })}
