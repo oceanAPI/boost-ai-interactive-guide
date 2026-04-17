@@ -54,9 +54,21 @@ function CollapsibleSection({
 
   return (
     <section className="bg-white rounded-xl border border-boost-border shadow-sm overflow-hidden">
-      <button
+      {/* Role=button instead of <button> so we can nest real interactive
+          elements (like the Pac-Man feedback trigger) inside without
+          breaking HTML button-nesting rules. */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 p-5 text-left hover:bg-boost-surface/50 transition-colors"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen(!open);
+          }
+        }}
+        className="w-full flex items-center gap-3 p-5 text-left hover:bg-boost-surface/50 transition-colors cursor-pointer select-none"
       >
         {customBadge ? (
           customBadge
@@ -88,7 +100,7 @@ function CollapsibleSection({
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
-      </button>
+      </div>
       {open && <div className="px-5 pb-5 pt-0">{children}</div>}
     </section>
   );
