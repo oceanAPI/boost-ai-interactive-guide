@@ -44,17 +44,17 @@ const MILESTONES: Milestone[] = [
   {
     year: "2016", label: "Founded in Norway",
     markers: [
-      { x: 50, y: 22, label: "Stavanger", size: "lg" },
+      { x: 50, y: 26, label: "Stavanger", size: "lg" },
     ],
   },
   {
     year: "2019", label: "Nordic scale",
     markers: [
-      { x: 53, y: 23, label: "Stockholm" },
-      { x: 51.5, y: 21, label: "Oslo" },
+      { x: 53, y: 25, label: "Stockholm" },
+      { x: 52, y: 25, label: "Oslo" },
       { x: 51, y: 29, label: "Copenhagen" },
-      { x: 55, y: 22, label: "Helsinki" },
-      { x: 43, y: 23, label: "Reykjavík" },
+      { x: 54, y: 25, label: "Helsinki" },
+      { x: 44, y: 23, label: "Reykjavík" },
     ],
   },
   {
@@ -70,35 +70,35 @@ const MILESTONES: Milestone[] = [
   {
     year: "2023", label: "GenAI + compliance",
     markers: [
-      { x: 28, y: 36, label: "Washington DC" },
+      { x: 28, y: 35, label: "Washington DC" },
       { x: 47, y: 31, label: "Dublin" },
       { x: 50, y: 36, label: "Zurich" },
-      { x: 44, y: 42, label: "Lisbon" },      // Portugal
-      { x: 47, y: 43, label: "Madrid" },      // Spain
-      { x: 51, y: 39, label: "Rome" },        // Italy
-      { x: 49, y: 33, label: "Brussels" },    // Belgium
+      { x: 43, y: 42, label: "Lisbon" },     // Portugal
+      { x: 47, y: 43, label: "Madrid" },     // Spain
+      { x: 51, y: 39, label: "Rome" },       // Italy
+      { x: 49, y: 33, label: "Brussels" },   // Belgium
     ],
   },
   {
     year: "2024", label: "Voice AI",
     markers: [
-      { x: 28, y: 29, label: "Toronto" },
-      { x: 55, y: 24, label: "Tallinn" },
-      { x: 55, y: 26, label: "Riga" },
-      { x: 82, y: 83, label: "Sydney" },      // Australia
+      { x: 28, y: 30, label: "Toronto" },
+      { x: 53, y: 27, label: "Tallinn" },
+      { x: 53, y: 29, label: "Riga" },
+      { x: 82, y: 83, label: "Sydney" },     // Australia
     ],
   },
   {
     year: "2025", label: "Agentic platform · global reach",
     markers: [
       { x: 73, y: 62, label: "Singapore", size: "md" },
-      { x: 62, y: 49, label: "Dubai" },
-      { x: 52, y: 36, label: "Ljubljana" },   // Slovenia
-      { x: 52, y: 35, label: "Vienna" },      // Austria
-      { x: 53, y: 32, label: "Warsaw" },      // Poland
-      { x: 55, y: 40, label: "Istanbul" },    // Turkey
-      { x: 24, y: 48, label: "Mexico City" }, // Mexico
-      { x: 66, y: 50, label: "Mumbai" },      // India
+      { x: 61, y: 49, label: "Dubai" },
+      { x: 52, y: 36, label: "Ljubljana" },  // Slovenia
+      { x: 52, y: 35, label: "Vienna" },     // Austria
+      { x: 53, y: 32, label: "Warsaw" },     // Poland
+      { x: 55, y: 40, label: "Istanbul" },   // Turkey
+      { x: 24, y: 48, label: "Mexico City" },// Mexico
+      { x: 66, y: 50, label: "Mumbai" },     // India
     ],
   },
 ];
