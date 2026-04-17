@@ -40,55 +40,55 @@ const MILESTONES: Milestone[] = [
   {
     year: "2019", label: "Nordic scale",
     markers: [
-      { x: 53, y: 20, label: "Stockholm" },
-      { x: 51, y: 19, label: "Oslo" },
-      { x: 52, y: 24, label: "Copenhagen" },
-      { x: 55, y: 18, label: "Helsinki" },
-      { x: 42, y: 17, label: "Reykjavík" },
+      { x: 52.5, y: 21, label: "Stockholm" },
+      { x: 51, y: 20, label: "Oslo" },
+      { x: 52, y: 24.5, label: "Copenhagen" },
+      { x: 55, y: 20, label: "Helsinki" },
+      { x: 44, y: 14, label: "Reykjavík" },
     ],
   },
   {
     year: "2021", label: "Global expansion",
     markers: [
-      { x: 49, y: 28, label: "London", size: "md" },
+      { x: 49, y: 28.5, label: "London", size: "md" },
       { x: 28, y: 33, label: "New York", size: "md" },
-      { x: 51, y: 30, label: "Frankfurt" },
-      { x: 49.5, y: 30, label: "Paris" },
-      { x: 52, y: 28, label: "Amsterdam" },
+      { x: 51.5, y: 30, label: "Frankfurt" },
+      { x: 50, y: 31, label: "Paris" },
+      { x: 51, y: 28.5, label: "Amsterdam" },
     ],
   },
   {
     year: "2023", label: "GenAI + compliance",
     markers: [
       { x: 25, y: 36, label: "Washington DC" },
-      { x: 47, y: 30, label: "Dublin" },
-      { x: 54, y: 32, label: "Zurich" },
-      { x: 45, y: 35, label: "Lisbon" },       // Portugal
-      { x: 47, y: 34, label: "Madrid" },       // Spain
-      { x: 53, y: 33, label: "Rome" },         // Italy
-      { x: 50.5, y: 30, label: "Brussels" },   // Belgium
+      { x: 47, y: 28, label: "Dublin" },
+      { x: 52, y: 31.5, label: "Zurich" },
+      { x: 46.5, y: 38, label: "Lisbon" },     // Portugal
+      { x: 48, y: 37, label: "Madrid" },       // Spain
+      { x: 52.5, y: 37, label: "Rome" },       // Italy
+      { x: 51, y: 29.5, label: "Brussels" },   // Belgium
     ],
   },
   {
     year: "2024", label: "Voice AI",
     markers: [
       { x: 22, y: 30, label: "Toronto" },
-      { x: 56, y: 27, label: "Tallinn" },
-      { x: 55, y: 25, label: "Riga" },
+      { x: 55.5, y: 22, label: "Tallinn" },
+      { x: 55, y: 24, label: "Riga" },
+      { x: 82, y: 70, label: "Sydney" },       // Australia
     ],
   },
   {
     year: "2025", label: "Agentic platform · global reach",
     markers: [
-      { x: 73, y: 55, label: "Singapore", size: "md" },
-      { x: 82, y: 67, label: "Sydney" },
-      { x: 67, y: 38, label: "Dubai" },
-      { x: 54, y: 30, label: "Ljubljana" },    // Slovenia
-      { x: 54, y: 28, label: "Vienna" },       // Austria
-      { x: 55, y: 27, label: "Warsaw" },       // Poland
-      { x: 58, y: 33, label: "Istanbul" },     // Turkey
-      { x: 22, y: 44, label: "Mexico City" },  // Mexico
-      { x: 68, y: 44, label: "Mumbai" },       // India
+      { x: 73, y: 58, label: "Singapore", size: "md" },
+      { x: 63, y: 42, label: "Dubai" },
+      { x: 53, y: 34, label: "Ljubljana" },    // Slovenia
+      { x: 53.5, y: 32, label: "Vienna" },     // Austria
+      { x: 55, y: 29, label: "Warsaw" },       // Poland
+      { x: 57, y: 36, label: "Istanbul" },     // Turkey
+      { x: 24, y: 51, label: "Mexico City" },  // Mexico
+      { x: 66, y: 43, label: "Mumbai" },       // India
     ],
   },
 ];
