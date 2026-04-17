@@ -73,8 +73,8 @@ const MILESTONES: Milestone[] = [
       { x: 28, y: 35, label: "Washington DC" },
       { x: 47, y: 31, label: "Dublin" },
       { x: 50, y: 36, label: "Zurich" },
-      { x: 43, y: 42, label: "Lisbon" },     // Portugal
-      { x: 47, y: 43, label: "Madrid" },     // Spain
+      { x: 45, y: 42, label: "Lisbon" },     // Portugal (mainland W coast)
+      { x: 47, y: 41, label: "Madrid" },     // Spain (central)
       { x: 51, y: 39, label: "Rome" },       // Italy
       { x: 49, y: 33, label: "Brussels" },   // Belgium
     ],
