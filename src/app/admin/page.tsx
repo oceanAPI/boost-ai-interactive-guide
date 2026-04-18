@@ -907,10 +907,17 @@ export default function AdminPage() {
           }
           hasContent={hasDeployment}
         >
-          <div className="space-y-5">
-            {/* Markets */}
+          <div className="space-y-6">
+            {/* Markets — compact slider with inline number */}
             <div>
-              <FieldLabel>Number of Markets / Countries</FieldLabel>
+              <div className="mb-3">
+                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+                  How many markets do they cover?
+                </p>
+                <p className="text-xs text-boost-muted/80 mt-1">
+                  Drives timeline and localisation scope in the roadmap.
+                </p>
+              </div>
               <div className="flex items-center gap-4">
                 <input
                   type="range"
@@ -922,134 +929,140 @@ export default function AdminPage() {
                   }
                   className="flex-1 accent-boost-green-light"
                 />
-                <span className="text-boost-dark font-bold text-lg w-10 text-center">
+                <span className="inline-flex items-center justify-center min-w-[3rem] px-2.5 py-1 rounded-md text-sm font-bold tabular-nums bg-boost-green-light text-white">
                   {form.deployment_markets}
                 </span>
               </div>
             </div>
 
             {/* FTE breakdown */}
-            <div>
-              <FieldLabel>Available FTEs by Role</FieldLabel>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <span className="text-xs text-boost-muted block mb-1">
-                    Stakeholder Owners
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.resources.stakeholder_owners ?? ""}
-                    onChange={(e) =>
-                      updateResource(
-                        "stakeholder_owners",
-                        e.target.value ? parseInt(e.target.value) : undefined,
-                      )
-                    }
-                    placeholder="0"
-                    className={inputClass}
-                  />
-                  <p className="text-[11px] text-boost-muted mt-0.5">
-                    Executive sponsors & project owners
-                  </p>
-                </div>
-                <div>
-                  <span className="text-xs text-boost-muted block mb-1">
-                    AI Trainers
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.resources.ai_trainers ?? ""}
-                    onChange={(e) =>
-                      updateResource(
-                        "ai_trainers",
-                        e.target.value ? parseInt(e.target.value) : undefined,
-                      )
-                    }
-                    placeholder="0"
-                    className={inputClass}
-                  />
-                  <p className="text-[11px] text-boost-muted mt-0.5">
-                    Work in the boost.ai platform daily
-                  </p>
-                </div>
-                <div>
-                  <span className="text-xs text-boost-muted block mb-1">
-                    Technical Resources
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.resources.technical_resources ?? ""}
-                    onChange={(e) =>
-                      updateResource(
-                        "technical_resources",
-                        e.target.value ? parseInt(e.target.value) : undefined,
-                      )
-                    }
-                    placeholder="0"
-                    className={inputClass}
-                  />
-                  <p className="text-[11px] text-boost-muted mt-0.5">
-                    Developers & integration engineers
-                  </p>
-                </div>
+            <div className="pt-5 border-t border-boost-border/60">
+              <div className="mb-3">
+                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+                  Who's available internally?
+                </p>
+                <p className="text-xs text-boost-muted/80 mt-1">
+                  Count real FTEs the customer can dedicate — not aspiration.
+                </p>
               </div>
-            </div>
-
-            {/* Supporting departments */}
-            <div>
-              <FieldLabel optional>Supporting Departments Involved</FieldLabel>
-              <div className="flex flex-wrap gap-2">
-                {SUPPORTING_DEPARTMENTS.map((dept) => (
-                  <button
-                    key={dept}
-                    onClick={() => toggleDepartment(dept)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                      form.resources.supporting_departments?.includes(dept)
-                        ? "bg-boost-green-light text-white"
-                        : "bg-boost-surface text-boost-muted hover:text-boost-dark border border-boost-border"
-                    }`}
-                  >
-                    {dept}
-                  </button>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {([
+                  {
+                    key: "stakeholder_owners" as const,
+                    label: "Stakeholder owners",
+                    hint: "Executive sponsors, project owners",
+                  },
+                  {
+                    key: "ai_trainers" as const,
+                    label: "AI trainers",
+                    hint: "Work in the platform daily",
+                  },
+                  {
+                    key: "technical_resources" as const,
+                    label: "Technical resources",
+                    hint: "Developers, integration engineers",
+                  },
+                ]).map((r) => (
+                  <div key={r.key}>
+                    <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.14em]">
+                      {r.label}
+                    </p>
+                    <input
+                      type="number"
+                      min={0}
+                      value={form.resources[r.key] ?? ""}
+                      onChange={(e) =>
+                        updateResource(
+                          r.key,
+                          e.target.value ? parseInt(e.target.value) : undefined,
+                        )
+                      }
+                      placeholder="0"
+                      className={`${inputClass} mt-1.5 tabular-nums`}
+                    />
+                    <p className="text-[11px] text-boost-muted/70 mt-1 leading-snug">
+                      {r.hint}
+                    </p>
+                  </div>
                 ))}
               </div>
             </div>
 
-            {/* Knowledge management */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  updateResource(
-                    "knowledge_management",
-                    !form.resources.knowledge_management,
-                  )
-                }
-                className={`w-10 h-6 rounded-full transition-colors relative p-0 border-0 ${
-                  form.resources.knowledge_management
-                    ? "bg-boost-green-light"
-                    : "bg-boost-border"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    form.resources.knowledge_management
-                      ? "translate-x-4"
-                      : "translate-x-0"
-                  }`}
-                />
-              </button>
-              <div>
-                <span className="text-sm font-medium text-boost-dark">
-                  Knowledge Management Responsible
-                </span>
-                <p className="text-xs text-boost-muted">
-                  Dedicated person(s) managing knowledge base content
+            {/* Supporting departments — chip row, same grammar as Section 2 */}
+            <div className="pt-5 border-t border-boost-border/60">
+              <div className="mb-3">
+                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+                  Which departments are involved?
+                </p>
+                <p className="text-xs text-boost-muted/80 mt-1">
+                  Optional — signals how cross-functional the rollout will be.
                 </p>
               </div>
+              <div className="flex flex-wrap gap-1.5">
+                {SUPPORTING_DEPARTMENTS.map((dept) => {
+                  const active = form.resources.supporting_departments?.includes(dept) ?? false;
+                  return (
+                    <button
+                      key={dept}
+                      type="button"
+                      onClick={() => toggleDepartment(dept)}
+                      aria-pressed={active}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                        active
+                          ? "bg-boost-green-light text-white"
+                          : "text-boost-muted hover:text-boost-dark bg-boost-surface/40 hover:bg-boost-surface ring-1 ring-inset ring-boost-border/50"
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          active ? "bg-white/80" : "bg-boost-muted/40"
+                        }`}
+                      />
+                      {dept}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Knowledge management toggle */}
+            <div className="pt-5 border-t border-boost-border/60">
+              <div className="mb-3">
+                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+                  Do they have a knowledge-base lead?
+                </p>
+                <p className="text-xs text-boost-muted/80 mt-1">
+                  Dedicated person(s) managing KB content — a strong signal for self-improvement adoption.
+                </p>
+              </div>
+              <label className="inline-flex items-center gap-3 cursor-pointer select-none">
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateResource(
+                      "knowledge_management",
+                      !form.resources.knowledge_management,
+                    )
+                  }
+                  aria-pressed={form.resources.knowledge_management ?? false}
+                  className={`w-10 h-6 rounded-full transition-colors relative p-0 border-0 shrink-0 ${
+                    form.resources.knowledge_management
+                      ? "bg-boost-green-light"
+                      : "bg-boost-border"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                      form.resources.knowledge_management
+                        ? "translate-x-4"
+                        : "translate-x-0"
+                    }`}
+                  />
+                </button>
+                <span className="text-sm font-medium text-boost-dark">
+                  {form.resources.knowledge_management ? "Yes, KB owner in place" : "No dedicated KB owner"}
+                </span>
+              </label>
             </div>
           </div>
         </CollapsibleSection>
