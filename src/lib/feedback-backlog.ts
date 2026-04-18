@@ -153,31 +153,71 @@ export function isShared(): boolean {
   return isSharedBackendEnabled();
 }
 
+export interface FeedbackFetchOptions {
+  /** Only include entries with `timestamp >= since` (epoch ms). */
+  since?: number;
+  /** Cap the number of remote entries returned. Server also enforces a hard ceiling. */
+  limit?: number;
+}
+
+export interface FeedbackFetchResult {
+  entries: FeedbackEntry[];
+  /** Total entries in the shared store (pre-filter). Undefined in local mode. */
+  total?: number;
+  /** True when the filtered server window had more entries than `limit`. */
+  hasMore?: boolean;
+}
+
 /**
  * Fetch feedback entries.
  *
  * In shared mode:
- *   - WITH admin password → full server list (everyone's entries)
+ *   - WITH admin password → filtered server list (everyone's entries)
  *   - WITHOUT admin password → THIS browser's own submissions only,
  *     from localStorage. Means the submitter sees their own entries
  *     without exposing the full shared log to non-admins.
  *
  * In local mode (no worker wired), localStorage is returned as-is.
+ *
+ * Pagination: pass `{ since, limit }` to narrow the window. The server
+ * returns newest-first within the window. The `total` and `hasMore`
+ * fields on the result let the admin UI show "Showing N of M · widen?"
  */
-export async function getFeedback(adminPassword?: string): Promise<FeedbackEntry[]> {
+export async function getFeedback(
+  adminPassword?: string,
+  options: FeedbackFetchOptions = {},
+): Promise<FeedbackFetchResult> {
   if (isSharedBackendEnabled() && adminPassword) {
-    const data = await feedGet<{ entries: FeedbackEntry[] }>("/feedback", adminPassword);
+    const params = new URLSearchParams();
+    if (options.since) params.set("since", String(options.since));
+    if (options.limit) params.set("limit", String(options.limit));
+    const qs = params.toString();
+    const path = qs ? `/feedback?${qs}` : "/feedback";
+    const data = await feedGet<{ entries: FeedbackEntry[]; total?: number; hasMore?: boolean }>(
+      path,
+      adminPassword,
+    );
     const remote = data?.entries || [];
     // Merge in this browser's local mirror to mask KV eventual-consistency
     // delay — freshly-written entries show up immediately instead of
     // needing a lock/unlock cycle to force a re-fetch.
-    const localMirror = readLocal();
+    const localMirror = readLocal().filter(
+      (e) => !options.since || e.timestamp >= options.since,
+    );
     const byId = new Map<string, FeedbackEntry>();
     for (const e of remote) byId.set(e.id, e);
     for (const e of localMirror) if (!byId.has(e.id)) byId.set(e.id, e);
-    return Array.from(byId.values()).sort((a, b) => a.timestamp - b.timestamp);
+    return {
+      entries: Array.from(byId.values()).sort((a, b) => a.timestamp - b.timestamp),
+      total: data?.total,
+      hasMore: data?.hasMore,
+    };
   }
-  return readLocal();
+  // Local mode — apply the same time filter client-side.
+  const local = readLocal().filter(
+    (e) => !options.since || e.timestamp >= options.since,
+  );
+  return { entries: local };
 }
 
 export async function addFeedback(

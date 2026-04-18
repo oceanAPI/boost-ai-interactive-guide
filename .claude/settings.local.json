@@ -110,7 +110,13 @@
       "Bash(/usr/bin/file /tmp/_mark.svg /tmp/_full.svg)",
       "Bash(/usr/bin/wc -c /tmp/_mark.svg /tmp/_full.svg)",
       "Bash(/usr/bin/curl -sL -A 'Mozilla/5.0' -o public/logos/genesys.svg 'https://www.genesys.com/media/Genesys_logo-mark.svg')",
-      "Bash(/usr/bin/ls -l public/logos/)"
+      "Bash(/usr/bin/ls -l public/logos/)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(curl -s -H \"x-admin-password: Sebastian06%\" \"https://feed-me-log.mikal-boost-ai.workers.dev/feedback?limit=3\")",
+      "Bash(python3 -c \"import sys, json; d = json.loads\\(sys.stdin.read\\(\\)\\); print\\(f\"\"total: {d.get\\(''''total''''\\)}, hasMore: {d.get\\(''''hasMore''''\\)}, entries returned: {len\\(d.get\\(''''entries'''', []\\)\\)}\"\"\\)\")"
     ]
   }
 }

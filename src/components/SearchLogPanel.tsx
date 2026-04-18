@@ -51,6 +51,10 @@ function formatRelative(ts: number): string {
 export default function SearchLogPanel({ open, onClose }: SearchLogPanelProps) {
   const shared = isSharedBackendEnabled();
   const [entries, setEntries] = useState<SearchLogEntry[]>([]);
+  const [remoteTotal, setRemoteTotal] = useState<number | null>(null);
+  /** Server-side time window; keeps the admin read fast as the shared
+   *  log grows. Default 30 days matches the Feed me log panel. */
+  const [timeRange, setTimeRange] = useState<"1d" | "7d" | "30d" | "all">("30d");
   const [adminPassword, setAdminPassword] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -69,15 +73,32 @@ export default function SearchLogPanel({ open, onClose }: SearchLogPanelProps) {
     }
   }, [shared]);
 
+  const sinceFor = (range: typeof timeRange): number | undefined => {
+    const day = 86_400_000;
+    switch (range) {
+      case "1d":
+        return Date.now() - day;
+      case "7d":
+        return Date.now() - 7 * day;
+      case "30d":
+        return Date.now() - 30 * day;
+      default:
+        return undefined;
+    }
+  };
+
   const fetchEntries = useCallback(async () => {
     setLoading(true);
     try {
-      const next = await getSearchLog(shared ? adminPassword : undefined);
-      setEntries(next);
+      const result = await getSearchLog(shared ? adminPassword : undefined, {
+        since: sinceFor(timeRange),
+      });
+      setEntries(result.entries);
+      setRemoteTotal(result.total ?? null);
     } finally {
       setLoading(false);
     }
-  }, [adminPassword, shared]);
+  }, [adminPassword, shared, timeRange]);
 
   // Refresh when opened or when unlock succeeds
   useEffect(() => {
@@ -111,7 +132,7 @@ export default function SearchLogPanel({ open, onClose }: SearchLogPanelProps) {
     setLoading(true);
     setUnlockError("");
     try {
-      const test = await getSearchLog(pw);
+      const test = await getSearchLog(pw, { since: sinceFor(timeRange) });
       // Worker returns [] for wrong password too (401 -> null -> []), so
       // also check: if user pasted obviously-wrong-length string we still
       // treat it as a try. The "did it really work" signal is the fetch
@@ -120,7 +141,8 @@ export default function SearchLogPanel({ open, onClose }: SearchLogPanelProps) {
       // To better disambiguate we could probe a tiny endpoint; for now,
       // accept and stash.
       setAdminPassword(pw);
-      setEntries(test);
+      setEntries(test.entries);
+      setRemoteTotal(test.total ?? null);
       try {
         window.sessionStorage.setItem(ADMIN_PASSWORD_KEY, pw);
       } catch {
@@ -331,14 +353,58 @@ export default function SearchLogPanel({ open, onClose }: SearchLogPanelProps) {
           ) : entries.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-sm text-boost-muted">
-                No searches logged {shared ? "yet" : "on this browser"}.
+                No searches logged {shared ? `in the selected window` : "on this browser"}.
               </p>
               <p className="text-[11px] text-boost-muted/60 mt-1">
                 The log fills as people use the quick-prefill search on the admin page.
               </p>
+              {shared && timeRange !== "all" && (
+                <button
+                  type="button"
+                  onClick={() => setTimeRange("all")}
+                  className="mt-3 text-[10px] font-semibold text-boost-muted hover:text-boost-dark uppercase tracking-[0.14em]"
+                >
+                  Widen to all time
+                </button>
+              )}
             </div>
           ) : (
             <>
+              {shared && adminPassword && (
+                <div className="flex items-center gap-1.5 flex-wrap -mb-2">
+                  <span className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em] mr-1">
+                    Range
+                  </span>
+                  {([
+                    { key: "1d" as const, label: "Today" },
+                    { key: "7d" as const, label: "7d" },
+                    { key: "30d" as const, label: "30d" },
+                    { key: "all" as const, label: "All time" },
+                  ]).map((r) => {
+                    const active = timeRange === r.key;
+                    return (
+                      <button
+                        key={r.key}
+                        type="button"
+                        onClick={() => setTimeRange(r.key)}
+                        aria-pressed={active}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+                          active
+                            ? "bg-boost-dark text-white"
+                            : "text-boost-muted hover:text-boost-dark hover:bg-boost-surface/60"
+                        }`}
+                      >
+                        {r.label}
+                      </button>
+                    );
+                  })}
+                  {remoteTotal !== null && (
+                    <span className="ml-auto text-[10px] text-boost-muted/80 tabular-nums">
+                      {entries.length} shown · {remoteTotal} total
+                    </span>
+                  )}
+                </div>
+              )}
               {unmatched.length > 0 && (
                 <div>
                   <div className="flex items-baseline justify-between mb-3">

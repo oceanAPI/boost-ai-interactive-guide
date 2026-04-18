@@ -265,6 +265,12 @@ export function FeedbackModal({ open, onClose, pending = {} }: FeedbackModalProp
   const [selectedLabel, setSelectedLabel] = useState<FeedbackLabel | undefined>(undefined);
   const [filterLabel, setFilterLabel] = useState<FeedbackLabel | "all">("all");
   const [showMetaJson, setShowMetaJson] = useState(false);
+  /** Server-side time filter for the admin log read. "1d" / "7d" / "30d" / "all".
+   *  Default "30d" keeps the admin panel fast even on a heavy log — matches
+   *  Cloudflare's paid-tier capacity plan for a 200-person team. */
+  const [timeRange, setTimeRange] = useState<"1d" | "7d" | "30d" | "all">("30d");
+  const [remoteTotal, setRemoteTotal] = useState<number | null>(null);
+  const [remoteHasMore, setRemoteHasMore] = useState(false);
   /** Per-entry copy-as-JSON flash state: holds the id of the entry that was
    *  most recently copied so its button can briefly say "Copied!" */
   const [copiedEntryId, setCopiedEntryId] = useState<string | null>(null);
@@ -284,19 +290,42 @@ export function FeedbackModal({ open, onClose, pending = {} }: FeedbackModalProp
     }
   }, [shared]);
 
+  /** Translate the preset time range into an epoch-ms `since` value.
+   *  "all" → undefined (no filter). */
+  const sinceFor = (range: typeof timeRange): number | undefined => {
+    const day = 86_400_000;
+    switch (range) {
+      case "1d":
+        return Date.now() - day;
+      case "7d":
+        return Date.now() - 7 * day;
+      case "30d":
+        return Date.now() - 30 * day;
+      case "all":
+      default:
+        return undefined;
+    }
+  };
+
   const refresh = useCallback(async () => {
     if (shared && !adminPassword) {
       setEntries([]);
+      setRemoteTotal(null);
+      setRemoteHasMore(false);
       return;
     }
     setLoading(true);
     try {
-      const next = await getFeedback(shared ? adminPassword : undefined);
-      setEntries(next);
+      const result = await getFeedback(shared ? adminPassword : undefined, {
+        since: sinceFor(timeRange),
+      });
+      setEntries(result.entries);
+      setRemoteTotal(result.total ?? null);
+      setRemoteHasMore(Boolean(result.hasMore));
     } finally {
       setLoading(false);
     }
-  }, [adminPassword, shared]);
+  }, [adminPassword, shared, timeRange]);
 
   useEffect(() => {
     if (open) refresh();
@@ -797,6 +826,48 @@ export function FeedbackModal({ open, onClose, pending = {} }: FeedbackModalProp
                   </button>
                 )}
               </div>
+
+              {/* Time range — server-side filter. Keeps the admin read
+                  fast even when the shared log has thousands of entries.
+                  Always visible when unlocked so the AE can widen at will. */}
+              {shared && adminPassword && (
+                <div className="mb-2 flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em] mr-1">
+                    Range
+                  </span>
+                  {([
+                    { key: "1d" as const, label: "Today" },
+                    { key: "7d" as const, label: "7d" },
+                    { key: "30d" as const, label: "30d" },
+                    { key: "all" as const, label: "All time" },
+                  ]).map((r) => {
+                    const active = timeRange === r.key;
+                    return (
+                      <button
+                        key={r.key}
+                        type="button"
+                        onClick={() => setTimeRange(r.key)}
+                        aria-pressed={active}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+                          active
+                            ? "bg-boost-dark text-white"
+                            : "text-boost-muted hover:text-boost-dark hover:bg-boost-surface/60"
+                        }`}
+                      >
+                        {r.label}
+                      </button>
+                    );
+                  })}
+                  {remoteTotal !== null && (
+                    <span className="ml-auto text-[10px] text-boost-muted/80 tabular-nums">
+                      {entries.length} shown · {remoteTotal} total
+                      {remoteHasMore && (
+                        <span className="ml-1 text-boost-muted/70">(more in window)</span>
+                      )}
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Label filter */}
               {entries.length > 0 && (

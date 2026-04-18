@@ -63,20 +63,49 @@ export function logSearch(query: string, matchedKey: string | null): void {
   writeLocal(q, matchedKey);
 }
 
+export interface SearchLogFetchOptions {
+  /** Only include entries with `timestamp >= since` (epoch ms). */
+  since?: number;
+  /** Cap the number of remote entries returned. Server also enforces a hard ceiling. */
+  limit?: number;
+}
+
+export interface SearchLogFetchResult {
+  entries: SearchLogEntry[];
+  total?: number;
+  hasMore?: boolean;
+}
+
 /**
  * Read the search log.
  *
  * In shared mode the admin password is required — reviewing queries
  * across the team is a leadership workflow, not a per-user feature.
+ *
+ * Pass `{ since, limit }` to narrow the window. The server returns
+ * newest-first within the window.
  */
-export async function getSearchLog(adminPassword?: string): Promise<SearchLogEntry[]> {
+export async function getSearchLog(
+  adminPassword?: string,
+  options: SearchLogFetchOptions = {},
+): Promise<SearchLogFetchResult> {
   if (isSharedBackendEnabled() && adminPassword) {
-    const data = await feedGet<{ entries: SearchLogEntry[] }>("/search-log", adminPassword);
+    const params = new URLSearchParams();
+    if (options.since) params.set("since", String(options.since));
+    if (options.limit) params.set("limit", String(options.limit));
+    const qs = params.toString();
+    const path = qs ? `/search-log?${qs}` : "/search-log";
+    const data = await feedGet<{ entries: SearchLogEntry[]; total?: number; hasMore?: boolean }>(
+      path,
+      adminPassword,
+    );
     const remote = data?.entries || [];
     // Merge this browser's local mirror to mask KV eventual-consistency
     // delay — a search run by the admin in this tab appears instantly
     // instead of needing a lock/unlock cycle.
-    const localMirror = readLocal();
+    const localMirror = readLocal().filter(
+      (e) => !options.since || e.timestamp >= options.since,
+    );
     const seen = new Set(remote.map((e) => `${e.timestamp}:${e.query}`));
     const merged = [...remote];
     for (const e of localMirror) {
@@ -86,10 +115,17 @@ export async function getSearchLog(adminPassword?: string): Promise<SearchLogEnt
         seen.add(key);
       }
     }
-    return merged.sort((a, b) => a.timestamp - b.timestamp);
+    return {
+      entries: merged.sort((a, b) => a.timestamp - b.timestamp),
+      total: data?.total,
+      hasMore: data?.hasMore,
+    };
   }
-  // Locked or local mode — return this browser's own search history.
-  return readLocal();
+  // Locked or local mode — this browser's own search history, time-filtered.
+  const local = readLocal().filter(
+    (e) => !options.since || e.timestamp >= options.since,
+  );
+  return { entries: local };
 }
 
 export async function clearSearchLog(adminPassword?: string): Promise<boolean> {

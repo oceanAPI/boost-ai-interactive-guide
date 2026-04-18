@@ -28,7 +28,18 @@ export interface Env {
   ALLOWED_ORIGINS: string;
 }
 
-const MAX_ENTRIES = 500;
+// Single-key KV entry cap. Bumped from 500 to give ~7-10 days of
+// retention for a 200-person team at active use. Worst-case payload
+// size stays under KV's 25MB value limit (2000 × ~10KB max meta).
+// When / if usage outpaces this, move to sharded keys (feedback:page:N).
+const MAX_ENTRIES = 2000;
+
+// Max entries returned per GET request. Hard cap that protects the
+// Worker from OOM on very active stores and keeps response payloads
+// under ~10MB. Clients can paginate further via the `since` cursor.
+const DEFAULT_READ_LIMIT = 200;
+const MAX_READ_LIMIT = 1000;
+
 const FEEDBACK_KEY = "feedback:list";
 const SEARCH_KEY = "search-log:list";
 
@@ -110,6 +121,43 @@ async function readList<T>(kv: KVNamespace, key: string): Promise<T[]> {
   } catch {
     return [];
   }
+}
+
+/**
+ * Apply `?since=<ms>` + `?limit=<n>` filtering to a list of entries
+ * that carry a `timestamp` field. Entries are returned newest-first
+ * within the filtered window, capped at `limit`.
+ *
+ * Returns { entries, total, hasMore } so the admin UI can say
+ * "Showing 48 of 1,247 · last 30 days".
+ */
+function paginateByTime<T extends { timestamp: number }>(
+  list: T[],
+  url: URL,
+): { entries: T[]; total: number; hasMore: boolean } {
+  const total = list.length;
+  const sinceRaw = url.searchParams.get("since");
+  const limitRaw = url.searchParams.get("limit");
+
+  let since = 0;
+  if (sinceRaw) {
+    const n = Number(sinceRaw);
+    if (Number.isFinite(n) && n >= 0) since = n;
+  }
+
+  let limit = DEFAULT_READ_LIMIT;
+  if (limitRaw) {
+    const n = Number(limitRaw);
+    if (Number.isFinite(n) && n > 0) limit = Math.min(n, MAX_READ_LIMIT);
+  }
+
+  const filtered = since > 0 ? list.filter((e) => e.timestamp >= since) : list;
+  // Sort newest-first so the most recent entries come back even when
+  // the filtered window exceeds `limit`. Original list stays in
+  // insertion order (ascending) inside KV.
+  const sorted = [...filtered].sort((a, b) => b.timestamp - a.timestamp);
+  const hasMore = sorted.length > limit;
+  return { entries: sorted.slice(0, limit), total, hasMore };
 }
 
 async function writeList<T>(kv: KVNamespace, key: string, items: T[]): Promise<void> {
@@ -201,7 +249,8 @@ export default {
           // still write.
           if (!requireAdmin(req, env, url)) return respond({ error: "unauthorized" }, { status: 401 });
           const list = await readList<FeedbackEntry>(env.FEED_KV, FEEDBACK_KEY);
-          return respond({ entries: list });
+          const paged = paginateByTime(list, url);
+          return respond(paged);
         }
       }
 
@@ -246,7 +295,8 @@ export default {
         if (req.method === "GET") {
           if (!requireAdmin(req, env, url)) return respond({ error: "unauthorized" }, { status: 401 });
           const list = await readList<SearchEntry>(env.FEED_KV, SEARCH_KEY);
-          return respond({ entries: list });
+          const paged = paginateByTime(list, url);
+          return respond(paged);
         }
 
         if (req.method === "DELETE") {
