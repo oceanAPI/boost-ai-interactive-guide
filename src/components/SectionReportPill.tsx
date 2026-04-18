@@ -162,7 +162,7 @@ export function SectionReportPill({ sectionId, offset, displayName }: Props) {
               onBlur={() => setFocused(false)}
               onPointerEnter={() => setVisible(true)}
               onPointerLeave={() => setVisible(false)}
-              className="feedback-pill fixed z-40 w-7 h-7 rounded-full bg-boost-dark/85 hover:bg-boost-dark text-white shadow-md shadow-boost-dark/10 transition-opacity duration-150 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-1"
+              className="feedback-pill fixed z-40 w-7 h-7 rounded-full bg-boost-dark text-white shadow-md shadow-boost-dark/10 opacity-25 hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-200 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-1"
               style={{
                 top: pos!.top,
                 left: pos!.left,
