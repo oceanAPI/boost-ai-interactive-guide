@@ -63,7 +63,21 @@ function CollapsibleSection({
   }, [openSignal]);
 
   return (
-    <section className="bg-white rounded-xl border border-boost-border shadow-sm overflow-hidden">
+    <section
+      className={`relative bg-white rounded-xl border border-boost-border shadow-sm overflow-hidden transition-shadow ${
+        open ? "shadow-md" : "hover:shadow-md"
+      }`}
+    >
+      {/* Left accent stripe — boost-green-light when the card has content,
+          transparent otherwise. Adds rhythm to the section stack and gives
+          completed cards a premium signal without a heavy gradient. */}
+      <span
+        aria-hidden="true"
+        className={`absolute left-0 top-0 bottom-0 w-[3px] transition-colors ${
+          hasContent ? "bg-boost-green-light" : "bg-transparent"
+        }`}
+      />
+
       {/* Role=button instead of <button> so we can nest real interactive
           elements (like the Pac-Man feedback trigger) inside without
           breaking HTML button-nesting rules. */}
@@ -78,25 +92,31 @@ function CollapsibleSection({
             setOpen(!open);
           }
         }}
-        className="w-full flex items-center gap-3 p-5 text-left hover:bg-boost-surface/50 transition-colors cursor-pointer select-none"
+        className={`w-full flex items-center gap-4 p-5 text-left cursor-pointer select-none transition-colors ${
+          open ? "bg-boost-surface/30" : "hover:bg-boost-surface/40"
+        }`}
       >
         {customBadge ? (
           customBadge
         ) : (
           <span
-            className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm flex-shrink-0 ${
+            className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm flex-shrink-0 transition-all ${
               hasContent
-                ? "bg-boost-green-light text-white"
-                : "bg-boost-surface text-boost-muted border border-boost-border"
+                ? "bg-boost-green-light text-white shadow-sm shadow-boost-green-light/30"
+                : "bg-white text-boost-purple/80 ring-1 ring-inset ring-boost-border"
             }`}
           >
             {hasContent ? "✓" : number}
           </span>
         )}
         <div className="flex-1 min-w-0">
-          <h2 className="text-base font-semibold text-boost-dark">{title}</h2>
+          <h2 className="text-lg font-semibold text-boost-dark leading-tight tracking-tight">
+            {title}
+          </h2>
           {subtitle && !open && (
-            <p className="text-xs text-boost-muted truncate mt-0.5">{subtitle}</p>
+            <p className="text-[11px] text-boost-muted/90 truncate mt-1 leading-snug">
+              {subtitle}
+            </p>
           )}
         </div>
         <svg
@@ -106,7 +126,9 @@ function CollapsibleSection({
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          className={`text-boost-muted transition-transform ${open ? "rotate-180" : ""}`}
+          className={`text-boost-muted transition-transform duration-200 flex-shrink-0 ${
+            open ? "rotate-180 text-boost-dark" : ""
+          }`}
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
@@ -1151,63 +1173,97 @@ export default function AdminPage() {
           }
           hasContent={hasIntegrations}
         >
-          <div className="mb-5">
+          <div className="mb-4">
             <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
               Which systems do they already use?
             </p>
             <p className="text-xs text-boost-muted/80 mt-1">
-              Integrations we map for the SOW. Tag everything they have today — even the tools we don't touch.
+              Integrations we map for the SOW. Categories are collapsed — expand what applies.
             </p>
           </div>
-          <div className="space-y-5">
+
+          {/* Compact summary strip: total selected across all categories */}
+          {totalIntegrations > 0 && (
+            <div className="mb-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em]">
+              <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light" />
+              <span className="text-boost-dark tabular-nums">{totalIntegrations}</span>
+              <span className="text-boost-muted">selected</span>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
             {INTEGRATION_CATEGORIES.map((cat) => {
               const selected = (form.integrations[
                 cat.key as keyof IntegrationSelections
               ] || []) as string[];
+              const total = cat.items.length;
               return (
-                <div key={cat.key} className="pt-4 first:pt-0 border-t first:border-t-0 border-boost-border/60">
-                  <div className="flex items-center gap-2 mb-2.5">
-                    <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-                      {cat.label}
-                    </p>
-                    {selected.length > 0 && (
-                      <span className="text-[10px] font-semibold text-boost-green tabular-nums">
-                        {selected.length}
+                <details
+                  key={cat.key}
+                  open={selected.length > 0}
+                  className="group rounded-lg border border-boost-border/60 bg-boost-surface/20"
+                >
+                  <summary className="flex items-center justify-between gap-2 px-3 py-2.5 cursor-pointer hover:bg-boost-surface/40 rounded-lg transition-colors select-none list-none">
+                    <span className="inline-flex items-center gap-2 min-w-0">
+                      <svg
+                        className="w-3 h-3 text-boost-muted transition-transform group-open:rotate-90 flex-shrink-0"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                      <span className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em] truncate">
+                        {cat.label}
                       </span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {cat.items.map((item) => {
-                      const active = selected.includes(item.name);
-                      return (
-                        <button
-                          key={item.name}
-                          type="button"
-                          onClick={() => toggleIntegration(cat.key, item.name)}
-                          aria-pressed={active}
-                          title={item.description}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
-                            active
-                              ? "bg-boost-green-light text-white"
-                              : "text-boost-muted hover:text-boost-dark bg-boost-surface/40 hover:bg-boost-surface ring-1 ring-inset ring-boost-border/50"
-                          }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              active ? "bg-white/80" : "bg-boost-muted/40"
+                    </span>
+                    <span className="flex items-center gap-2 shrink-0">
+                      {selected.length > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-boost-green uppercase tracking-[0.14em]">
+                          <span className="w-1 h-1 rounded-full bg-boost-green-light" />
+                          {selected.length} picked
+                        </span>
+                      )}
+                      <span className="text-[10px] text-boost-muted/70 tabular-nums">
+                        {selected.length}/{total}
+                      </span>
+                    </span>
+                  </summary>
+                  <div className="px-3 pb-3 pt-1">
+                    <div className="flex flex-wrap gap-1.5">
+                      {cat.items.map((item) => {
+                        const active = selected.includes(item.name);
+                        return (
+                          <button
+                            key={item.name}
+                            type="button"
+                            onClick={() => toggleIntegration(cat.key, item.name)}
+                            aria-pressed={active}
+                            title={item.description}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                              active
+                                ? "bg-boost-green-light text-white"
+                                : "text-boost-muted hover:text-boost-dark bg-white hover:bg-boost-surface ring-1 ring-inset ring-boost-border/50"
                             }`}
-                          />
-                          {item.name}
-                          {item.tags?.includes("beta") && (
-                            <span className={`ml-0.5 text-[9px] font-bold ${active ? "text-white/70" : "text-boost-muted/60"}`}>
-                              β
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                active ? "bg-white/80" : "bg-boost-muted/40"
+                              }`}
+                            />
+                            {item.name}
+                            {item.tags?.includes("beta") && (
+                              <span className={`ml-0.5 text-[9px] font-bold ${active ? "text-white/70" : "text-boost-muted/60"}`}>
+                                β
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                </details>
               );
             })}
           </div>
