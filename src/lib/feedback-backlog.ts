@@ -46,12 +46,13 @@ export interface FeedbackMeta {
    */
   sectionsInView?: string[];
   /**
-   * How `nearestSection` was determined. "hover" and "focus" are
-   * high-confidence signals — the user was actively engaged with that
-   * section. "viewport" is a fallback inference and should be treated
-   * as a weaker signal.
+   * How `nearestSection` was determined. "click" is the strongest signal
+   * (the user precisely aimed and clicked in targeting mode). "hover"
+   * and "focus" are also high-confidence — the user was actively engaged
+   * with that section. "viewport" is a fallback inference and should be
+   * treated as a weaker signal.
    */
-  nearestSectionSource?: "hover" | "focus" | "viewport";
+  nearestSectionSource?: "click" | "hover" | "focus" | "viewport";
   /**
    * The deepest element the cursor was directly over at trigger time.
    * Read from the `:hover` pseudo-class chain — no event listeners, no

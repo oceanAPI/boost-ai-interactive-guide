@@ -27,6 +27,17 @@ export interface FeedbackTriggerValue {
   pending: PendingContext;
   openWith: (ctx?: PendingContext) => void;
   close: () => void;
+  /**
+   * Enter targeting mode: a green reticle follows the cursor, and the
+   * next click anywhere on the page opens the modal with meta pinned to
+   * the exact click target. `Esc` cancels. Used by Cmd+. and the PacMan
+   * button so users can aim precisely. Section pills bypass this — they
+   * already scope to a known target.
+   */
+  requestTarget: () => void;
+  /** True while targeting mode is active. Consumers may render their
+   *  own affordances (e.g. a dimmed state) while aiming. */
+  targeting: boolean;
 }
 
 export const FeedbackTriggerContext = createContext<FeedbackTriggerValue | null>(null);
@@ -42,6 +53,8 @@ export function useFeedbackTrigger(): FeedbackTriggerValue {
       pending: {},
       openWith: () => {},
       close: () => {},
+      requestTarget: () => {},
+      targeting: false,
     };
   }
   return ctx;

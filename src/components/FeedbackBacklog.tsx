@@ -10,7 +10,7 @@ import {
   type FeedbackEntry,
   type FeedbackLabel,
 } from "@/lib/feedback-backlog";
-import { captureMeta } from "@/lib/feedback-meta";
+import { captureMeta, captureMetaAtPoint } from "@/lib/feedback-meta";
 import {
   FeedbackTriggerContext,
   type FeedbackTriggerValue,
@@ -59,6 +59,155 @@ function PacManSvg({ className = "" }: { className?: string }) {
       className={className}
       style={{ filter: "brightness(0) invert(1)" }}
     />
+  );
+}
+
+/* ─── Targeting overlay ─────────────────────────────────
+ * Shown while the user is in "aim then click" mode. A small green
+ * reticle follows the cursor; the native cursor is hidden. The next
+ * click anywhere on the page is intercepted (capture phase,
+ * preventDefault + stopImmediatePropagation) so underlying buttons
+ * don't fire — and resolved to a precise click target via
+ * document.elementFromPoint at that coordinate.
+ *
+ * Instruction chip at the top explains the controls. `Esc` cancels
+ * without submitting.
+ */
+function TargetingOverlay({
+  active,
+  onComplete,
+  onCancel,
+}: {
+  active: boolean;
+  onComplete: (x: number, y: number) => void;
+  onCancel: () => void;
+}) {
+  const dotRef = useRef<HTMLDivElement | null>(null);
+  const positionedRef = useRef(false);
+
+  useEffect(() => {
+    if (!active) {
+      positionedRef.current = false;
+      return;
+    }
+
+    // Hide the native cursor while aiming — only the green dot is visible.
+    const prevCursor = document.body.style.cursor;
+    document.body.style.cursor = "none";
+
+    const moveDot = (x: number, y: number) => {
+      const dot = dotRef.current;
+      if (!dot) return;
+      // translate(-50%, -50%) centers the 16px reticle exactly on the
+      // cursor so the hit point visually matches the click point.
+      dot.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+      if (!positionedRef.current) {
+        dot.style.opacity = "1";
+        positionedRef.current = true;
+      }
+    };
+
+    const onPointerMove = (e: PointerEvent) => moveDot(e.clientX, e.clientY);
+
+    // Intercept the very first click and convert it into a target-
+    // selection event. Capture-phase so we beat any delegate handlers,
+    // stopImmediatePropagation so sibling capture listeners on window
+    // don't also see it, preventDefault so default actions (submit,
+    // navigation, focus) don't fire.
+    const onClick = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      onComplete(e.clientX, e.clientY);
+    };
+    // Also block pointerdown so :active styles + focus don't briefly
+    // flash on underlying buttons before click fires.
+    const onPointerDown = (e: PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onCancel();
+      }
+    };
+
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    window.addEventListener("pointerdown", onPointerDown, { capture: true });
+    window.addEventListener("click", onClick, { capture: true });
+    window.addEventListener("keydown", onKey, { capture: true });
+
+    return () => {
+      document.body.style.cursor = prevCursor;
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerdown", onPointerDown, { capture: true } as EventListenerOptions);
+      window.removeEventListener("click", onClick, { capture: true } as EventListenerOptions);
+      window.removeEventListener("keydown", onKey, { capture: true } as EventListenerOptions);
+    };
+  }, [active, onComplete, onCancel]);
+
+  if (!active) return null;
+
+  return (
+    <>
+      {/* Instruction chip — top-center of the viewport. pointer-events
+          off so it never interferes with clicks underneath it. */}
+      <div
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] pointer-events-none"
+        aria-live="polite"
+      >
+        <div
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-lg"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(75,30,82,0.97) 0%, rgba(55,22,62,1) 100%)",
+          }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light animate-pulse" />
+          Click anywhere to report
+          <span className="text-white/40">·</span>
+          <span className="text-white/60">Esc to cancel</span>
+        </div>
+      </div>
+
+      {/* Green reticle — follows the cursor via transform. Fixed
+          position, pointer-events: none so elementFromPoint resolves to
+          the underlying target at click time. Opacity starts at 0 and
+          fades in on first pointermove so it doesn't flash at (0,0)
+          before the cursor moves. */}
+      <div
+        ref={dotRef}
+        aria-hidden="true"
+        className="fixed top-0 left-0 z-[61] pointer-events-none"
+        style={{
+          width: "16px",
+          height: "16px",
+          opacity: 0,
+          transition: "opacity 120ms ease-out",
+        }}
+      >
+        {/* Outer pulsing ring — visible halo around the dot. */}
+        <span
+          className="absolute inset-[-6px] rounded-full border-2 animate-ping"
+          style={{
+            borderColor: "rgb(149, 213, 80)",
+            opacity: 0.45,
+          }}
+        />
+        {/* Solid core — Pac-Man green. */}
+        <span
+          className="absolute inset-0 rounded-full shadow-md"
+          style={{
+            backgroundColor: "rgb(149, 213, 80)",
+            boxShadow: "0 0 0 2px rgba(255,255,255,0.9), 0 2px 8px rgba(0,0,0,0.2)",
+          }}
+        />
+      </div>
+    </>
   );
 }
 
@@ -827,11 +976,16 @@ export function FeedbackModal({ open, onClose, pending = {} }: FeedbackModalProp
 export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<PendingContext>({});
+  const [targeting, setTargeting] = useState(false);
   const openRef = useRef(open);
+  const targetingRef = useRef(targeting);
 
   useEffect(() => {
     openRef.current = open;
   }, [open]);
+  useEffect(() => {
+    targetingRef.current = targeting;
+  }, [targeting]);
 
   const openWith = useCallback((ctx: PendingContext = {}) => {
     setPending(ctx);
@@ -843,11 +997,44 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     setPending({});
   }, []);
 
+  /** Enter targeting mode — green reticle follows cursor until user
+   *  clicks somewhere or hits Esc. No-op if the modal is already open
+   *  or targeting is already active. */
+  const requestTarget = useCallback(() => {
+    if (openRef.current || targetingRef.current) return;
+    setTargeting(true);
+  }, []);
+
+  /** Invoked by TargetingOverlay when the user clicks somewhere on the
+   *  page. We capture meta pinned to that exact screen coordinate, close
+   *  targeting mode, and open the modal with the meta pre-filled. */
+  const onTargetingComplete = useCallback(
+    (x: number, y: number) => {
+      setTargeting(false);
+      let meta;
+      try {
+        meta = captureMetaAtPoint(x, y);
+      } catch {
+        meta = undefined;
+      }
+      openWith({ meta });
+    },
+    [openWith],
+  );
+
+  const onTargetingCancel = useCallback(() => {
+    setTargeting(false);
+  }, []);
+
   // Global shortcut: Cmd/Ctrl+. (period). Hardened:
   // - never throws into the event loop
   // - preventDefault only on exact match
   // - respects native input cancel semantics
-  // - re-entry guard via openRef
+  // - re-entry guard via openRef / targetingRef
+  //
+  // Behavior: enters targeting mode (green reticle + aim-to-click) rather
+  // than immediately opening the modal, so reports get pinned to the
+  // exact element the user aims at.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       try {
@@ -863,9 +1050,9 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
         ) {
           return;
         }
-        if (openRef.current) return;
+        if (openRef.current || targetingRef.current) return;
         e.preventDefault();
-        openWith({ meta: captureMeta() });
+        setTargeting(true);
       } catch (err) {
         // Swallow so we never break the host page's input loop.
         console.warn("feedback shortcut handler error", err);
@@ -873,16 +1060,21 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [openWith]);
+  }, []);
 
   const value = useMemo<FeedbackTriggerValue>(
-    () => ({ open, pending, openWith, close }),
-    [open, pending, openWith, close],
+    () => ({ open, pending, openWith, close, requestTarget, targeting }),
+    [open, pending, openWith, close, requestTarget, targeting],
   );
 
   return (
     <FeedbackTriggerContext.Provider value={value}>
       {children}
+      <TargetingOverlay
+        active={targeting}
+        onComplete={onTargetingComplete}
+        onCancel={onTargetingCancel}
+      />
       <FeedbackModal open={open} onClose={close} pending={pending} />
     </FeedbackTriggerContext.Provider>
   );

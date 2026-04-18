@@ -250,7 +250,15 @@ function decodeGuideState(dataParam: string | undefined): unknown {
   }
 }
 
-export function captureMeta(): FeedbackMeta {
+/**
+ * Shared invariants for both capture paths — URL, route, viewport, guide
+ * state, sectionsInView. The two paths only diverge in how they pick
+ * nearestSection, hoveredElement, and cursor.
+ */
+function buildBaseMeta(): Omit<
+  FeedbackMeta,
+  "nearestSection" | "sectionsInView" | "nearestSectionSource" | "hoveredElement" | "cursor"
+> {
   const url = window.location.href;
   const pathname = window.location.pathname;
   const params = Object.fromEntries(new URLSearchParams(window.location.search));
@@ -260,12 +268,6 @@ export function captureMeta(): FeedbackMeta {
   if (route === "Guide" && typeof params.data === "string") {
     guideState = decodeGuideState(params.data);
   }
-
-  const { nearestSection, sectionsInView, nearestSectionSource } = detectSectionsInView();
-  const hoveredElement = captureHoveredElement();
-  const cursor = cursorTracker.hasPosition
-    ? { x: cursorTracker.x, y: cursorTracker.y }
-    : undefined;
 
   return {
     url,
@@ -277,11 +279,100 @@ export function captureMeta(): FeedbackMeta {
     userAgent: navigator.userAgent,
     guideState,
     scroll: { x: window.scrollX, y: window.scrollY },
+    capturedAt: Date.now(),
+  };
+}
+
+/**
+ * Walk viewport-overlapping sections to build the `sectionsInView` list.
+ * Always safe to compute; used by both capture paths to surround whichever
+ * `nearestSection` signal was picked with contextual siblings.
+ */
+function computeSectionsInView(): string[] {
+  if (typeof document === "undefined") return [];
+  const main = document.querySelector("main");
+  if (!main) return [];
+  const viewportBottom = window.innerHeight;
+  const overlaps: Array<{ id: string; overlap: number }> = [];
+  for (const el of main.querySelectorAll<HTMLElement>("div[id]")) {
+    if (!el.id) continue;
+    const rect = el.getBoundingClientRect();
+    const top = Math.max(rect.top, 0);
+    const bottom = Math.min(rect.bottom, viewportBottom);
+    const overlap = bottom - top;
+    if (overlap > 0) overlaps.push({ id: el.id, overlap });
+  }
+  overlaps.sort((a, b) => b.overlap - a.overlap);
+  return overlaps.slice(0, MAX_SECTIONS_IN_VIEW).map((o) => o.id);
+}
+
+export function captureMeta(): FeedbackMeta {
+  const { nearestSection, sectionsInView, nearestSectionSource } = detectSectionsInView();
+  const hoveredElement = captureHoveredElement();
+  const cursor = cursorTracker.hasPosition
+    ? { x: cursorTracker.x, y: cursorTracker.y }
+    : undefined;
+
+  return {
+    ...buildBaseMeta(),
     nearestSection,
     sectionsInView,
     nearestSectionSource,
     hoveredElement,
     cursor,
-    capturedAt: Date.now(),
+  };
+}
+
+/**
+ * Capture meta from a precise click point (targeting-mode flow). The
+ * user has aimed at a specific element on the page, so we trust that
+ * element as the definitive `hoveredElement` — no hover/focus heuristics
+ * needed. Section is derived from `.closest('main div[id]')` of the
+ * click target, with viewport overlap as a fallback for clicks outside
+ * any section anchor.
+ */
+export function captureMetaAtPoint(x: number, y: number): FeedbackMeta {
+  const base = buildBaseMeta();
+  const sectionsInView = computeSectionsInView();
+
+  let nearestSection: string | undefined;
+  let nearestSectionSource: FeedbackMeta["nearestSectionSource"];
+  let hoveredElement: HoveredElement | undefined;
+
+  const target = document.elementFromPoint(x, y) as HTMLElement | null;
+
+  if (target) {
+    const sectionEl = target.closest<HTMLElement>("main div[id]");
+    if (sectionEl?.id) {
+      nearestSection = sectionEl.id;
+      nearestSectionSource = "click";
+    }
+    // Walk up until we find an element that isn't our own chrome
+    // (feedback pill / modal). The click target itself is almost always
+    // fine, but this guards against the targeting overlay or dot if they
+    // somehow end up hit-tested.
+    let cursor: HTMLElement | null = target;
+    while (cursor) {
+      const serialized = serializeElement(cursor);
+      if (serialized) {
+        hoveredElement = serialized;
+        break;
+      }
+      cursor = cursor.parentElement;
+    }
+  }
+
+  if (!nearestSection && sectionsInView.length > 0) {
+    nearestSection = sectionsInView[0];
+    nearestSectionSource = "viewport";
+  }
+
+  return {
+    ...base,
+    nearestSection,
+    sectionsInView: sectionsInView.length > 0 ? sectionsInView : undefined,
+    nearestSectionSource,
+    hoveredElement,
+    cursor: { x, y },
   };
 }

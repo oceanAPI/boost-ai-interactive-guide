@@ -419,7 +419,7 @@ export default function AdminPage() {
   const [showSalesforce, setShowSalesforce] = useState(false);
   const [showHubspot, setShowHubspot] = useState(false);
   const [showSearchLog, setShowSearchLog] = useState(false);
-  const { openWith: openFeedback } = useFeedbackTrigger();
+  const { requestTarget: requestFeedbackTarget } = useFeedbackTrigger();
   /** Preset-nudge modal: shown when user hits Generate on an untouched default guide. */
   const [showPresetNudge, setShowPresetNudge] = useState(false);
   /** Used to programmatically open Guide Sections from the preset nudge. Incrementing forces CollapsibleSection to expand. */
@@ -637,7 +637,7 @@ export default function AdminPage() {
           hasContent={hasCompanyInfo}
           defaultOpen={true}
           customBadge={
-            <PacManFeedbackButton onClick={() => openFeedback()} />
+            <PacManFeedbackButton onClick={() => requestFeedbackTarget()} />
           }
         >
           {/* Pattern-library quick prefill */}
