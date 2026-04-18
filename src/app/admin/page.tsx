@@ -12,6 +12,12 @@ import HubSpotImportModal from "@/components/HubSpotImportModal";
 import CompanySearch from "@/components/CompanySearch";
 import SearchLogPanel from "@/components/SearchLogPanel";
 import { CustomerDossierCard } from "@/components/admin/CustomerDossierCard";
+import {
+  AdminChip,
+  AdminChipRow,
+  AdminMiniLabel,
+  AdminPrompt,
+} from "@/components/admin/primitives";
 import { PacManFeedbackButton } from "@/components/FeedbackBacklog";
 import { useFeedbackTrigger } from "@/hooks/useFeedbackTrigger";
 import type { DetectionResult } from "@/lib/company-detect";
@@ -768,47 +774,25 @@ export default function AdminPage() {
           }
           hasContent={hasAreas}
         >
-          {/* Prompt — tracked uppercase + soft helper. Matches the
-              "Feed me log" header grammar. */}
-          <div className="mb-4">
-            <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-              Which industries does this customer operate in?
-            </p>
-            <p className="text-xs text-boost-muted/80 mt-1">
-              Leave empty for a general financial-services guide.
-            </p>
-          </div>
+          <AdminPrompt
+            question="Which industries does this customer operate in?"
+            helper="Leave empty for a general financial-services guide."
+          />
 
-          {/* Industry chips — compact wrap row. Active = solid boost-green-light + white. */}
-          <div className="flex flex-wrap gap-1.5">
-            {INDUSTRIES.map((ind) => {
-              const active = form.areas_of_interest.includes(ind.key);
-              return (
-                <button
-                  key={ind.key}
-                  type="button"
-                  onClick={() => toggleArea(ind.key)}
-                  aria-pressed={active}
-                  title={ind.description}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
-                    active
-                      ? "bg-boost-green-light text-white"
-                      : "text-boost-muted hover:text-boost-dark bg-boost-surface/40 hover:bg-boost-surface ring-1 ring-inset ring-boost-border/50"
-                  }`}
-                >
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      active ? "bg-white/80" : "bg-boost-muted/40"
-                    }`}
-                  />
-                  {ind.label}
-                </button>
-              );
-            })}
-          </div>
+          <AdminChipRow>
+            {INDUSTRIES.map((ind) => (
+              <AdminChip
+                key={ind.key}
+                active={form.areas_of_interest.includes(ind.key)}
+                onClick={() => toggleArea(ind.key)}
+                title={ind.description}
+              >
+                {ind.label}
+              </AdminChip>
+            ))}
+          </AdminChipRow>
 
-          {/* Variants — inline per active industry. Purple chip grammar
-              mirrors the Feed me log label chips. */}
+          {/* Variant chips per active industry — secondary tone (purple). */}
           {form.areas_of_interest
             .filter((areaKey) => INDUSTRY_VARIANTS[areaKey]?.length)
             .map((areaKey) => {
@@ -818,57 +802,42 @@ export default function AdminPage() {
                 variants.some((iv) => iv.key === v),
               );
               return (
-                <div
-                  key={`variants-${areaKey}`}
-                  className="mt-5 pt-4 border-t border-boost-border/60"
-                >
-                  <div className="flex items-center justify-between mb-2.5">
-                    <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-                      {industry?.label} · Variant
-                    </p>
-                    {selectedForIndustry.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateField(
-                            "selected_variants",
-                            (form.selected_variants || []).filter(
-                              (v) => !variants.some((iv) => iv.key === v),
-                            ),
-                          )
-                        }
-                        className="text-[10px] text-boost-muted hover:text-boost-dark transition-colors"
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {variants.map((v) => {
-                      const selected = (form.selected_variants || []).includes(v.key);
-                      return (
+                <div key={`variants-${areaKey}`}>
+                  <AdminPrompt
+                    divider
+                    question={`${industry?.label} · Variant`}
+                    action={
+                      selectedForIndustry.length > 0 && (
                         <button
-                          key={v.key}
                           type="button"
-                          onClick={() => toggleVariant(v.key)}
-                          aria-pressed={selected}
-                          title={v.description}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors ${
-                            selected
-                              ? "bg-boost-purple text-white"
-                              : "text-boost-muted hover:text-boost-dark bg-boost-surface/40 hover:bg-boost-surface ring-1 ring-inset ring-boost-border/50"
-                          }`}
+                          onClick={() =>
+                            updateField(
+                              "selected_variants",
+                              (form.selected_variants || []).filter(
+                                (v) => !variants.some((iv) => iv.key === v),
+                              ),
+                            )
+                          }
+                          className="text-[10px] text-boost-muted hover:text-boost-dark transition-colors uppercase tracking-[0.14em]"
                         >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              selected ? "bg-boost-green-light" : "bg-boost-muted/40"
-                            }`}
-                          />
-                          {v.label}
+                          Clear
                         </button>
-                      );
-                    })}
-                  </div>
+                      )
+                    }
+                  />
+                  <AdminChipRow>
+                    {variants.map((v) => (
+                      <AdminChip
+                        key={v.key}
+                        active={(form.selected_variants || []).includes(v.key)}
+                        onClick={() => toggleVariant(v.key)}
+                        title={v.description}
+                        tone="secondary"
+                      >
+                        {v.label}
+                      </AdminChip>
+                    ))}
+                  </AdminChipRow>
                 </div>
               );
             })}
@@ -881,62 +850,35 @@ export default function AdminPage() {
           subtitle={hasPricing ? `${PRICING_MODELS.find(p => p.key === form.pricing_model)?.label} · ${form.conversation_cost}` : "Choose pricing model and enter cost baseline"}
           hasContent={hasPricing}
         >
-          {/* Pricing model — chip row. Drives the ROI framing later in the guide. */}
-          <div className="mb-5">
-            <div className="mb-3">
-              <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-                How are they priced today?
-              </p>
-              <p className="text-xs text-boost-muted/80 mt-1">
-                Shapes the ROI story we show the customer.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {PRICING_MODELS.map((pm) => {
-                const active = form.pricing_model === pm.key;
-                return (
-                  <button
-                    key={pm.key}
-                    type="button"
-                    onClick={() => updateField("pricing_model", pm.key)}
-                    aria-pressed={active}
-                    title={pm.description}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
-                      active
-                        ? "bg-boost-green-light text-white"
-                        : "text-boost-muted hover:text-boost-dark bg-boost-surface/40 hover:bg-boost-surface ring-1 ring-inset ring-boost-border/50"
-                    }`}
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        active ? "bg-white/80" : "bg-boost-muted/40"
-                      }`}
-                    />
-                    {pm.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <AdminPrompt
+            question="How are they priced today?"
+            helper="Shapes the ROI story we show the customer."
+          />
+          <AdminChipRow>
+            {PRICING_MODELS.map((pm) => (
+              <AdminChip
+                key={pm.key}
+                active={form.pricing_model === pm.key}
+                onClick={() => updateField("pricing_model", pm.key)}
+                title={pm.description}
+              >
+                {pm.label}
+              </AdminChip>
+            ))}
+          </AdminChipRow>
 
-          {/* Cost baseline — a single labelled input; no column grid. */}
-          <div className="pt-4 border-t border-boost-border/60">
-            <div className="mb-3">
-              <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-                What does one conversation cost today?
-              </p>
-              <p className="text-xs text-boost-muted/80 mt-1">
-                Current average, including agent time and overhead. Used as the ROI baseline.
-              </p>
-            </div>
-            <input
-              type="text"
-              value={form.conversation_cost}
-              onChange={(e) => updateField("conversation_cost", e.target.value)}
-              placeholder="e.g. $8.50, 55 NOK, €6.20"
-              className={`${inputClass} max-w-xs`}
-            />
-          </div>
+          <AdminPrompt
+            divider
+            question="What does one conversation cost today?"
+            helper="Current average, including agent time and overhead. Used as the ROI baseline."
+          />
+          <input
+            type="text"
+            value={form.conversation_cost}
+            onChange={(e) => updateField("conversation_cost", e.target.value)}
+            placeholder="e.g. $8.50, 55 NOK, €6.20"
+            className={`${inputClass} max-w-xs`}
+          />
         </CollapsibleSection>
 
         {/* 4 — Deployment & Resources */}
@@ -954,164 +896,121 @@ export default function AdminPage() {
           }
           hasContent={hasDeployment}
         >
-          <div className="space-y-6">
-            {/* Markets — compact slider with inline number */}
-            <div>
-              <div className="mb-3">
-                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-                  How many markets do they cover?
-                </p>
-                <p className="text-xs text-boost-muted/80 mt-1">
-                  Drives timeline and localisation scope in the roadmap.
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
+          <AdminPrompt
+            question="How many markets do they cover?"
+            helper="Drives timeline and localisation scope in the roadmap."
+          />
+          <div className="flex items-center gap-4">
+            <input
+              type="range"
+              min={1}
+              max={30}
+              value={form.deployment_markets}
+              onChange={(e) =>
+                updateField("deployment_markets", parseInt(e.target.value))
+              }
+              className="flex-1 accent-boost-green-light"
+            />
+            <span className="inline-flex items-center justify-center min-w-[3rem] px-2.5 py-1 rounded-md text-sm font-bold tabular-nums bg-boost-green-light text-white">
+              {form.deployment_markets}
+            </span>
+          </div>
+
+          <AdminPrompt
+            divider
+            question="Who's available internally?"
+            helper="Count real FTEs the customer can dedicate — not aspiration."
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {([
+              {
+                key: "stakeholder_owners" as const,
+                label: "Stakeholder owners",
+                hint: "Executive sponsors, project owners",
+              },
+              {
+                key: "ai_trainers" as const,
+                label: "AI trainers",
+                hint: "Work in the platform daily",
+              },
+              {
+                key: "technical_resources" as const,
+                label: "Technical resources",
+                hint: "Developers, integration engineers",
+              },
+            ]).map((r) => (
+              <div key={r.key}>
+                <AdminMiniLabel>{r.label}</AdminMiniLabel>
                 <input
-                  type="range"
-                  min={1}
-                  max={30}
-                  value={form.deployment_markets}
+                  type="number"
+                  min={0}
+                  value={form.resources[r.key] ?? ""}
                   onChange={(e) =>
-                    updateField("deployment_markets", parseInt(e.target.value))
-                  }
-                  className="flex-1 accent-boost-green-light"
-                />
-                <span className="inline-flex items-center justify-center min-w-[3rem] px-2.5 py-1 rounded-md text-sm font-bold tabular-nums bg-boost-green-light text-white">
-                  {form.deployment_markets}
-                </span>
-              </div>
-            </div>
-
-            {/* FTE breakdown */}
-            <div className="pt-5 border-t border-boost-border/60">
-              <div className="mb-3">
-                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-                  Who's available internally?
-                </p>
-                <p className="text-xs text-boost-muted/80 mt-1">
-                  Count real FTEs the customer can dedicate — not aspiration.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {([
-                  {
-                    key: "stakeholder_owners" as const,
-                    label: "Stakeholder owners",
-                    hint: "Executive sponsors, project owners",
-                  },
-                  {
-                    key: "ai_trainers" as const,
-                    label: "AI trainers",
-                    hint: "Work in the platform daily",
-                  },
-                  {
-                    key: "technical_resources" as const,
-                    label: "Technical resources",
-                    hint: "Developers, integration engineers",
-                  },
-                ]).map((r) => (
-                  <div key={r.key}>
-                    <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.14em]">
-                      {r.label}
-                    </p>
-                    <input
-                      type="number"
-                      min={0}
-                      value={form.resources[r.key] ?? ""}
-                      onChange={(e) =>
-                        updateResource(
-                          r.key,
-                          e.target.value ? parseInt(e.target.value) : undefined,
-                        )
-                      }
-                      placeholder="0"
-                      className={`${inputClass} mt-1.5 tabular-nums`}
-                    />
-                    <p className="text-[11px] text-boost-muted/70 mt-1 leading-snug">
-                      {r.hint}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Supporting departments — chip row, same grammar as Section 2 */}
-            <div className="pt-5 border-t border-boost-border/60">
-              <div className="mb-3">
-                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-                  Which departments are involved?
-                </p>
-                <p className="text-xs text-boost-muted/80 mt-1">
-                  Optional — signals how cross-functional the rollout will be.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {SUPPORTING_DEPARTMENTS.map((dept) => {
-                  const active = form.resources.supporting_departments?.includes(dept) ?? false;
-                  return (
-                    <button
-                      key={dept}
-                      type="button"
-                      onClick={() => toggleDepartment(dept)}
-                      aria-pressed={active}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
-                        active
-                          ? "bg-boost-green-light text-white"
-                          : "text-boost-muted hover:text-boost-dark bg-boost-surface/40 hover:bg-boost-surface ring-1 ring-inset ring-boost-border/50"
-                      }`}
-                    >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          active ? "bg-white/80" : "bg-boost-muted/40"
-                        }`}
-                      />
-                      {dept}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Knowledge management toggle */}
-            <div className="pt-5 border-t border-boost-border/60">
-              <div className="mb-3">
-                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-                  Do they have a knowledge-base lead?
-                </p>
-                <p className="text-xs text-boost-muted/80 mt-1">
-                  Dedicated person(s) managing KB content — a strong signal for self-improvement adoption.
-                </p>
-              </div>
-              <label className="inline-flex items-center gap-3 cursor-pointer select-none">
-                <button
-                  type="button"
-                  onClick={() =>
                     updateResource(
-                      "knowledge_management",
-                      !form.resources.knowledge_management,
+                      r.key,
+                      e.target.value ? parseInt(e.target.value) : undefined,
                     )
                   }
-                  aria-pressed={form.resources.knowledge_management ?? false}
-                  className={`w-10 h-6 rounded-full transition-colors relative p-0 border-0 shrink-0 ${
-                    form.resources.knowledge_management
-                      ? "bg-boost-green-light"
-                      : "bg-boost-border"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                      form.resources.knowledge_management
-                        ? "translate-x-4"
-                        : "translate-x-0"
-                    }`}
-                  />
-                </button>
-                <span className="text-sm font-medium text-boost-dark">
-                  {form.resources.knowledge_management ? "Yes, KB owner in place" : "No dedicated KB owner"}
-                </span>
-              </label>
-            </div>
+                  placeholder="0"
+                  className={`${inputClass} mt-1.5 tabular-nums`}
+                />
+                <p className="text-[11px] text-boost-muted/70 mt-1 leading-snug">
+                  {r.hint}
+                </p>
+              </div>
+            ))}
           </div>
+
+          <AdminPrompt
+            divider
+            question="Which departments are involved?"
+            helper="Optional — signals how cross-functional the rollout will be."
+          />
+          <AdminChipRow>
+            {SUPPORTING_DEPARTMENTS.map((dept) => (
+              <AdminChip
+                key={dept}
+                active={form.resources.supporting_departments?.includes(dept) ?? false}
+                onClick={() => toggleDepartment(dept)}
+              >
+                {dept}
+              </AdminChip>
+            ))}
+          </AdminChipRow>
+
+          <AdminPrompt
+            divider
+            question="Do they have a knowledge-base lead?"
+            helper="Dedicated person(s) managing KB content — a strong signal for self-improvement adoption."
+          />
+          <label className="inline-flex items-center gap-3 cursor-pointer select-none">
+            <button
+              type="button"
+              onClick={() =>
+                updateResource(
+                  "knowledge_management",
+                  !form.resources.knowledge_management,
+                )
+              }
+              aria-pressed={form.resources.knowledge_management ?? false}
+              className={`w-10 h-6 rounded-full transition-colors relative p-0 border-0 shrink-0 ${
+                form.resources.knowledge_management
+                  ? "bg-boost-green-light"
+                  : "bg-boost-border"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  form.resources.knowledge_management
+                    ? "translate-x-4"
+                    : "translate-x-0"
+                }`}
+              />
+            </button>
+            <span className="text-sm font-medium text-boost-dark">
+              {form.resources.knowledge_management ? "Yes, KB owner in place" : "No dedicated KB owner"}
+            </span>
+          </label>
         </CollapsibleSection>
 
         {/* 5 — Requirements & Volumes */}
@@ -1125,66 +1024,49 @@ export default function AdminPage() {
           }
           hasContent={hasRequirements}
         >
-          <div className="space-y-6">
-            {/* Channel volumes — concrete data that drives ROI first. */}
-            <div>
-              <div className="mb-3">
-                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-                  How much do they handle each month?
-                </p>
-                <p className="text-xs text-boost-muted/80 mt-1">
-                  Monthly conversation volume per channel. Anchors the ROI calculator.
-                </p>
+          <AdminPrompt
+            question="How much do they handle each month?"
+            helper="Monthly conversation volume per channel. Anchors the ROI calculator."
+          />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {([
+              { key: "chat" as const, label: "Chat" },
+              { key: "voice" as const, label: "Voice" },
+              { key: "email" as const, label: "Email" },
+              { key: "social" as const, label: "Social" },
+            ]).map((ch) => (
+              <div key={ch.key}>
+                <AdminMiniLabel>{ch.label}</AdminMiniLabel>
+                <div className="relative mt-1.5">
+                  <input
+                    type="number"
+                    value={form.channel_volumes[ch.key] || ""}
+                    onChange={(e) => updateVolume(ch.key, e.target.value)}
+                    placeholder="0"
+                    className={`${inputClass} tabular-nums pr-10`}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-boost-muted/70 uppercase tracking-[0.14em] pointer-events-none">
+                    /mo
+                  </span>
+                </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {([
-                  { key: "chat" as const, label: "Chat" },
-                  { key: "voice" as const, label: "Voice" },
-                  { key: "email" as const, label: "Email" },
-                  { key: "social" as const, label: "Social" },
-                ]).map((ch) => (
-                  <div key={ch.key}>
-                    <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.14em]">
-                      {ch.label}
-                    </p>
-                    <div className="relative mt-1.5">
-                      <input
-                        type="number"
-                        value={form.channel_volumes[ch.key] || ""}
-                        onChange={(e) => updateVolume(ch.key, e.target.value)}
-                        placeholder="0"
-                        className={`${inputClass} tabular-nums pr-10`}
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-boost-muted/70 uppercase tracking-[0.14em] pointer-events-none">
-                        /mo
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Specific requirements — free-text for anything not captured above. */}
-            <div className="pt-5 border-t border-boost-border/60">
-              <div className="mb-3">
-                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-                  Anything specific they've asked for?
-                </p>
-                <p className="text-xs text-boost-muted/80 mt-1">
-                  Optional — regulatory asks, specific channels, languages, timelines, deal-breakers.
-                </p>
-              </div>
-              <textarea
-                value={form.specific_requirements}
-                onChange={(e) =>
-                  updateField("specific_requirements", e.target.value)
-                }
-                placeholder="e.g. Needs GDPR audit package by Q3, Norwegian language on day one, Genesys voice handover from week 2…"
-                rows={3}
-                className={`${inputClass} resize-none leading-relaxed`}
-              />
-            </div>
+            ))}
           </div>
+
+          <AdminPrompt
+            divider
+            question="Anything specific they've asked for?"
+            helper="Optional — regulatory asks, specific channels, languages, timelines, deal-breakers."
+          />
+          <textarea
+            value={form.specific_requirements}
+            onChange={(e) =>
+              updateField("specific_requirements", e.target.value)
+            }
+            placeholder="e.g. Needs GDPR audit package by Q3, Norwegian language on day one, Genesys voice handover from week 2…"
+            rows={3}
+            className={`${inputClass} resize-none leading-relaxed`}
+          />
         </CollapsibleSection>
 
         {/* 6 — Integrations */}
@@ -1198,14 +1080,10 @@ export default function AdminPage() {
           }
           hasContent={hasIntegrations}
         >
-          <div className="mb-4">
-            <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-              Which systems do they already use?
-            </p>
-            <p className="text-xs text-boost-muted/80 mt-1">
-              Integrations we map for the SOW. Categories are collapsed — expand what applies.
-            </p>
-          </div>
+          <AdminPrompt
+            question="Which systems do they already use?"
+            helper="Integrations we map for the SOW. Categories are collapsed — expand what applies."
+          />
 
           {/* Compact summary strip: total selected across all categories */}
           {totalIntegrations > 0 && (
@@ -1256,37 +1134,26 @@ export default function AdminPage() {
                     </span>
                   </summary>
                   <div className="px-3 pb-3 pt-1">
-                    <div className="flex flex-wrap gap-1.5">
+                    <AdminChipRow>
                       {cat.items.map((item) => {
                         const active = selected.includes(item.name);
                         return (
-                          <button
+                          <AdminChip
                             key={item.name}
-                            type="button"
+                            active={active}
                             onClick={() => toggleIntegration(cat.key, item.name)}
-                            aria-pressed={active}
                             title={item.description}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
-                              active
-                                ? "bg-boost-green-light text-white"
-                                : "text-boost-muted hover:text-boost-dark bg-white hover:bg-boost-surface ring-1 ring-inset ring-boost-border/50"
-                            }`}
                           >
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                active ? "bg-white/80" : "bg-boost-muted/40"
-                              }`}
-                            />
                             {item.name}
                             {item.tags?.includes("beta") && (
                               <span className={`ml-0.5 text-[9px] font-bold ${active ? "text-white/70" : "text-boost-muted/60"}`}>
                                 β
                               </span>
                             )}
-                          </button>
+                          </AdminChip>
                         );
                       })}
-                    </div>
+                    </AdminChipRow>
                   </div>
                 </details>
               );
@@ -1301,14 +1168,10 @@ export default function AdminPage() {
           subtitle={hasNotes ? "Notes added" : "Optional — extra context"}
           hasContent={hasNotes}
         >
-          <div className="mb-3">
-            <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-              What else should I know about this deal?
-            </p>
-            <p className="text-xs text-boost-muted/80 mt-1">
-              Optional — incumbent vendors, political sensitivities, champion context, anything that didn't fit above.
-            </p>
-          </div>
+          <AdminPrompt
+            question="What else should I know about this deal?"
+            helper="Optional — incumbent vendors, political sensitivities, champion context, anything that didn't fit above."
+          />
           <textarea
             value={form.custom_notes}
             onChange={(e) => updateField("custom_notes", e.target.value)}
@@ -1664,25 +1527,21 @@ export default function AdminPage() {
           }
           hasContent={hasCustomCaseStudies}
         >
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-                Which stories do you want to feature?
-              </p>
-              <p className="text-xs text-boost-muted/80 mt-1">
-                Leave empty to show all, sorted by industry match. Otherwise, pick the ones most relevant to this deal.
-              </p>
-            </div>
-            {hasCustomCaseStudies && (
-              <button
-                type="button"
-                onClick={() => updateField("selected_case_studies", [])}
-                className="text-[10px] text-boost-muted hover:text-boost-dark transition-colors uppercase tracking-[0.14em] shrink-0"
-              >
-                Clear
-              </button>
-            )}
-          </div>
+          <AdminPrompt
+            question="Which stories do you want to feature?"
+            helper="Leave empty to show all, sorted by industry match. Otherwise, pick the ones most relevant to this deal."
+            action={
+              hasCustomCaseStudies && (
+                <button
+                  type="button"
+                  onClick={() => updateField("selected_case_studies", [])}
+                  className="text-[10px] text-boost-muted hover:text-boost-dark transition-colors uppercase tracking-[0.14em]"
+                >
+                  Clear
+                </button>
+              )
+            }
+          />
           <div className="space-y-1.5">
             {CASE_STUDIES.map((cs) => {
               const isSelected = form.selected_case_studies?.includes(cs.id) ?? false;
@@ -1754,19 +1613,17 @@ export default function AdminPage() {
           }
           hasContent={!!form.custom_section?.title}
         >
-          <div className="mb-4">
-            <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-              Want a bespoke section just for this customer?
-            </p>
-            <p className="text-xs text-boost-muted/80 mt-1">
-              Appears at the end of the guide labelled &ldquo;Other&rdquo;. Image + video are optional.
-            </p>
-          </div>
+          <AdminPrompt
+            question="Want a bespoke section just for this customer?"
+            helper={
+              <>
+                Appears at the end of the guide labelled &ldquo;Other&rdquo;. Image + video are optional.
+              </>
+            }
+          />
           <div className="space-y-5">
             <div>
-              <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.14em]">
-                Section title
-              </p>
+              <AdminMiniLabel>Section title</AdminMiniLabel>
               <input
                 type="text"
                 value={form.custom_section?.title || ""}
@@ -1782,9 +1639,7 @@ export default function AdminPage() {
               />
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.14em]">
-                Body content
-              </p>
+              <AdminMiniLabel>Body content</AdminMiniLabel>
               <textarea
                 value={form.custom_section?.body || ""}
                 onChange={(e) =>
@@ -1801,9 +1656,9 @@ export default function AdminPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.14em]">
+                <AdminMiniLabel>
                   Image URL <span className="opacity-60">(optional)</span>
-                </p>
+                </AdminMiniLabel>
                 <input
                   type="url"
                   value={form.custom_section?.image_url || ""}
@@ -1820,9 +1675,9 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.14em]">
+                <AdminMiniLabel>
                   Video URL <span className="opacity-60">(optional)</span>
-                </p>
+                </AdminMiniLabel>
                 <input
                   type="url"
                   value={form.custom_section?.video_url || ""}
