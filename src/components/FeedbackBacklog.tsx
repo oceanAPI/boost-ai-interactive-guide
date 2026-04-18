@@ -827,10 +827,12 @@ export function FeedbackModal({ open, onClose, pending = {} }: FeedbackModalProp
                 )}
               </div>
 
-              {/* Time range — server-side filter. Keeps the admin read
-                  fast even when the shared log has thousands of entries.
-                  Always visible when unlocked so the AE can widen at will. */}
-              {shared && adminPassword && (
+              {/* Time range — server-side filter when shared, client-side
+                  on the local mirror otherwise. Keeps the admin read
+                  fast even when the log has thousands of entries.
+                  Shown whenever the log is unlocked and has anything to
+                  filter; total/hasMore readout only shows in shared mode. */}
+              {entries.length > 0 && (
                 <div className="mb-2 flex items-center gap-1.5 flex-wrap">
                   <span className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em] mr-1">
                     Range
