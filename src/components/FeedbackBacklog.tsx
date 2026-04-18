@@ -506,7 +506,7 @@ export function FeedbackModal({ open, onClose, pending = {} }: FeedbackModalProp
                   id="feedback-modal-title"
                   className="mt-1.5 text-xl sm:text-2xl font-bold text-white leading-tight"
                 >
-                  Nom nom nom — tell me how to grow
+                  Nom nom nom — feed me what to learn
                 </h3>
                 <p className="text-[12px] text-white/55 mt-1.5">
                   {shared

@@ -18,8 +18,6 @@ import {
   AdminMiniLabel,
   AdminPrompt,
 } from "@/components/admin/primitives";
-import { PacManFeedbackButton } from "@/components/FeedbackBacklog";
-import { useFeedbackTrigger } from "@/hooks/useFeedbackTrigger";
 import type { DetectionResult } from "@/lib/company-detect";
 import {
   SLIDE_SECTIONS,
@@ -425,7 +423,6 @@ export default function AdminPage() {
   const [showSalesforce, setShowSalesforce] = useState(false);
   const [showHubspot, setShowHubspot] = useState(false);
   const [showSearchLog, setShowSearchLog] = useState(false);
-  const { requestTarget: requestFeedbackTarget } = useFeedbackTrigger();
   /** Preset-nudge modal: shown when user hits Generate on an untouched default guide. */
   const [showPresetNudge, setShowPresetNudge] = useState(false);
   /** Used to programmatically open Guide Sections from the preset nudge. Incrementing forces CollapsibleSection to expand. */
@@ -642,9 +639,6 @@ export default function AdminPage() {
           title="Company Information"
           hasContent={hasCompanyInfo}
           defaultOpen={true}
-          customBadge={
-            <PacManFeedbackButton onClick={() => requestFeedbackTarget()} />
-          }
         >
           {/* Pattern-library quick prefill */}
           <div className="mb-5 pb-5 border-b border-boost-border">
