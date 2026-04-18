@@ -50,9 +50,24 @@ function iconFor(name: string, category: string): string {
 }
 
 /* ─── Look up description from integration data ─── */
-function getDescription(name: string): string {
+const CATEGORY_LABEL: Record<string, string> = {
+  channel: "channel integration",
+  human_handover: "human handover connector",
+  openid: "authentication provider",
+  voice: "voice channel",
+  utility: "backend system",
+};
+
+function getDescription(name: string, category?: string): string {
   const found = ALL_INTEGRATIONS.find((i) => i.name === name);
-  return found?.description || "";
+  if (found?.description) return found.description;
+  // Custom or out-of-catalog entry (e.g. admin typed "Custom Web Chat")
+  // — the name isn't in ALL_INTEGRATIONS. Return a category-aware
+  // fallback so the popover still has something to show and the icon
+  // stays clickable. Without this, hasDetail falls to false and the
+  // click silently does nothing, which looks like a broken UI.
+  const label = CATEGORY_LABEL[category ?? ""] ?? "integration";
+  return `${name} — custom ${label} configured in admin.`;
 }
 
 /* ─── Build dynamic nodes from guide selections ─── */
@@ -62,7 +77,7 @@ function buildNodes(guide: GuideData, category: string, fallback: ArchNode[]): A
   return selected.map((name) => ({
     label: name.length > 16 ? name.slice(0, 14) + "\u2026" : name,
     icon: iconFor(name, category),
-    description: getDescription(name),
+    description: getDescription(name, category),
     category,
   }));
 }
@@ -110,7 +125,11 @@ function IconBlock({ node, size = "md", delay, visible }: {
   const ref = useRef<HTMLDivElement>(null);
   const dims = { sm: "w-10 h-10", md: "w-12 h-12", lg: "w-14 h-14" };
   const iconDims = { sm: "w-5 h-5", md: "w-6 h-6", lg: "w-7 h-7" };
-  const hasDetail = !!node.description;
+  // User-picked nodes should always open a popover — the green "Your
+  // pick" dot signals interactivity, and silent no-op clicks were the
+  // reason for bug #1776507428426. Static platform nodes keep the
+  // description-presence gate.
+  const hasDetail = !!node.description || !node.isStatic;
 
   /* Close on outside click */
   useEffect(() => {
