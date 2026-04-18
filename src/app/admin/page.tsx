@@ -1151,47 +1151,61 @@ export default function AdminPage() {
           }
           hasContent={hasIntegrations}
         >
-          <p className="text-boost-muted text-sm mb-4">
-            Select integrations the customer uses or needs.{" "}
-            {totalIntegrations > 0 && (
-              <span className="text-boost-green font-medium">
-                {totalIntegrations} selected
-              </span>
-            )}
-          </p>
-          <div className="space-y-6">
+          <div className="mb-5">
+            <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+              Which systems do they already use?
+            </p>
+            <p className="text-xs text-boost-muted/80 mt-1">
+              Integrations we map for the SOW. Tag everything they have today — even the tools we don't touch.
+            </p>
+          </div>
+          <div className="space-y-5">
             {INTEGRATION_CATEGORIES.map((cat) => {
               const selected = (form.integrations[
                 cat.key as keyof IntegrationSelections
               ] || []) as string[];
               return (
-                <div key={cat.key}>
-                  <h3 className="text-sm font-semibold text-boost-dark mb-2 flex items-center gap-2">
-                    {cat.label}
+                <div key={cat.key} className="pt-4 first:pt-0 border-t first:border-t-0 border-boost-border/60">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+                      {cat.label}
+                    </p>
                     {selected.length > 0 && (
-                      <span className="text-xs bg-boost-green-light/20 text-boost-green px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-semibold text-boost-green tabular-nums">
                         {selected.length}
                       </span>
                     )}
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {cat.items.map((item) => (
-                      <button
-                        key={item.name}
-                        onClick={() => toggleIntegration(cat.key, item.name)}
-                        title={item.description}
-                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                          selected.includes(item.name)
-                            ? "bg-boost-green-light text-white"
-                            : "bg-boost-surface text-boost-muted hover:text-boost-dark hover:bg-boost-card-hover border border-boost-border"
-                        }`}
-                      >
-                        {item.name}
-                        {item.tags?.includes("beta") && (
-                          <span className="ml-1 text-[10px] opacity-70">β</span>
-                        )}
-                      </button>
-                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {cat.items.map((item) => {
+                      const active = selected.includes(item.name);
+                      return (
+                        <button
+                          key={item.name}
+                          type="button"
+                          onClick={() => toggleIntegration(cat.key, item.name)}
+                          aria-pressed={active}
+                          title={item.description}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                            active
+                              ? "bg-boost-green-light text-white"
+                              : "text-boost-muted hover:text-boost-dark bg-boost-surface/40 hover:bg-boost-surface ring-1 ring-inset ring-boost-border/50"
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              active ? "bg-white/80" : "bg-boost-muted/40"
+                            }`}
+                          />
+                          {item.name}
+                          {item.tags?.includes("beta") && (
+                            <span className={`ml-0.5 text-[9px] font-bold ${active ? "text-white/70" : "text-boost-muted/60"}`}>
+                              β
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -1206,12 +1220,20 @@ export default function AdminPage() {
           subtitle={hasNotes ? "Notes added" : "Optional — extra context"}
           hasContent={hasNotes}
         >
+          <div className="mb-3">
+            <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+              What else should I know about this deal?
+            </p>
+            <p className="text-xs text-boost-muted/80 mt-1">
+              Optional — incumbent vendors, political sensitivities, champion context, anything that didn't fit above.
+            </p>
+          </div>
           <textarea
             value={form.custom_notes}
             onChange={(e) => updateField("custom_notes", e.target.value)}
-            placeholder="Any additional context for this customer..."
-            rows={3}
-            className={inputClass}
+            placeholder="e.g. Procurement runs a 90-day cycle, champion is the CTO, previous bot vendor was Intercom and it underperformed…"
+            rows={4}
+            className={`${inputClass} resize-none leading-relaxed`}
           />
         </CollapsibleSection>
 
@@ -1561,17 +1583,25 @@ export default function AdminPage() {
           }
           hasContent={hasCustomCaseStudies}
         >
-          <p className="text-boost-muted text-sm mb-3">
-            Pick the customer stories to feature. Leave empty to show all, sorted by industry match.
-          </p>
-          {hasCustomCaseStudies && (
-            <button
-              onClick={() => updateField("selected_case_studies", [])}
-              className="text-xs text-boost-muted hover:text-boost-dark transition-colors mb-3"
-            >
-              Clear selection
-            </button>
-          )}
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+                Which stories do you want to feature?
+              </p>
+              <p className="text-xs text-boost-muted/80 mt-1">
+                Leave empty to show all, sorted by industry match. Otherwise, pick the ones most relevant to this deal.
+              </p>
+            </div>
+            {hasCustomCaseStudies && (
+              <button
+                type="button"
+                onClick={() => updateField("selected_case_studies", [])}
+                className="text-[10px] text-boost-muted hover:text-boost-dark transition-colors uppercase tracking-[0.14em] shrink-0"
+              >
+                Clear
+              </button>
+            )}
+          </div>
           <div className="space-y-1.5">
             {CASE_STUDIES.map((cs) => {
               const isSelected = form.selected_case_studies?.includes(cs.id) ?? false;
@@ -1581,11 +1611,13 @@ export default function AdminPage() {
               return (
                 <button
                   key={cs.id}
+                  type="button"
                   onClick={() => toggleCaseStudy(cs.id)}
+                  aria-pressed={isSelected}
                   className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all ${
                     isSelected
                       ? "bg-boost-green-light/10 ring-1 ring-boost-green-light/30"
-                      : "bg-boost-surface/50 hover:bg-boost-surface"
+                      : "bg-boost-surface/40 hover:bg-boost-surface"
                   }`}
                 >
                   {/* Checkbox */}
@@ -1606,9 +1638,10 @@ export default function AdminPage() {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-sm font-medium text-boost-dark">{cs.headline}</span>
+                      <span className="text-sm font-medium text-boost-dark truncate">{cs.headline}</span>
                       {isRelevant && (
-                        <span className="text-[9px] font-semibold text-boost-green-light bg-boost-green-light/10 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                        <span className="inline-flex items-center gap-1 shrink-0 text-[9px] font-semibold text-boost-green-light uppercase tracking-[0.14em]">
+                          <span className="w-1 h-1 rounded-full bg-boost-green-light" />
                           Match
                         </span>
                       )}
@@ -1640,12 +1673,19 @@ export default function AdminPage() {
           }
           hasContent={!!form.custom_section?.title}
         >
-          <p className="text-boost-muted text-sm mb-4">
-            Add a custom content section to the guide. It will appear as &ldquo;Other&rdquo; in the section list.
-          </p>
-          <div className="space-y-4">
+          <div className="mb-4">
+            <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+              Want a bespoke section just for this customer?
+            </p>
+            <p className="text-xs text-boost-muted/80 mt-1">
+              Appears at the end of the guide labelled &ldquo;Other&rdquo;. Image + video are optional.
+            </p>
+          </div>
+          <div className="space-y-5">
             <div>
-              <FieldLabel>Section Title</FieldLabel>
+              <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.14em]">
+                Section title
+              </p>
               <input
                 type="text"
                 value={form.custom_section?.title || ""}
@@ -1657,11 +1697,13 @@ export default function AdminPage() {
                   })
                 }
                 placeholder="e.g. Partnership Vision"
-                className={inputClass}
+                className={`${inputClass} mt-1.5`}
               />
             </div>
             <div>
-              <FieldLabel>Body Content</FieldLabel>
+              <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.14em]">
+                Body content
+              </p>
               <textarea
                 value={form.custom_section?.body || ""}
                 onChange={(e) =>
@@ -1671,44 +1713,50 @@ export default function AdminPage() {
                     body: e.target.value,
                   })
                 }
-                placeholder="Write the section content here. Use double line-breaks for paragraphs."
+                placeholder="Write the section content here. Double line-breaks = new paragraphs."
                 rows={5}
-                className={inputClass}
+                className={`${inputClass} mt-1.5 resize-none leading-relaxed`}
               />
             </div>
-            <div>
-              <FieldLabel optional>Image URL</FieldLabel>
-              <input
-                type="url"
-                value={form.custom_section?.image_url || ""}
-                onChange={(e) =>
-                  updateField("custom_section", {
-                    ...form.custom_section!,
-                    title: form.custom_section?.title || "",
-                    body: form.custom_section?.body || "",
-                    image_url: e.target.value || undefined,
-                  })
-                }
-                placeholder="https://example.com/image.jpg"
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <FieldLabel optional>Video URL</FieldLabel>
-              <input
-                type="url"
-                value={form.custom_section?.video_url || ""}
-                onChange={(e) =>
-                  updateField("custom_section", {
-                    ...form.custom_section!,
-                    title: form.custom_section?.title || "",
-                    body: form.custom_section?.body || "",
-                    video_url: e.target.value || undefined,
-                  })
-                }
-                placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
-                className={inputClass}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.14em]">
+                  Image URL <span className="opacity-60">(optional)</span>
+                </p>
+                <input
+                  type="url"
+                  value={form.custom_section?.image_url || ""}
+                  onChange={(e) =>
+                    updateField("custom_section", {
+                      ...form.custom_section!,
+                      title: form.custom_section?.title || "",
+                      body: form.custom_section?.body || "",
+                      image_url: e.target.value || undefined,
+                    })
+                  }
+                  placeholder="https://example.com/image.jpg"
+                  className={`${inputClass} mt-1.5`}
+                />
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.14em]">
+                  Video URL <span className="opacity-60">(optional)</span>
+                </p>
+                <input
+                  type="url"
+                  value={form.custom_section?.video_url || ""}
+                  onChange={(e) =>
+                    updateField("custom_section", {
+                      ...form.custom_section!,
+                      title: form.custom_section?.title || "",
+                      body: form.custom_section?.body || "",
+                      video_url: e.target.value || undefined,
+                    })
+                  }
+                  placeholder="YouTube or Vimeo URL"
+                  className={`${inputClass} mt-1.5`}
+                />
+              </div>
             </div>
           </div>
         </CollapsibleSection>
