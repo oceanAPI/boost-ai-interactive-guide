@@ -462,6 +462,46 @@ export function FeedbackModal({ open, onClose, pending = {} }: FeedbackModalProp
                     </div>
                   )}
 
+                  {/* Element — the specific thing the cursor was on. Gives
+                      reviewers pixel-level "where" to complement the section-
+                      level "what". Read from the :hover chain at capture time
+                      (no listeners, no latency). */}
+                  {pending.meta?.hoveredElement && (() => {
+                    const el = pending.meta.hoveredElement;
+                    const primary = el.ariaLabel || el.text || el.dataTestId || el.id || "";
+                    return (
+                      <div className="flex items-start gap-1.5 text-[10px] bg-white rounded-md px-2 py-1.5 ring-1 ring-inset ring-boost-border">
+                        <span className="text-[9px] font-semibold text-boost-muted uppercase tracking-[0.14em] shrink-0 mt-0.5">Element</span>
+                        <div className="flex-1 min-w-0 flex flex-wrap items-center gap-1.5">
+                          <code className="font-mono text-[10px] text-boost-dark bg-boost-surface/80 px-1.5 py-0.5 rounded">
+                            {el.tag.toLowerCase()}
+                            {el.id && <span className="text-boost-muted">#{el.id}</span>}
+                          </code>
+                          {primary && (
+                            <span className="text-boost-dark/80 italic truncate max-w-[22rem]">
+                              “{primary}”
+                            </span>
+                          )}
+                          {el.role && (
+                            <span className="text-[9px] text-boost-muted uppercase tracking-[0.14em]">
+                              role={el.role}
+                            </span>
+                          )}
+                          {el.dataTestId && el.dataTestId !== primary && (
+                            <span className="text-[9px] text-boost-muted">
+                              testid={el.dataTestId}
+                            </span>
+                          )}
+                          {el.rect && (
+                            <span className="text-[9px] text-boost-muted tabular-nums">
+                              {el.rect.w}×{el.rect.h} @ ({el.rect.x},{el.rect.y})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Full JSON — for reviewers who need more than the summary chips. */}
                   {pending.meta && (
                     <div>

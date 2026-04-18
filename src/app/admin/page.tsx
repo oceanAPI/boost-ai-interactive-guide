@@ -1078,37 +1078,64 @@ export default function AdminPage() {
           }
           hasContent={hasRequirements}
         >
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Channel volumes — concrete data that drives ROI first. */}
             <div>
-              <FieldLabel optional>Specific Requirements</FieldLabel>
+              <div className="mb-3">
+                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+                  How much do they handle each month?
+                </p>
+                <p className="text-xs text-boost-muted/80 mt-1">
+                  Monthly conversation volume per channel. Anchors the ROI calculator.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {([
+                  { key: "chat" as const, label: "Chat" },
+                  { key: "voice" as const, label: "Voice" },
+                  { key: "email" as const, label: "Email" },
+                  { key: "social" as const, label: "Social" },
+                ]).map((ch) => (
+                  <div key={ch.key}>
+                    <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.14em]">
+                      {ch.label}
+                    </p>
+                    <div className="relative mt-1.5">
+                      <input
+                        type="number"
+                        value={form.channel_volumes[ch.key] || ""}
+                        onChange={(e) => updateVolume(ch.key, e.target.value)}
+                        placeholder="0"
+                        className={`${inputClass} tabular-nums pr-10`}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-boost-muted/70 uppercase tracking-[0.14em] pointer-events-none">
+                        /mo
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Specific requirements — free-text for anything not captured above. */}
+            <div className="pt-5 border-t border-boost-border/60">
+              <div className="mb-3">
+                <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
+                  Anything specific they've asked for?
+                </p>
+                <p className="text-xs text-boost-muted/80 mt-1">
+                  Optional — regulatory asks, specific channels, languages, timelines, deal-breakers.
+                </p>
+              </div>
               <textarea
                 value={form.specific_requirements}
                 onChange={(e) =>
                   updateField("specific_requirements", e.target.value)
                 }
-                placeholder="Any specific requirements they've communicated..."
+                placeholder="e.g. Needs GDPR audit package by Q3, Norwegian language on day one, Genesys voice handover from week 2…"
                 rows={3}
-                className={inputClass}
+                className={`${inputClass} resize-none leading-relaxed`}
               />
-            </div>
-            <div>
-              <FieldLabel optional>Monthly Channel Volumes</FieldLabel>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {(["chat", "voice", "email", "social"] as const).map((ch) => (
-                  <div key={ch}>
-                    <span className="text-xs text-boost-muted capitalize mb-1 block">
-                      {ch}
-                    </span>
-                    <input
-                      type="number"
-                      value={form.channel_volumes[ch] || ""}
-                      onChange={(e) => updateVolume(ch, e.target.value)}
-                      placeholder="0"
-                      className={inputClass}
-                    />
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </CollapsibleSection>

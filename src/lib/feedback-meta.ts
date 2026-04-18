@@ -10,7 +10,7 @@
  * Client-only — touches window/navigator. Do not import into SSR paths.
  */
 
-import type { FeedbackMeta } from "./feedback-backlog";
+import type { FeedbackMeta, HoveredElement } from "./feedback-backlog";
 
 const GUIDE_STATE_MAX_CHARS = 4096;
 /**
@@ -18,6 +18,39 @@ const GUIDE_STATE_MAX_CHARS = 4096;
  * more qualify. Keeps the payload bounded on very tall viewports.
  */
 const MAX_SECTIONS_IN_VIEW = 5;
+
+const TEXT_SNIPPET_MAX = 80;
+const CLASS_SNIPPET_MAX = 100;
+
+/**
+ * Cursor position tracker. Updated passively on every `pointermove` so
+ * `captureMeta()` can attach viewport-relative coordinates to the
+ * report. Passive listener + a single mutable object: zero work beyond
+ * writing two numbers per mousemove, no preventDefault, no rAF.
+ *
+ * `hasPosition` stays false until the pointer has actually moved over
+ * the page at least once; lets us distinguish "cursor at (0,0)" from
+ * "cursor position unknown."
+ */
+const cursorTracker: { x: number; y: number; hasPosition: boolean } = {
+  x: 0,
+  y: 0,
+  hasPosition: false,
+};
+
+if (typeof window !== "undefined") {
+  const onPointerMove = (e: PointerEvent) => {
+    cursorTracker.x = e.clientX;
+    cursorTracker.y = e.clientY;
+    cursorTracker.hasPosition = true;
+  };
+  // Track on both pointer and mouse — covers touch-initiated hover on
+  // hybrid devices that don't fire pointermove.
+  window.addEventListener("pointermove", onPointerMove, { passive: true });
+  window.addEventListener("pointerleave", () => {
+    cursorTracker.hasPosition = false;
+  }, { passive: true });
+}
 
 function detectRoute(pathname: string): FeedbackMeta["route"] {
   if (pathname.includes("/admin")) return "Admin";
@@ -126,6 +159,79 @@ function detectSectionsInView(): {
   return {};
 }
 
+/**
+ * Serialize an element into a minimal fingerprint for the reviewer.
+ * Skips the feedback pill and anything inside the modal so our own
+ * chrome never masquerades as the user's target.
+ */
+function serializeElement(el: HTMLElement): HoveredElement | undefined {
+  if (el.classList.contains("feedback-pill")) return undefined;
+  if (el.closest('[role="dialog"]')) return undefined;
+
+  const rect = el.getBoundingClientRect();
+  const result: HoveredElement = { tag: el.tagName };
+  if (el.id) result.id = el.id;
+  if (typeof el.className === "string" && el.className) {
+    result.classes = el.className.slice(0, CLASS_SNIPPET_MAX);
+  }
+  const text = (el.textContent || "").trim().replace(/\s+/g, " ");
+  if (text) result.text = text.slice(0, TEXT_SNIPPET_MAX);
+  const ariaLabel = el.getAttribute("aria-label");
+  if (ariaLabel) result.ariaLabel = ariaLabel.slice(0, TEXT_SNIPPET_MAX);
+  const testId = el.getAttribute("data-testid");
+  if (testId) result.dataTestId = testId.slice(0, TEXT_SNIPPET_MAX);
+  const role = el.getAttribute("role");
+  if (role) result.role = role;
+  result.rect = {
+    x: Math.round(rect.x),
+    y: Math.round(rect.y),
+    w: Math.round(rect.width),
+    h: Math.round(rect.height),
+  };
+  return result;
+}
+
+/**
+ * Identify the element the cursor is over. Two signals, in order:
+ *
+ *   1. `:hover` pseudo-class chain — what the browser says is currently
+ *      hovered. Most accurate when it's populated (cursor is physically
+ *      over the page).
+ *   2. `elementFromPoint(cursor.x, cursor.y)` — resolves from the last
+ *      known cursor position. Covers cases where `:hover` is empty (JS-
+ *      dispatched events in tests, focus recently moved off the page,
+ *      touch devices).
+ *
+ * Zero listeners on this call path — the one pointermove listener that
+ * feeds `cursorTracker` is already in place and is `passive: true`.
+ */
+function captureHoveredElement(): HoveredElement | undefined {
+  if (typeof document === "undefined") return undefined;
+
+  // 1. :hover chain — deepest-first walk.
+  const hovered = document.querySelectorAll<HTMLElement>(":hover");
+  for (let i = hovered.length - 1; i >= 0; i--) {
+    const serialized = serializeElement(hovered[i]);
+    if (serialized) return serialized;
+  }
+
+  // 2. Fallback: resolve from last known cursor coordinates.
+  if (cursorTracker.hasPosition) {
+    const el = document.elementFromPoint(cursorTracker.x, cursorTracker.y) as HTMLElement | null;
+    if (el) {
+      // Walk up until we find an element that isn't our chrome.
+      let cursor: HTMLElement | null = el;
+      while (cursor) {
+        const serialized = serializeElement(cursor);
+        if (serialized) return serialized;
+        cursor = cursor.parentElement;
+      }
+    }
+  }
+
+  return undefined;
+}
+
 function decodeGuideState(dataParam: string | undefined): unknown {
   if (!dataParam) return undefined;
   try {
@@ -156,6 +262,10 @@ export function captureMeta(): FeedbackMeta {
   }
 
   const { nearestSection, sectionsInView, nearestSectionSource } = detectSectionsInView();
+  const hoveredElement = captureHoveredElement();
+  const cursor = cursorTracker.hasPosition
+    ? { x: cursorTracker.x, y: cursorTracker.y }
+    : undefined;
 
   return {
     url,
@@ -170,6 +280,8 @@ export function captureMeta(): FeedbackMeta {
     nearestSection,
     sectionsInView,
     nearestSectionSource,
+    hoveredElement,
+    cursor,
     capturedAt: Date.now(),
   };
 }

@@ -52,7 +52,45 @@ export interface FeedbackMeta {
    * as a weaker signal.
    */
   nearestSectionSource?: "hover" | "focus" | "viewport";
+  /**
+   * The deepest element the cursor was directly over at trigger time.
+   * Read from the `:hover` pseudo-class chain — no event listeners, no
+   * latency cost. Only populated when the user's cursor was actually
+   * over the page (e.g. shortcut fired while pointer was on-page).
+   */
+  hoveredElement?: HoveredElement;
+  /**
+   * Viewport-relative cursor hit point (px). Only captured when the
+   * cursor was over the page. Pairs with `hoveredElement` so a reviewer
+   * can pinpoint where, not just which element.
+   */
+  cursor?: { x: number; y: number };
   capturedAt: number;
+}
+
+/**
+ * Minimal fingerprint of the element the cursor was over. Enough for a
+ * reviewer to identify the specific thing the reporter was looking at
+ * (e.g. "the SOC 2 badge inside topic-security") without serializing
+ * the entire DOM subtree.
+ */
+export interface HoveredElement {
+  /** Tag name in uppercase, matching HTMLElement.tagName (e.g. "BUTTON"). */
+  tag: string;
+  /** `id` attribute if present. */
+  id?: string;
+  /** First ~100 chars of the className for visual identification. */
+  classes?: string;
+  /** First ~80 chars of the trimmed textContent — the element's visible label. */
+  text?: string;
+  /** `aria-label` if present — often the most semantic identifier. */
+  ariaLabel?: string;
+  /** `data-testid` if present — stable selector for reviewers writing repro tests. */
+  dataTestId?: string;
+  /** `role` attribute if present. */
+  role?: string;
+  /** Viewport-relative bounding rect at capture time. */
+  rect?: { x: number; y: number; w: number; h: number };
 }
 
 export interface FeedbackEntry {
