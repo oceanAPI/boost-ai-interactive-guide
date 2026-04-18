@@ -14,7 +14,6 @@ import SearchLogPanel from "@/components/SearchLogPanel";
 import { CustomerDossierCard } from "@/components/admin/CustomerDossierCard";
 import { PacManFeedbackButton } from "@/components/FeedbackBacklog";
 import { useFeedbackTrigger } from "@/hooks/useFeedbackTrigger";
-import { SectionReportPill } from "@/components/SectionReportPill";
 import type { DetectionResult } from "@/lib/company-detect";
 import {
   SLIDE_SECTIONS,
@@ -63,14 +62,8 @@ function CollapsibleSection({
     if (openSignal !== undefined && openSignal > 0) setOpen(true);
   }, [openSignal]);
 
-  // Stable, human-readable section id derived from the title. Used by
-  // the report pill so reviewers can see which admin group the comment
-  // is attached to (e.g. "admin/company-information").
-  const sectionId = `admin/${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
-
   return (
     <section className="bg-white rounded-xl border border-boost-border shadow-sm overflow-hidden">
-      <SectionReportPill sectionId={sectionId} displayName={title} />
       {/* Role=button instead of <button> so we can nest real interactive
           elements (like the Pac-Man feedback trigger) inside without
           breaking HTML button-nesting rules. */}
