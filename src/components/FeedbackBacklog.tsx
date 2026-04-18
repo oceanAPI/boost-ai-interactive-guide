@@ -116,6 +116,9 @@ export function FeedbackModal({ open, onClose, pending = {} }: FeedbackModalProp
   const [selectedLabel, setSelectedLabel] = useState<FeedbackLabel | undefined>(undefined);
   const [filterLabel, setFilterLabel] = useState<FeedbackLabel | "all">("all");
   const [showMetaJson, setShowMetaJson] = useState(false);
+  /** Per-entry copy-as-JSON flash state: holds the id of the entry that was
+   *  most recently copied so its button can briefly say "Copied!" */
+  const [copiedEntryId, setCopiedEntryId] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
@@ -225,6 +228,24 @@ export function FeedbackModal({ open, onClose, pending = {} }: FeedbackModalProp
   const handleRemove = async (id: string) => {
     await removeFeedback(id, shared ? adminPassword : undefined);
     await refresh();
+  };
+
+  /** Copy a single entry to the clipboard as pretty-printed JSON. The
+   *  full entry (including meta with URL, nearestSection, hoveredElement,
+   *  etc.) goes to the clipboard so it can be pasted into a bug-triage
+   *  chat or imported into a database later. */
+  const handleCopyEntry = async (entry: FeedbackEntry) => {
+    try {
+      const json = JSON.stringify(entry, null, 2);
+      await navigator.clipboard.writeText(json);
+      setCopiedEntryId(entry.id);
+      setTimeout(() => {
+        setCopiedEntryId((current) => (current === entry.id ? null : current));
+      }, 1500);
+    } catch {
+      // Clipboard write can fail (permission denied, non-HTTPS on older
+      // browsers). Silent — the entry is still visible in the modal.
+    }
   };
 
   const handleUnlock = async () => {
@@ -748,17 +769,41 @@ export function FeedbackModal({ open, onClose, pending = {} }: FeedbackModalProp
                       <span className="text-[10px] text-boost-muted tabular-nums shrink-0 mt-1">
                         {formatRelative(e.timestamp)}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemove(e.id)}
-                        className="opacity-0 group-hover:opacity-100 text-boost-muted/60 hover:text-boost-dark transition-opacity shrink-0 mt-0.5"
-                        aria-label="Delete entry"
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6" />
-                        </svg>
-                      </button>
+                      <div className="flex items-start gap-1 shrink-0 mt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handleCopyEntry(e)}
+                          className={`transition-opacity ${
+                            copiedEntryId === e.id
+                              ? "opacity-100 text-boost-green"
+                              : "opacity-0 group-hover:opacity-100 text-boost-muted/60 hover:text-boost-dark"
+                          }`}
+                          aria-label={copiedEntryId === e.id ? "Copied" : "Copy entry as JSON"}
+                          title={copiedEntryId === e.id ? "Copied!" : "Copy entry as JSON"}
+                        >
+                          {copiedEntryId === e.id ? (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          ) : (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                            </svg>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemove(e.id)}
+                          className="opacity-0 group-hover:opacity-100 text-boost-muted/60 hover:text-boost-dark transition-opacity"
+                          aria-label="Delete entry"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
