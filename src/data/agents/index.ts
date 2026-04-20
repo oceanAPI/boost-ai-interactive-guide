@@ -27,11 +27,11 @@ export {
 
 // Industry-specific imports
 import { BANKING_AGENTS, BANKING_STANDALONE, BANKING_TOPIC_GROUPS } from "./banking";
-import { INSURANCE_AGENTS, INSURANCE_TOPIC_GROUPS } from "./insurance";
-import { PENSION_AGENTS, PENSION_TOPIC_GROUPS } from "./pension";
-import { WEALTH_MANAGEMENT_AGENTS, WEALTH_MANAGEMENT_TOPIC_GROUPS } from "./wealth_management";
-import { FINTECH_AGENTS, FINTECH_TOPIC_GROUPS } from "./fintech";
-import { CREDIT_UNION_AGENTS, CREDIT_UNION_TOPIC_GROUPS } from "./credit_union";
+import { INSURANCE_AGENTS, INSURANCE_STANDALONE, INSURANCE_TOPIC_GROUPS } from "./insurance";
+import { PENSION_AGENTS, PENSION_STANDALONE, PENSION_TOPIC_GROUPS } from "./pension";
+import { WEALTH_MANAGEMENT_AGENTS, WEALTH_MANAGEMENT_STANDALONE, WEALTH_MANAGEMENT_TOPIC_GROUPS } from "./wealth_management";
+import { FINTECH_AGENTS, FINTECH_STANDALONE, FINTECH_TOPIC_GROUPS } from "./fintech";
+import { CREDIT_UNION_AGENTS, CREDIT_UNION_STANDALONE, CREDIT_UNION_TOPIC_GROUPS } from "./credit_union";
 import { SECURITY_AGENTS, SECURITY_TOPIC_GROUPS } from "./security";
 
 import type { AgentTier, OrchestratorConfig, SpecialistAgent, TopicGroup } from "./_types";
@@ -127,23 +127,23 @@ export const ORCHESTRATOR_BY_INDUSTRY: Record<string, OrchestratorConfig> = {
     topicGroups: BANKING_TOPIC_GROUPS,
   },
   insurance: {
-    standaloneAgents: [],
+    standaloneAgents: INSURANCE_STANDALONE,
     topicGroups: INSURANCE_TOPIC_GROUPS,
   },
   pension: {
-    standaloneAgents: [],
+    standaloneAgents: PENSION_STANDALONE,
     topicGroups: PENSION_TOPIC_GROUPS,
   },
   wealth_management: {
-    standaloneAgents: [],
+    standaloneAgents: WEALTH_MANAGEMENT_STANDALONE,
     topicGroups: WEALTH_MANAGEMENT_TOPIC_GROUPS,
   },
   fintech: {
-    standaloneAgents: [],
+    standaloneAgents: FINTECH_STANDALONE,
     topicGroups: FINTECH_TOPIC_GROUPS,
   },
   credit_union: {
-    standaloneAgents: [],
+    standaloneAgents: CREDIT_UNION_STANDALONE,
     topicGroups: CREDIT_UNION_TOPIC_GROUPS,
   },
   security: {

@@ -5,6 +5,8 @@ const agent: SpecialistAgent = {
   name: "Billing & Payments",
   icon: "banknote",
   automationRate: 84,
+  avgResolutionTime: "~2 min",
+  topTopic: "Premium payment methods",
   description: "Premium queries, payment deferrals, eFaktura, billing errors, payment method changes.",
   capabilities: [
     { title: "Premium inquiries", description: "Instant answers on premium amounts, due dates, and payment history" },

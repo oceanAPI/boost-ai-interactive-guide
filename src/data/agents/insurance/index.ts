@@ -24,6 +24,11 @@ import petInsurance from "./pet-insurance";
 import healthInsurance from "./health-insurance";
 import businessInsurance from "./business-insurance";
 
+// ─── Customer management (firm-level, cross-cuts every product + journey stage) ───
+import customerRelationship from "./customer-relationship";
+import generalInquiries from "./general-inquiries";
+import cancelOrChangePolicy from "./cancel-or-change-policy";
+
 // ─── Flat list of all insurance agents ───
 
 export const INSURANCE_AGENTS: SpecialistAgent[] = [
@@ -43,19 +48,31 @@ export const INSURANCE_AGENTS: SpecialistAgent[] = [
   petInsurance,
   healthInsurance,
   businessInsurance,
+  // Customer management
+  customerRelationship,
+  generalInquiries,
+  cancelOrChangePolicy,
+];
+
+// ─── Standalone agents (outside topic groups) ───
+// Customer relationship cross-cuts every product line and journey stage.
+
+export const INSURANCE_STANDALONE: SpecialistAgent[] = [
+  customerRelationship,
 ];
 
 // ─── Topic Groups ───
 //
-// Journey agents live under "Insurance" as the catch-all customer-lifecycle group.
-// Product-line agents live under "Product Lines" so they present as a proper
-// site-nav-aligned set alongside the journey bucket.
+// Journey agents live under "Customer lifecycle" as the catch-all customer-lifecycle group.
+// Product-line agents live under "Personal insurance" and "Business & pension" so they
+// present as a proper site-nav-aligned set alongside the journey bucket.
+// Firm-level customer management lives under "Customer management".
 
 export const INSURANCE_TOPIC_GROUPS: TopicGroup[] = [
   {
     key: "insurance_journey",
-    label: "Insurance",
-    icon: "umbrella",
+    label: "Customer lifecycle",
+    icon: "route",
     agents: [
       proactiveOutreach,
       salesAndQuotes,
@@ -63,13 +80,12 @@ export const INSURANCE_TOPIC_GROUPS: TopicGroup[] = [
       claims,
       billingAndPayments,
       coverageAndPolicy,
-      pensionAndSavings,
     ],
   },
   {
-    key: "insurance_product_lines",
-    label: "Product Lines",
-    icon: "hand-protection",
+    key: "insurance_personal",
+    label: "Personal insurance",
+    icon: "umbrella",
     agents: [
       motorInsurance,
       homeInsurance,
@@ -77,7 +93,24 @@ export const INSURANCE_TOPIC_GROUPS: TopicGroup[] = [
       travelInsurance,
       petInsurance,
       healthInsurance,
+    ],
+  },
+  {
+    key: "insurance_business_pension",
+    label: "Business & pension",
+    icon: "hand-protection",
+    agents: [
       businessInsurance,
+      pensionAndSavings,
+    ],
+  },
+  {
+    key: "insurance_customer_management",
+    label: "Customer management",
+    icon: "users",
+    agents: [
+      generalInquiries,
+      cancelOrChangePolicy,
     ],
   },
 ];
