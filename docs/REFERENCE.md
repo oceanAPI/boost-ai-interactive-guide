@@ -1,3 +1,34 @@
+---
+
+> **Status: PARTIALLY STALE — last verified 2026-04-20**
+> This file is a lookup resource, not an onboarding doc. Use it to find
+> where a specific element lives (CSS tokens, animations, UI components,
+> hooks, orchestrator code paths). Do NOT trust it for "what does the app
+> do overall" — for that, read `docs/ARCHITECTURE.md`.
+>
+> **Trust rule (from project memory):** when REFERENCE.md disagrees with
+> `src/app/globals.css` or `src/**/_types.ts`, trust the code.
+
+## Freshness map
+
+**Trust these sections** (verified current 2026-04-20):
+- Color System (design tokens match globals.css)
+- CSS Animation Reference (keyframes still match)
+- UI Component Library (all listed components exist)
+- Hooks table (useScrollReveal, useCountUp in use)
+- Orchestrator / Flow / Agent architecture (code paths current)
+- Topic Data Architecture (topic-registry mapping valid)
+
+**Do NOT trust these sections** (known stale):
+- Page Architecture tree — predates audience-defaults layer and 9 new CE sections
+- Section 09 / 10 numbering — drifts as sections change
+- Home redirect description — `/` is now the 3-card audience chooser
+- Admin / Form Builder — now 10 collapsible sections, not 6-step linear
+- Agent Data Architecture — missing pension, wealth_management, fintech, credit_union, security industries
+- Missing entirely: Pac-Man (FeedbackBacklog), Cloudflare Worker, Feed-me-log, customer-fixtures.ts, audience-sections.ts, company-patterns.ts
+
+---
+
 # Interactive Guide — Complete Reference Map
 
 > **How to use this document:** Find the visual element you want to change, then follow the file path and component name to make targeted edits. Each entry includes the exact file, exported component, and notable internal sub-components.
