@@ -650,7 +650,16 @@ function VolumeTile({
 }) {
   const ready = useTabActivation(active);
   const counted = useCountUp({ target: value, duration: 1400, enabled: ready });
-  const formatted = useMemo(() => counted.toLocaleString(), [counted]);
+  // Compact + exact forms. Compact ("95M") is the big display that always
+  // fits the tile; exact ("95,000,000") sits below as subtitle context so
+  // the number is still verifiable at a glance.
+  const compact = useMemo(() => {
+    if (counted >= 1_000_000_000) return (counted / 1_000_000_000).toFixed(counted >= 10_000_000_000 ? 0 : 1).replace(/\.0$/, "") + "B";
+    if (counted >= 1_000_000) return (counted / 1_000_000).toFixed(counted >= 10_000_000 ? 0 : 1).replace(/\.0$/, "") + "M";
+    if (counted >= 10_000) return Math.round(counted / 1_000) + "K";
+    return counted.toLocaleString();
+  }, [counted]);
+  const exact = useMemo(() => counted.toLocaleString(), [counted]);
 
   // Synthetic sparkline points — deterministic curve that hints at
   // a 12-month ramp (slow start, steep middle, plateau). Purely
@@ -681,9 +690,14 @@ function VolumeTile({
         {label}
       </p>
       <p className="mt-2 text-2xl sm:text-3xl font-bold text-boost-dark tabular-nums leading-none">
-        {formatted}
+        {compact}
       </p>
-      <p className="text-xs text-boost-muted mt-1">{suffix}</p>
+      <p className="text-[11px] text-boost-dark/70 mt-1 tabular-nums">
+        {exact}
+      </p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-boost-muted mt-1">
+        {suffix}
+      </p>
 
       {/* Sparkline */}
       <svg viewBox="0 0 100 30" className="mt-4 w-full h-7" preserveAspectRatio="none" aria-hidden="true">
