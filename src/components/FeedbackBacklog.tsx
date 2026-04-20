@@ -77,10 +77,14 @@ function TargetingOverlay({
   active,
   onComplete,
   onCancel,
+  cursorRef,
 }: {
   active: boolean;
   onComplete: (x: number, y: number) => void;
   onCancel: () => void;
+  /** Optional to stay HMR-safe: during a hot update the overlay may
+   *  remount one render ahead of the provider passing the ref. */
+  cursorRef?: React.RefObject<{ x: number; y: number; fresh: boolean }>;
 }) {
   const dotRef = useRef<HTMLDivElement | null>(null);
   const positionedRef = useRef(false);
@@ -106,6 +110,16 @@ function TargetingOverlay({
         positionedRef.current = true;
       }
     };
+
+    // Seed the reticle from the global cursor tracker so it appears
+    // immediately at the current cursor position when ⌘+. fires —
+    // instead of waiting for the user's first mousemove after activation
+    // (which left them staring at an invisible reticle if they were
+    // idle). `fresh` guards against the pre-first-move 0,0 default.
+    const seed = cursorRef?.current;
+    if (seed && seed.fresh) {
+      moveDot(seed.x, seed.y);
+    }
 
     const onPointerMove = (e: PointerEvent) => moveDot(e.clientX, e.clientY);
 
@@ -148,33 +162,46 @@ function TargetingOverlay({
       window.removeEventListener("click", onClick, { capture: true } as EventListenerOptions);
       window.removeEventListener("keydown", onKey, { capture: true } as EventListenerOptions);
     };
-  }, [active, onComplete, onCancel]);
+  }, [active, onComplete, onCancel, cursorRef]);
 
   if (!active) return null;
 
   return (
     <>
-      {/* Instruction chip — top-center of the viewport. pointer-events
-          off so it never interferes with clicks underneath it. */}
+      {/* Left-edge mode indicator — a slim full-height green strip
+          plus a tiny corner hint pill. Shape chosen for two reasons:
+          (1) right edge already hosts the pin-drop sidebar, so
+          separating affordances across opposite edges prevents any
+          collision; (2) a thin edge strip never overlaps content
+          regardless of scroll / route / banner height. The corner
+          pill carries the keyboard hint without eating real estate. */}
       <div
-        className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] pointer-events-none"
         aria-live="polite"
+        className="fixed inset-y-0 left-0 z-[60] pointer-events-none flex items-start"
       >
-        <div
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-lg"
+        <span
+          aria-hidden="true"
+          className="w-[3px] h-full"
           style={{
             background:
-              "linear-gradient(135deg, rgba(75,30,82,0.97) 0%, rgba(55,22,62,1) 100%)",
+              "linear-gradient(180deg, rgba(32,130,105,0.95) 0%, rgba(54,181,149,1) 100%)",
+            boxShadow: "0 0 12px rgba(54,181,149,0.45)",
           }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light animate-pulse" />
-          Click anywhere to report
-          <span className="text-white/40">·</span>
-          <span className="text-white/60">Esc to cancel</span>
-        </div>
+        />
+        {/* Corner pill — pushed to mt-32 so it clears both the /admin
+            work-mode banner and the sticky admin header regardless of
+            which route we're in. On routes without a banner or header
+            the pill just sits a little further down; never fights
+            anything. */}
+        <span className="inline-flex items-center gap-2 ml-2 mt-32 px-2.5 py-1 rounded-md bg-white shadow-md border border-boost-green-light/40 text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-green">
+          <span className="w-1 h-1 rounded-full bg-boost-green-light animate-pulse" />
+          Aim &amp; click
+          <span className="text-boost-muted/50">·</span>
+          <span className="text-boost-muted">Esc</span>
+        </span>
       </div>
 
-      {/* Green reticle — follows the cursor via transform. Fixed
+      {/* Pac-Man reticle — follows the cursor via transform. Fixed
           position, pointer-events: none so elementFromPoint resolves to
           the underlying target at click time. Opacity starts at 0 and
           fades in on first pointermove so it doesn't flash at (0,0)
@@ -184,29 +211,330 @@ function TargetingOverlay({
         aria-hidden="true"
         className="fixed top-0 left-0 z-[61] pointer-events-none"
         style={{
-          width: "16px",
-          height: "16px",
+          width: "22px",
+          height: "22px",
           opacity: 0,
           transition: "opacity 120ms ease-out",
         }}
       >
-        {/* Outer pulsing ring — visible halo around the dot. */}
+        {/* Outer pulsing halo — boost-green-light at low opacity so it
+            reads as a directional cue without dominating the glyph. */}
         <span
-          className="absolute inset-[-6px] rounded-full border-2 animate-ping"
+          className="absolute inset-[-7px] rounded-full border-2 animate-ping"
           style={{
-            borderColor: "rgb(149, 213, 80)",
+            borderColor: "#36b595",
             opacity: 0.45,
           }}
         />
-        {/* Solid core — Pac-Man green. */}
+        {/* Pac-Man body — the brand SVG, masked to boost-green-light so
+            it inherits the admin + Feed-me-log visual vocabulary. A soft
+            white outer glow keeps it legible over dark or busy hero
+            backgrounds. */}
         <span
-          className="absolute inset-0 rounded-full shadow-md"
+          className="absolute inset-0"
           style={{
-            backgroundColor: "rgb(149, 213, 80)",
-            boxShadow: "0 0 0 2px rgba(255,255,255,0.9), 0 2px 8px rgba(0,0,0,0.2)",
+            backgroundColor: "#36b595",
+            WebkitMaskImage: `url(${assetPath("/images/pac-man.svg")})`,
+            maskImage: `url(${assetPath("/images/pac-man.svg")})`,
+            WebkitMaskSize: "contain",
+            maskSize: "contain",
+            WebkitMaskPosition: "center",
+            maskPosition: "center",
+            WebkitMaskRepeat: "no-repeat",
+            maskRepeat: "no-repeat",
+            filter: "drop-shadow(0 0 2px rgba(255,255,255,0.9)) drop-shadow(0 2px 4px rgba(0,0,0,0.25))",
           }}
         />
       </div>
+    </>
+  );
+}
+
+/* ─── Pin-drop overlay (purple Pac-Man walkthrough mode) ─────
+ * Entered via the Left+Right Arrow chord in FeedbackProvider.
+ * A purple Pac-Man reticle follows the cursor. Up drops a pin +
+ * autofocused inline input. Enter commits the note (pin stays
+ * dimmed on page). Down sends every commited note as a separate
+ * feedback entry (label="information"). Esc discards everything.
+ *
+ * Use case: live presentation walkthrough — the presenter or
+ * customer spots something worth noting, drops a purple pin with
+ * a short note, continues, then flushes all notes at the end.
+ */
+interface PinDraft {
+  id: string;
+  /** Viewport-relative cursor coords at drop time (used for meta capture). */
+  x: number;
+  y: number;
+  /** Document-relative coords — pinned to page content so pins scroll with
+   *  the section they were dropped on instead of floating over the viewport. */
+  pageX: number;
+  pageY: number;
+  text: string;
+  meta: import("@/lib/feedback-backlog").FeedbackMeta | null;
+}
+
+function PinDropOverlay({
+  active,
+  onComplete,
+  onCancel,
+  cursorRef,
+}: {
+  active: boolean;
+  onComplete: (pins: PinDraft[]) => void;
+  onCancel: () => void;
+  /** Optional to stay HMR-safe: during a hot update the overlay may
+   *  remount one render ahead of the provider passing the ref. */
+  cursorRef?: React.RefObject<{ x: number; y: number; fresh: boolean }>;
+}) {
+  const [pins, setPins] = useState<PinDraft[]>([]);
+  const [activeInputId, setActiveInputId] = useState<string | null>(null);
+  const pinsRef = useRef(pins);
+  const activeInputIdRef = useRef(activeInputId);
+  pinsRef.current = pins;
+  activeInputIdRef.current = activeInputId;
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Focus the input whenever a new pin becomes active.
+  useEffect(() => {
+    if (activeInputId && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [activeInputId]);
+
+  useEffect(() => {
+    if (!active) {
+      setPins([]);
+      setActiveInputId(null);
+      return;
+    }
+
+    const dropPin = () => {
+      const ref = cursorRef?.current;
+      if (!ref || !ref.fresh) return; // Cursor hasn't moved since page load.
+      const { x, y } = ref;
+      const id = `pin-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      let meta: PinDraft["meta"] = null;
+      try {
+        meta = captureMetaAtPoint(x, y);
+      } catch {
+        meta = null;
+      }
+      // Translate viewport coords → document coords so the pin stays
+      // anchored to the page content when the user scrolls.
+      const pageX = x + window.scrollX;
+      const pageY = y + window.scrollY;
+      setPins((prev) => [...prev, { id, x, y, pageX, pageY, text: "", meta }]);
+      setActiveInputId(id);
+    };
+
+    // Mode just activated — open the comment field immediately at the
+    // current cursor. The Pac-Man reticle is intentionally absent here;
+    // Pac-Man is the ⌘+. funnel, not the pin-drop affordance.
+    dropPin();
+
+    const onKey = (e: KeyboardEvent) => {
+      // When a textarea is focused (the inline note input), let its own
+      // keydown handler drive Enter / Esc. We only care about the raw
+      // walkthrough shortcuts at the document level here.
+      const el = document.activeElement as HTMLElement | null;
+      const inInput = !!el && (el.tagName === "TEXTAREA" || el.tagName === "INPUT" || el.isContentEditable);
+      if (inInput) return;
+
+      switch (e.key) {
+        case "ArrowUp":
+          e.preventDefault();
+          e.stopPropagation();
+          dropPin();
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          e.stopPropagation();
+          // Flush every pin with non-empty text — caller iterates and
+          // calls addFeedback once per pin.
+          onComplete(pinsRef.current.filter((p) => p.text.trim().length > 0));
+          break;
+        case "Escape":
+          e.preventDefault();
+          e.stopPropagation();
+          onCancel();
+          break;
+        case "ArrowLeft":
+        case "ArrowRight":
+          // Suppress page scroll while in mode — user is holding / tapping
+          // arrows as part of the chord re-entry attempt or just noise.
+          e.preventDefault();
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", onKey, { capture: true });
+    return () => {
+      window.removeEventListener("keydown", onKey, { capture: true } as EventListenerOptions);
+    };
+  }, [active, onComplete, onCancel, cursorRef]);
+
+  if (!active) return null;
+
+  const activePin = pins.find((p) => p.id === activeInputId) ?? null;
+  const noteCount = pins.filter((p) => p.text.trim().length > 0).length;
+
+  // Speech-bubble mask — the "comment left here" marker. Pac-Man is
+  // intentionally reserved for the ⌘+. funnel so the two modes stay
+  // visually distinct.
+  const flagMaskStyle = {
+    WebkitMaskImage: `url(${assetPath("/icons/purple/speech.svg")})`,
+    maskImage: `url(${assetPath("/icons/purple/speech.svg")})`,
+    WebkitMaskSize: "contain" as const,
+    maskSize: "contain" as const,
+    WebkitMaskPosition: "center" as const,
+    maskPosition: "center" as const,
+    WebkitMaskRepeat: "no-repeat" as const,
+    maskRepeat: "no-repeat" as const,
+  };
+
+  return (
+    <>
+      {/* Right-edge mode indicator — mirror of the targeting-mode
+          left-edge strip. Slim full-height purple strip + a quiet
+          top-right corner pill. Same visual grammar as aim-mode so
+          the two walkthrough tools read as a matched pair:
+            · left edge + green  → Pac-Man targeting (⌘+.)
+            · right edge + purple → note drop (←+→)
+          The corner pill carries live state (note count + keyboard
+          hints) without eating content real estate. */}
+      <div
+        aria-live="polite"
+        className="fixed inset-y-0 right-0 z-[60] pointer-events-none flex items-start justify-end"
+      >
+        <span
+          aria-hidden="true"
+          className="inline-flex items-center gap-2 mr-2 mt-32 px-2.5 py-1 rounded-md bg-white shadow-md border border-boost-purple/40 text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-purple"
+        >
+          <span
+            aria-hidden="true"
+            className="w-3 h-3"
+            style={{ backgroundColor: "#59195d", ...flagMaskStyle }}
+          />
+          {noteCount === 0 ? "Note ready" : `${noteCount} note${noteCount === 1 ? "" : "s"}`}
+          <span className="text-boost-muted/50">·</span>
+          <span className="text-boost-muted">&uarr; &darr; Esc</span>
+        </span>
+        <span
+          aria-hidden="true"
+          className="w-[3px] h-full"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(89,25,93,0.95) 0%, rgba(69,17,73,1) 100%)",
+            boxShadow: "0 0 12px rgba(89,25,93,0.45)",
+          }}
+        />
+      </div>
+
+      {/* Dropped pin markers — anchored to the document (pageX/pageY)
+          using position: absolute so they scroll with the page content
+          they were dropped on. Clicking a pin re-opens its inline input
+          pre-filled with the saved note so the presenter can read,
+          edit, or delete it (Esc in the input discards that pin).
+          Hidden for the currently-active pin since its inline input
+          already shows it. */}
+      {pins.map((p) => {
+        if (p.id === activeInputId) return null;
+        const hasText = p.text.trim().length > 0;
+        return (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => setActiveInputId(p.id)}
+            aria-label={hasText ? `Edit note: ${p.text.slice(0, 40)}` : "Edit empty note"}
+            title={hasText ? p.text : "Empty note"}
+            className="absolute z-[60] group focus-visible:outline-none"
+            style={{
+              width: "22px",
+              height: "22px",
+              top: p.pageY,
+              left: p.pageX,
+              transform: "translate(-50%, -100%)",
+              padding: 0,
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 transition-transform duration-150 group-hover:scale-110 group-focus-visible:scale-110"
+              style={{
+                backgroundColor: "#59195d",
+                filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.18))",
+                opacity: hasText ? 0.85 : 0.45,
+                ...flagMaskStyle,
+              }}
+            />
+            {/* Focus ring — uses boost-green-light per global CSS rule */}
+            <span
+              aria-hidden="true"
+              className="absolute inset-[-4px] rounded-full ring-2 ring-boost-green-light opacity-0 group-focus-visible:opacity-100 transition-opacity"
+            />
+          </button>
+        );
+      })}
+
+      {/* Inline comment input for the currently-active pin. Absolute-
+          positioned in document space so it stays attached to the pin
+          even if the user scrolls. Offset 18px down-right so the input
+          never overlaps the drop point. */}
+      {activePin && (
+        <div
+          className="absolute z-[62]"
+          style={{
+            top: activePin.pageY + 18,
+            left: activePin.pageX + 18,
+          }}
+        >
+          <div className="flex items-start gap-2 p-2 rounded-lg bg-white shadow-xl border border-boost-border/70 animate-fade-in">
+            <span
+              aria-hidden="true"
+              className="w-4 h-4 mt-1 flex-shrink-0"
+              style={{ backgroundColor: "#59195d", ...flagMaskStyle }}
+            />
+            <textarea
+              ref={inputRef}
+              rows={1}
+              placeholder="Note — Enter to save · Esc to discard"
+              value={activePin.text}
+              onChange={(e) => {
+                const text = e.target.value;
+                setPins((prev) =>
+                  prev.map((p) => (p.id === activePin.id ? { ...p, text } : p)),
+                );
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  // Commit: if empty, discard this pin; otherwise keep it
+                  // as a dimmed marker + clear the active-input flag so
+                  // the reticle takes over again.
+                  if (!activePin.text.trim()) {
+                    setPins((prev) => prev.filter((p) => p.id !== activePin.id));
+                  }
+                  setActiveInputId(null);
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  // Discard only this pin, stay in pin mode.
+                  setPins((prev) => prev.filter((p) => p.id !== activePin.id));
+                  setActiveInputId(null);
+                }
+              }}
+              className="text-[12px] leading-snug text-boost-text placeholder:text-boost-muted outline-none resize-none bg-transparent"
+              style={{ minWidth: "220px", maxWidth: "300px" }}
+              autoFocus
+            />
+          </div>
+        </div>
+      )}
+
     </>
   );
 }
@@ -1050,8 +1378,32 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<PendingContext>({});
   const [targeting, setTargeting] = useState(false);
+  const [pinning, setPinning] = useState(false);
   const openRef = useRef(open);
   const targetingRef = useRef(targeting);
+  const pinningRef = useRef(pinning);
+
+  /**
+   * Always-on cursor tracker. Captures the latest viewport coords on
+   * every pointermove so features that trigger via keyboard chords
+   * (e.g. Left+Right → pin-drop) can read "where is the cursor right
+   * now?" at the moment the chord fires — without waiting for the
+   * user to move the mouse again after activation. `fresh` flips true
+   * on the first move so we can distinguish "cursor at 0,0 because
+   * never moved" from "cursor genuinely at 0,0".
+   */
+  const globalCursorRef = useRef<{ x: number; y: number; fresh: boolean }>({
+    x: 0,
+    y: 0,
+    fresh: false,
+  });
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      globalCursorRef.current = { x: e.clientX, y: e.clientY, fresh: true };
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => window.removeEventListener("pointermove", onMove);
+  }, []);
 
   useEffect(() => {
     openRef.current = open;
@@ -1059,6 +1411,9 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     targetingRef.current = targeting;
   }, [targeting]);
+  useEffect(() => {
+    pinningRef.current = pinning;
+  }, [pinning]);
 
   const openWith = useCallback((ctx: PendingContext = {}) => {
     setPending(ctx);
@@ -1099,6 +1454,39 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     setTargeting(false);
   }, []);
 
+  /** Submit every committed pin as its own feedback entry. Runs
+   *  sequentially so the order in the log matches the order the
+   *  presenter dropped them in. Empty-text pins are filtered inside
+   *  PinDropOverlay before this fires. */
+  const onPinsComplete = useCallback(
+    async (pins: PinDraft[]) => {
+      setPinning(false);
+      for (const pin of pins) {
+        const text = pin.text.trim();
+        if (!text) continue;
+        try {
+          await addFeedback(text, {
+            // Walkthrough pins land as "information" for now — the
+            // closest neutral label in the shipped set. If a dedicated
+            // "comment" label gets added later, swap it here + update
+            // the worker's ALLOWED_LABELS.
+            label: "information",
+            sectionRef: pin.meta?.nearestSection,
+            meta: pin.meta ?? undefined,
+          });
+        } catch (err) {
+          // Swallow — one bad pin shouldn't kill the flush.
+          console.warn("pin submit failed", err);
+        }
+      }
+    },
+    [],
+  );
+
+  const onPinsCancel = useCallback(() => {
+    setPinning(false);
+  }, []);
+
   // Global shortcut: Cmd/Ctrl+. (period). Hardened:
   // - never throws into the event loop
   // - preventDefault only on exact match
@@ -1123,7 +1511,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
         ) {
           return;
         }
-        if (openRef.current || targetingRef.current) return;
+        if (openRef.current || targetingRef.current || pinningRef.current) return;
         e.preventDefault();
         setTargeting(true);
       } catch (err) {
@@ -1133,6 +1521,55 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  // Chord: Left + Right Arrow held simultaneously enters pin-drop mode.
+  // Arrow keys repeat on hold, so we track per-key down/up state in refs
+  // and treat "both currently held" as the trigger — regardless of which
+  // one was pressed first. Ignored inside inputs / when another mode is
+  // already active, and preventDefault'd when fired so the page doesn't
+  // also horizontally scroll.
+  useEffect(() => {
+    const leftDown = { current: false };
+    const rightDown = { current: false };
+
+    const onDown = (e: KeyboardEvent) => {
+      try {
+        if (e.shiftKey || e.altKey || e.metaKey || e.ctrlKey) return;
+        const el = document.activeElement as HTMLElement | null;
+        if (
+          el &&
+          (el.tagName === "INPUT" ||
+            el.tagName === "TEXTAREA" ||
+            el.isContentEditable)
+        ) {
+          return;
+        }
+        if (e.key === "ArrowLeft") leftDown.current = true;
+        else if (e.key === "ArrowRight") rightDown.current = true;
+        else return;
+
+        if (leftDown.current && rightDown.current) {
+          if (openRef.current || targetingRef.current || pinningRef.current) return;
+          e.preventDefault();
+          setPinning(true);
+        }
+      } catch (err) {
+        console.warn("pin-drop chord handler error", err);
+      }
+    };
+
+    const onUp = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") leftDown.current = false;
+      else if (e.key === "ArrowRight") rightDown.current = false;
+    };
+
+    window.addEventListener("keydown", onDown);
+    window.addEventListener("keyup", onUp);
+    return () => {
+      window.removeEventListener("keydown", onDown);
+      window.removeEventListener("keyup", onUp);
+    };
   }, []);
 
   const value = useMemo<FeedbackTriggerValue>(
@@ -1147,6 +1584,13 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
         active={targeting}
         onComplete={onTargetingComplete}
         onCancel={onTargetingCancel}
+        cursorRef={globalCursorRef}
+      />
+      <PinDropOverlay
+        active={pinning}
+        onComplete={onPinsComplete}
+        onCancel={onPinsCancel}
+        cursorRef={globalCursorRef}
       />
       <FeedbackModal open={open} onClose={close} pending={pending} />
     </FeedbackTriggerContext.Provider>

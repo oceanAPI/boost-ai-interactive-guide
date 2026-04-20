@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { assetPath } from "@/lib/asset-path";
 import { INTEGRATION_CATEGORIES } from "@/data/integrations";
-import { INDUSTRIES, SUPPORTING_DEPARTMENTS, INDUSTRY_VARIANTS } from "@/data/agents";
+import { INDUSTRIES, HIDDEN_INDUSTRIES, SUPPORTING_DEPARTMENTS, INDUSTRY_VARIANTS } from "@/data/agents";
 import { encodeGuideData, decodeGuideData } from "@/lib/url-encoding";
 import { generateSOWPdf } from "@/lib/generate-sow-pdf";
 import SalesforceImportModal from "@/components/SalesforceImportModal";
@@ -27,8 +28,9 @@ import {
   type SectionGroup,
   type SectionPreset,
 } from "@/lib/slide-sections";
+import { AUDIENCE_DEFAULTS } from "@/data/audience-sections";
 import { CASE_STUDIES } from "@/data/case-studies";
-import type { GuideFormData, ChannelVolumes, IntegrationSelections, PricingModel, ResourceAllocation } from "@/lib/types";
+import type { GuideFormData, ChannelVolumes, IntegrationSelections, PricingModel, ResourceAllocation, Audience } from "@/lib/types";
 
 /* ─── Collapsible Section ─── */
 function CollapsibleSection({
@@ -271,6 +273,19 @@ export default function AdminPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  /* ─── Audience detection (?audience=sales|customer-excellence|professional-services) ───
+   *  Lifted from the URL on mount. Null until read so the banner never
+   *  flashes during SSR hydration. `"sales"` and `null` both render the
+   *  existing Sales admin with zero visual change. */
+  const [audience, setAudience] = useState<Audience | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = new URLSearchParams(window.location.search).get("audience");
+    if (raw === "sales" || raw === "customer-excellence" || raw === "professional-services") {
+      setAudience(raw);
+    }
+  }, []);
+
   /* ─── URL-based prefill (?prefill=<base64>) ─── */
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -394,11 +409,18 @@ export default function AdminPage() {
     });
   };
 
-  /** Actual generate — called after any pre-checks (e.g. preset nudge) pass. */
+  /** Actual generate — called after any pre-checks (e.g. preset nudge) pass.
+   *  Threads the current `audience` through to the guide route so the
+   *  guide renderer can filter sections by audience defaults. Sales
+   *  (no audience param) generates the same URL as before —
+   *  bookmark-compatible. */
   const proceedWithGenerate = () => {
     const encoded = encodeGuideData(form);
-    const sections = selectedSectionIds.join(",");
-    router.push(`/guide?data=${encoded}&sections=${sections}`);
+    const params = new URLSearchParams();
+    params.set("data", encoded);
+    if (audience) params.set("audience", audience);
+    params.set("sections", selectedSectionIds.join(","));
+    router.push(`/guide?${params.toString()}`);
   };
 
   const handleSubmit = () => {
@@ -443,6 +465,20 @@ export default function AdminPage() {
    * list (toggle, reorder, bulk action). Combined with
    * lastAppliedPresetKey for the Generate-time nudge. */
   const [hasTouchedSections, setHasTouchedSections] = useState(false);
+
+  /* Apply per-audience defaults once the audience is read from the URL.
+   * Runs exactly once per audience transition (null → set) because
+   * audience is read on mount and never mutated after.
+   *
+   * Bare /admin (no ?audience=) skips this block and keeps today's
+   * SLIDE_SECTIONS-based defaults — zero change for existing bookmarks. */
+  useEffect(() => {
+    if (!audience) return;
+    const defaults = new Set(AUDIENCE_DEFAULTS[audience]);
+    setSectionItems((prev) =>
+      prev.map((item) => ({ ...item, enabled: defaults.has(item.id) })),
+    );
+  }, [audience]);
 
   const toggleSection = (id: string) => {
     setHasTouchedSections(true);
@@ -569,17 +605,62 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-boost-surface">
+      {/* Audience banner — renders for any audience routed from the
+          landing page (Sales / CE / PS). Bare /admin without any
+          ?audience param stays banner-free, preserving every existing
+          bookmark. The strip is non-sticky so it scrolls away on
+          content; the "Change mode" link is always reachable by
+          scrolling back to top or re-visiting /. */}
+      {audience ? (
+        <div className="bg-boost-purple text-white">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <span
+                aria-hidden="true"
+                className="w-1.5 h-1.5 rounded-full bg-boost-green-light flex-shrink-0"
+              />
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] truncate">
+                {audience === "sales"
+                  ? "Sales mode"
+                  : audience === "customer-excellence"
+                  ? "Customer Excellence mode"
+                  : "Professional Services mode"}
+                <span className="text-white/50 mx-2">·</span>
+                <span className="text-white/70 normal-case tracking-normal font-normal">
+                  {audience === "sales"
+                    ? "Prospect-facing guide assembly."
+                    : audience === "customer-excellence"
+                    ? "Post-sale reviews, success planning, inspiration."
+                    : "Scoping, architecture, delivery."}
+                </span>
+              </p>
+            </div>
+            <a
+              href="/"
+              className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 focus-visible:ring-offset-boost-purple rounded-sm px-2 py-0.5 whitespace-nowrap"
+            >
+              ← Change mode
+            </a>
+          </div>
+        </div>
+      ) : null}
+
       {/* Header */}
       <header className="border-b border-boost-border bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={assetPath("/brand/boost_logo_purple-_main.svg")}
-              alt="boost.ai"
-              className="h-5 sm:h-6 w-auto flex-shrink-0"
-            />
-            <span className="text-boost-muted text-xs sm:text-sm hidden sm:inline">Guide Builder</span>
+            <Link
+              href="/"
+              aria-label="Back to workspace picker"
+              className="flex-shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 hover:opacity-80 transition-opacity"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={assetPath("/brand/boost_logo_purple-_main.svg")}
+                alt="boost.ai"
+                className="h-5 sm:h-6 w-auto"
+              />
+            </Link>
           </div>
           <div className="flex items-center gap-1 sm:gap-1.5">
             <button
@@ -633,6 +714,14 @@ export default function AdminPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-4">
+        {/* Sections 1 + 2 are SHARED customer metadata \u2014 rendered
+            for every audience. Company identity, contact, start date,
+            and the customer's vertical drive block defaults (agenda
+            mentions the company name; SWOT frames around the industry;
+            benchmarking cohort filters by vertical). Without these
+            fields populated the CE blocks pre-fill with placeholders
+            and the generated guide reads generic. */}
+
         {/* 1 — Company Info */}
         <CollapsibleSection
           number={1}
@@ -774,7 +863,7 @@ export default function AdminPage() {
           />
 
           <AdminChipRow>
-            {INDUSTRIES.map((ind) => (
+            {INDUSTRIES.filter((ind) => !HIDDEN_INDUSTRIES.has(ind.key)).map((ind) => (
               <AdminChip
                 key={ind.key}
                 active={form.areas_of_interest.includes(ind.key)}
@@ -1690,7 +1779,6 @@ export default function AdminPage() {
             </div>
           </div>
         </CollapsibleSection>
-
       </main>
 
       {/* Salesforce import modal */}

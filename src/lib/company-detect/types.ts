@@ -6,7 +6,7 @@
  * lookup, or a backend worker), keep this type stable and the UI keeps working.
  */
 
-import type { GuideFormData } from "@/lib/types";
+import type { Customer } from "@/lib/types";
 
 /** Where the detection answer came from. Drives UI treatment (badge, colour). */
 export type DetectionSource = "curated" | "web" | "none";
@@ -30,8 +30,11 @@ export interface DetectionResult {
     summary?: string;
   };
 
-  /** The actual form data to merge when the AE confirms. */
-  prefill?: Partial<GuideFormData>;
+  /** The actual customer data to merge when the AE confirms. Uses
+   *  `Partial<Customer>` (superset of GuideFormData) so CE/PS-owned
+   *  fields can ride through detection — admin consumers that only
+   *  read GuideFormData fields stay compatible. */
+  prefill?: Partial<Customer>;
 
   /** For debugging / dev — the raw source that produced the guess. Not displayed. */
   debug?: {

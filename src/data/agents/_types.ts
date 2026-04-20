@@ -103,9 +103,22 @@ export const INDUSTRIES = [
   { key: "credit_union", label: "Credit Union", description: "Member services, lending, account management" },
   { key: "fintech", label: "Fintech", description: "Digital payments, lending platforms, neobanking" },
   { key: "pension", label: "Pension & Retirement", description: "Pension administration, retirement planning, fund management" },
+  { key: "security", label: "Security", description: "Alarm monitoring, subscription security, service dispatch, emergency response" },
 ] as const;
 
 export type IndustryKey = (typeof INDUSTRIES)[number]["key"];
+
+/**
+ * Industries that are valid in the data model but hidden from the default
+ * admin Section 2 chip row. Used to keep non-FS POCs off the sales-team
+ * surface while still accepting the key when set programmatically (e.g.
+ * via a company-patterns.ts prefill).
+ *
+ * Implementation: admin filters `INDUSTRIES.filter(i => !HIDDEN_INDUSTRIES.has(i.key))`
+ * when rendering chips; the orchestrator + variant map still accept the key
+ * so prefilled guides render normally.
+ */
+export const HIDDEN_INDUSTRIES: ReadonlySet<string> = new Set(["security"]);
 
 // ─── Industry Variants ───
 //
@@ -238,6 +251,23 @@ export const INDUSTRY_VARIANTS: Record<string, IndustryVariant[]> = {
       key: "pension:personal",
       label: "Personal / DC",
       description: "Individual retirement accounts, mobile-led pension apps",
+    },
+  ],
+  security: [
+    {
+      key: "security:residential",
+      label: "Residential / Consumer",
+      description: "Single-dwelling subscribers — alarm monitoring, smart-home devices, self-install + pro-install",
+    },
+    {
+      key: "security:commercial",
+      label: "Commercial / SMB",
+      description: "Shops, offices, warehouses — multi-site contracts, access control, higher-touch service",
+    },
+    {
+      key: "security:hybrid",
+      label: "Hybrid (B2C + SMB)",
+      description: "Operators running both consumer and business subscriptions on one platform (e.g. Sector Alarm)",
     },
   ],
 };

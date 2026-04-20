@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { decodeGuideData } from "@/lib/url-encoding";
-import type { GuideData } from "@/lib/types";
+import type { Customer, GuideData } from "@/lib/types";
 import GuideClient from "./GuideClient";
 
 function GuideContent() {
@@ -64,7 +64,15 @@ function GuideContent() {
     ? sectionsParam.split(",").map((id) => (id === "core-components" ? "platform-vision" : id))
     : undefined;
 
-  return <GuideClient guide={guide} sectionIds={sectionIds} />;
+  // Pass the full decoded formData as `customer` alongside the
+  // Sales-shaped `guide` projection. Existing Sales sections keep
+  // reading from `guide`; new CE sections (agenda, performance,
+  // success plan, etc.) read from `customer` which carries the
+  // optional CE fields (br_context, performance, agent_swot,
+  // uat_status, benchmarks, recommendations, etc.).
+  const customer: Customer = { ...formData };
+
+  return <GuideClient guide={guide} customer={customer} sectionIds={sectionIds} />;
 }
 
 export default function GuidePage() {

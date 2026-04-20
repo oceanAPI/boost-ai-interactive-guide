@@ -1,13 +1,22 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import type { GuideData } from "@/lib/types";
+import type { Customer, GuideData } from "@/lib/types";
 import { getTopicSections, getTopicsForGuide } from "@/data/topics";
 import { getAgentsForGuide } from "@/data/agents";
 import { getDemoScript, getEscalatedDemoScript } from "@/data/demo-scripts";
 import GuideNav from "@/components/GuideNav";
 import HeroSection from "@/components/sections/HeroSection";
+import AgendaSection from "@/components/sections/AgendaSection";
 import OrchestratorSection from "@/components/sections/OrchestratorSection";
+import PerformanceSection from "@/components/sections/PerformanceSection";
+import BenchmarkingSection from "@/components/sections/BenchmarkingSection";
+import AgenticBeforeAfterSection from "@/components/sections/AgenticBeforeAfterSection";
+import AgentSwotSection from "@/components/sections/AgentSwotSection";
+import UatStatusSection from "@/components/sections/UatStatusSection";
+import SuccessPlanSection from "@/components/sections/SuccessPlanSection";
+import TopRecommendationsSection from "@/components/sections/TopRecommendationsSection";
+import GovernanceSection from "@/components/sections/GovernanceSection";
 import TopicHubSection from "@/components/sections/TopicHubSection";
 import TopicSection from "@/components/sections/topics/TopicSection";
 import DemoPreviewSection from "@/components/sections/DemoPreviewSection";
@@ -31,6 +40,7 @@ const topicSections = getTopicSections();
 /* Build the nav sections dynamically: fixed sections + topic sections */
 const SECTIONS = [
   { id: "hero", label: "Overview", icon: "◆" },
+  { id: "agenda", label: "Agenda", icon: "◷" },
   { id: "orchestrator", label: "Agent Orchestrator", icon: "⬡" },
   { id: "topics", label: "Deep Dive", icon: "◈" },
   ...topicSections.map((t, i) => ({
@@ -41,6 +51,11 @@ const SECTIONS = [
   { id: "platform-vision", label: "Platform & Vision", icon: "⚙" },
   { id: "voice", label: "Voice Preview", icon: "◉" },
   { id: "demo", label: "Chat Preview", icon: "▶" },
+  { id: "performance", label: "Performance Snapshot", icon: "⟳" },
+  { id: "benchmarking", label: "Benchmarking", icon: "▤" },
+  { id: "agentic-before-after", label: "Agentic Transformation", icon: "⇄" },
+  { id: "agent-swot", label: "Agent SWOT", icon: "◇" },
+  { id: "uat-status", label: "Rollout Status", icon: "●" },
   { id: "impact", label: "Business Impact", icon: "△" },
   { id: "trust-validation", label: "Platform Credibility", icon: "◎" },
   { id: "case-studies", label: "Case Studies", icon: "★" },
@@ -49,11 +64,28 @@ const SECTIONS = [
   { id: "commercial-offer", label: "Commercial Offer", icon: "◈" },
   { id: "roi", label: "ROI Calculator", icon: "◇" },
   { id: "scope-of-work", label: "Scope of Work", icon: "◫" },
+  { id: "success-plan", label: "Success Plan", icon: "▰" },
+  { id: "top-recommendations", label: "Top Recommendations", icon: "✦" },
+  { id: "governance", label: "Governance", icon: "◉" },
   { id: "next-steps", label: "Next Steps", icon: "→" },
   { id: "custom", label: "Other", icon: "◌" },
 ];
 
-export default function GuideClient({ guide, sectionIds }: { guide: GuideData; sectionIds?: string[] }) {
+export default function GuideClient({
+  guide,
+  customer,
+  sectionIds,
+}: {
+  guide: GuideData;
+  /** Full Customer record carrying optional CE/PS fields (br_context,
+   *  performance, agent_swot, etc.). Passed alongside `guide` so new
+   *  audience-specific sections can read the richer shape while
+   *  existing Sales sections continue reading `guide`. Optional for
+   *  backwards compatibility — sections that depend on it check for
+   *  the field they need. */
+  customer?: Customer;
+  sectionIds?: string[];
+}) {
   /* Filter sections if sectionIds provided */
   const activeSections = sectionIds
     ? SECTIONS.filter((s) => sectionIds.includes(s.id))
@@ -211,6 +243,16 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
             </div>
           )}
 
+          {(!activeSectionSet || activeSectionSet.has("agenda")) && (
+            <div id="agenda" ref={(el) => { sectionRefs.current["agenda"] = el; }}>
+              <SectionReportPill sectionId="agenda" displayName="Agenda" />
+              <AgendaSection
+                customer={customer}
+                sectionNumber={sn("agenda")}
+              />
+            </div>
+          )}
+
           {(!activeSectionSet || activeSectionSet.has("orchestrator")) && (
             <div id="orchestrator" ref={(el) => { sectionRefs.current["orchestrator"] = el; }}>
               <SectionReportPill sectionId="orchestrator" displayName="Agent Orchestrator" />
@@ -278,6 +320,41 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
             </div>
           )}
 
+          {(!activeSectionSet || activeSectionSet.has("performance")) && (
+            <div id="performance" ref={(el) => { sectionRefs.current["performance"] = el; }}>
+              <SectionReportPill sectionId="performance" displayName="Performance Snapshot" />
+              <PerformanceSection customer={customer} sectionNumber={sn("performance")} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("benchmarking")) && (
+            <div id="benchmarking" ref={(el) => { sectionRefs.current["benchmarking"] = el; }}>
+              <SectionReportPill sectionId="benchmarking" displayName="Benchmarking" />
+              <BenchmarkingSection customer={customer} sectionNumber={sn("benchmarking")} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("agentic-before-after")) && (
+            <div id="agentic-before-after" ref={(el) => { sectionRefs.current["agentic-before-after"] = el; }}>
+              <SectionReportPill sectionId="agentic-before-after" displayName="Agentic Transformation" />
+              <AgenticBeforeAfterSection customer={customer} sectionNumber={sn("agentic-before-after")} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("agent-swot")) && (
+            <div id="agent-swot" ref={(el) => { sectionRefs.current["agent-swot"] = el; }}>
+              <SectionReportPill sectionId="agent-swot" displayName="Agent SWOT" />
+              <AgentSwotSection customer={customer} sectionNumber={sn("agent-swot")} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("uat-status")) && (
+            <div id="uat-status" ref={(el) => { sectionRefs.current["uat-status"] = el; }}>
+              <SectionReportPill sectionId="uat-status" displayName="Rollout Status" />
+              <UatStatusSection customer={customer} sectionNumber={sn("uat-status")} />
+            </div>
+          )}
+
           {(!activeSectionSet || activeSectionSet.has("impact")) && (
             <div id="impact" ref={(el) => { sectionRefs.current["impact"] = el; }}>
               <SectionReportPill sectionId="impact" displayName="Impact" />
@@ -331,6 +408,27 @@ export default function GuideClient({ guide, sectionIds }: { guide: GuideData; s
             <div id="scope-of-work" ref={(el) => { sectionRefs.current["scope-of-work"] = el; }}>
               <SectionReportPill sectionId="scope-of-work" displayName="Scope of Work" />
               <ScopeOfWorkSection guide={guide} sectionNumber={sn("scope-of-work")} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("success-plan")) && (
+            <div id="success-plan" ref={(el) => { sectionRefs.current["success-plan"] = el; }}>
+              <SectionReportPill sectionId="success-plan" displayName="Success Plan" />
+              <SuccessPlanSection customer={customer} sectionNumber={sn("success-plan")} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("top-recommendations")) && (
+            <div id="top-recommendations" ref={(el) => { sectionRefs.current["top-recommendations"] = el; }}>
+              <SectionReportPill sectionId="top-recommendations" displayName="Top Recommendations" />
+              <TopRecommendationsSection customer={customer} sectionNumber={sn("top-recommendations")} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("governance")) && (
+            <div id="governance" ref={(el) => { sectionRefs.current["governance"] = el; }}>
+              <SectionReportPill sectionId="governance" displayName="Governance" />
+              <GovernanceSection customer={customer} sectionNumber={sn("governance")} />
             </div>
           )}
 

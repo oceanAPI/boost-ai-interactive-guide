@@ -7,9 +7,18 @@
  */
 
 import { searchCompanies, type CompanyPattern } from "@/data/company-patterns";
+import { getCustomerFixture } from "@/data/customer-fixtures";
 import type { DetectionResult } from "./types";
 
 export function patternToResult(pattern: CompanyPattern): DetectionResult {
+  // Overlay the CE fixture (if one exists for this key) on top of the
+  // Sales-oriented pattern prefill. Fixture fields win on conflict —
+  // they are the richer, CE-specific source. Sales consumers continue
+  // to read the overlaid prefill transparently because every fixture
+  // field is additive-optional on Customer/GuideFormData.
+  const fixture = getCustomerFixture(pattern.key);
+  const prefill = fixture ? { ...pattern.prefill, ...fixture } : pattern.prefill;
+
   return {
     source: "curated",
     confidence: "high",
@@ -19,11 +28,13 @@ export function patternToResult(pattern: CompanyPattern): DetectionResult {
       country: pattern.country,
       category: pattern.category,
     },
-    prefill: pattern.prefill,
+    prefill,
     debug: {
       query: "",
       tier: "curated",
-      reason: `Matched curated pattern "${pattern.key}"`,
+      reason: fixture
+        ? `Matched curated pattern "${pattern.key}" + CE fixture`
+        : `Matched curated pattern "${pattern.key}"`,
     },
   };
 }

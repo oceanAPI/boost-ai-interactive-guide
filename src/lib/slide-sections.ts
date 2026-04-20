@@ -33,6 +33,7 @@ export const SECTION_GROUPS: { key: SectionGroup; label: string }[] = [
 
 export const SLIDE_SECTIONS: SlideSection[] = [
   { id: "hero",                     label: "Overview",                  group: "intro",      minutes: 1,  hint: "Cover slide with the customer name + brand" },
+  { id: "agenda",                   label: "Agenda",                    group: "intro",      minutes: 1,  hint: "Timed or numbered agenda — BR opener / demo-meeting starter", defaultEnabled: false },
   { id: "orchestrator",             label: "Agent Orchestrator",        group: "intro",      minutes: 3,  hint: "Visual map of the orchestrator + specialist agents" },
   { id: "topics",                   label: "Deep Dive",                 group: "topics",     minutes: 1,  hint: "Hub page linking to the 4 deep-dive topics" },
   { id: "topic-implementation",     label: "Implementation & Roadmap",  group: "topics",     minutes: 3,  hint: "12-week delivery plan with milestones" },
@@ -42,6 +43,11 @@ export const SLIDE_SECTIONS: SlideSection[] = [
   { id: "platform-vision",          label: "Platform & Vision",         group: "platform",   minutes: 4,  hint: "Today · 2026 Roadmap · Vision (3 tabs)" },
   { id: "voice",                    label: "Voice Preview",             group: "platform",   minutes: 2,  hint: "Voice channel scaffolding + demo placeholder" },
   { id: "demo",                     label: "Chat Preview",              group: "platform",   minutes: 3,  hint: "Chat demo with the AI analyzer panel" },
+  { id: "performance",              label: "Performance Snapshot",      group: "proof",      minutes: 2,  hint: "Live KPI tiles with trend arrows — CE operational telemetry", defaultEnabled: false },
+  { id: "benchmarking",             label: "Benchmarking",              group: "proof",      minutes: 2,  hint: "Customer vs peer cohort vs industry averages — per metric bar chart", defaultEnabled: false },
+  { id: "agentic-before-after",     label: "Agentic Transformation",    group: "proof",      minutes: 2,  hint: "Pre-boost vs post-boost outcomes per topic — the agentic story", defaultEnabled: false },
+  { id: "agent-swot",               label: "Agent SWOT",                group: "proof",      minutes: 3,  hint: "Per-agent strengths / weaknesses / opportunities / threats", defaultEnabled: false },
+  { id: "uat-status",               label: "Rollout Status",            group: "proof",      minutes: 2,  hint: "Traffic-light rollout / UAT health per agent + market", defaultEnabled: false },
   { id: "impact",                   label: "Business Impact",           group: "proof",      minutes: 2,  hint: "CSAT · Automation · Data · Commercial (4 tabs)" },
   { id: "trust-validation",         label: "Platform Credibility",      group: "proof",      minutes: 2,  hint: "9-year track record + analyst recognition" },
   { id: "case-studies",             label: "Case Studies",              group: "proof",      minutes: 3,  hint: "Customer stories — AE-picks or auto-sorted" },
@@ -50,6 +56,9 @@ export const SLIDE_SECTIONS: SlideSection[] = [
   { id: "commercial-offer",         label: "Commercial Offer",          group: "commercial", minutes: 2,  hint: "Pricing framing + proposal terms" },
   { id: "roi",                      label: "ROI Calculator",            group: "commercial", minutes: 2,  hint: "Interactive savings + break-even modelling" },
   { id: "scope-of-work",            label: "Scope of Work",             group: "commercial", minutes: 3,  hint: "Visual SOW — scope, team, timeline, integrations/ROI" },
+  { id: "success-plan",             label: "Success Plan",              group: "close",      minutes: 3,  hint: "Gantt timeline of committed initiatives — CE strategic plan", defaultEnabled: false },
+  { id: "top-recommendations",      label: "Top Recommendations",       group: "close",      minutes: 2,  hint: "Ranked initiatives with weight + confidence + urgency — CE strategic recs", defaultEnabled: false },
+  { id: "governance",               label: "Governance & Cadence",      group: "close",      minutes: 2,  hint: "Review cadence + sponsor + next BR date — CE governance", defaultEnabled: false },
   { id: "next-steps",               label: "Next Steps",                group: "close",      minutes: 1,  hint: "What happens after this guide" },
   { id: "custom",                   label: "Other",                     group: "close",      minutes: 1,  hint: "Optional — freeform title, body, image/video", defaultEnabled: false },
 ];

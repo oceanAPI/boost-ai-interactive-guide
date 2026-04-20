@@ -17,7 +17,7 @@ function SlidesContent() {
         <div className="text-center">
           <p className="text-boost-dark text-xl mb-4">Missing presentation data</p>
           <a href="/admin" className="text-boost-green-light hover:underline">
-            ← Back to Guide Builder
+            ← Back to admin
           </a>
         </div>
       </div>
@@ -32,7 +32,7 @@ function SlidesContent() {
         <div className="text-center">
           <p className="text-boost-dark text-xl mb-4">Invalid guide data</p>
           <a href="/admin" className="text-boost-green-light hover:underline">
-            ← Back to Guide Builder
+            ← Back to admin
           </a>
         </div>
       </div>

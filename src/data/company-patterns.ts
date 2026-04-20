@@ -527,6 +527,36 @@ export const COMPANY_PATTERNS: CompanyPattern[] = [
       custom_notes: "Part of If group — deployment likely coordinated across Nordic markets.",
     },
   },
+  {
+    key: "sector-alarm",
+    name: "Sector Alarm",
+    domain: "sectoralarm.no",
+    aliases: ["sectoralarm", "sector-alarm", "sectoralarm-no"],
+    country: "NO",
+    category: "Home & SMB security · Nordics + EU",
+    prefill: {
+      company_name: "Sector Alarm",
+      company_url: "https://www.sectoralarm.no/",
+      areas_of_interest: ["security"],
+      selected_variants: ["security:hybrid"],
+      channel_volumes: { chat: 30000, voice: 120000, email: 20000, social: 4000 },
+      conversation_cost: "~45 NOK",
+      pricing_model: "fixed",
+      deployment_markets: 7,
+      resources: {
+        stakeholder_owners: 2,
+        ai_trainers: 3,
+        technical_resources: 2,
+        supporting_departments: ["Customer Service", "Operations", "IT / Engineering"],
+        knowledge_management: true,
+      },
+      integrations: { openid: ["BankID"], channel: ["Custom Web Chat"] },
+      specific_requirements:
+        "Nordic home + SMB security subscription across 7 markets (NO, SE, FI, IE, ES, PT, FR). Heavy voice (alarm events + technician dispatch), moderate chat (billing + contract + device support), low social. Multi-language NLU required (NO / SE / FI + ES / PT / FR + EN). BankID for NO + SE auth, local strong-auth elsewhere. 24/7 monitoring-centre escalation is critical and must never be bypassed. False-alarm cost avoidance is a named business goal.",
+      custom_notes:
+        "Non-FS POC for the extensibility path. Validates industry expansion ahead of the CE / Professional Services content passes — if Sector Alarm renders cleanly, the same mechanics handle CE + PS non-FS customers.",
+    },
+  },
 
   // ─── Denmark ─────────────────────────────────
   {
@@ -1116,6 +1146,111 @@ export const COMPANY_PATTERNS: CompanyPattern[] = [
       specific_requirements:
         "US money-center bank — ~67M retail and SMB clients, ~200K+ employees, ~35 markets. Existing large-scale AI assistant (Erica) handles ~1B+ interactions per year. Any boost engagement is augmentation or specialist-agent federation, not greenfield. Extreme scale + US regulatory rigor (OCC, FDIC, CFPB).",
       custom_notes: "Erica is the incumbent AI — position boost agents as specialist orchestrators that federate with, rather than replace, the existing stack.",
+    },
+  },
+
+  /* ─── CE fixture customers ──────────────────────────
+   * Live boost.ai customers from the CE delivery history (BR + inspiration
+   * decks in customer_excellence_raw_data_pdfs/). Minimal Sales-prefill
+   * here — the rich CE telemetry (performance, success plan, SWOT, UAT,
+   * benchmarks, recommendations, BR context) lives in
+   * `src/data/customer-fixtures.ts` and is overlaid via
+   * `detectFromCurated()`. */
+  {
+    key: "hm",
+    name: "H&M",
+    domain: "hm.com",
+    aliases: ["hennes-and-mauritz", "h-and-m", "handm"],
+    country: "SE",
+    category: "Retail · Global",
+    prefill: {
+      company_name: "H&M",
+      company_url: "https://www.hm.com/",
+      areas_of_interest: [],
+      deployment_markets: 20,
+      integrations: { channel: ["Custom Web Chat"] },
+      specific_requirements: "Global fashion retailer. Multi-market CX automation across ordering, returns, membership, and store locator.",
+    },
+  },
+  {
+    key: "cbna",
+    name: "CBNA",
+    domain: "cbna.com",
+    aliases: ["community-bank-na", "community-bank"],
+    country: "US",
+    category: "Community bank · US",
+    prefill: {
+      company_name: "CBNA",
+      company_url: "https://www.cbna.com/",
+      areas_of_interest: ["banking"],
+      selected_variants: ["banking:retail"],
+      deployment_markets: 1,
+      integrations: { channel: ["Custom Web Chat"] },
+      specific_requirements: "US community bank — retail banking, account support, branch locator, and card operations.",
+    },
+  },
+  {
+    key: "dna",
+    name: "DNA",
+    domain: "dna.fi",
+    aliases: ["dna-oy", "dna-finland"],
+    country: "FI",
+    category: "Telecom · FI",
+    prefill: {
+      company_name: "DNA",
+      company_url: "https://www.dna.fi/",
+      areas_of_interest: [],
+      deployment_markets: 1,
+      integrations: { channel: ["Custom Web Chat"] },
+      specific_requirements: "Finnish telecom operator — mobile, broadband, and TV. Consumer + SMB self-service automation.",
+    },
+  },
+  {
+    key: "juno",
+    name: "JUNO",
+    domain: "juno.fi",
+    aliases: ["juno-bank", "juno-digital"],
+    country: "FI",
+    category: "Digital services · FI",
+    prefill: {
+      company_name: "JUNO",
+      company_url: "https://www.juno.fi/",
+      areas_of_interest: [],
+      deployment_markets: 1,
+      integrations: { channel: ["Custom Web Chat"] },
+      specific_requirements: "Nordic digital services customer. Early boost deployment with agent-assist focus.",
+    },
+  },
+  {
+    key: "moi",
+    name: "Moi",
+    domain: "moi.fi",
+    aliases: ["moi-mobiili", "moi-mobile"],
+    country: "FI",
+    category: "Mobile operator · FI",
+    prefill: {
+      company_name: "Moi",
+      company_url: "https://www.moi.fi/",
+      areas_of_interest: [],
+      deployment_markets: 1,
+      integrations: { channel: ["Custom Web Chat"] },
+      specific_requirements: "Finnish MVNO — lean operator, digital-first CX.",
+    },
+  },
+  {
+    key: "sanoma",
+    name: "Sanoma",
+    domain: "sanoma.com",
+    aliases: ["sanoma-media", "sanoma-group"],
+    country: "FI",
+    category: "Media · FI",
+    prefill: {
+      company_name: "Sanoma",
+      company_url: "https://www.sanoma.com/",
+      areas_of_interest: [],
+      deployment_markets: 2,
+      integrations: { channel: ["Custom Web Chat"] },
+      specific_requirements: "Nordic media + learning group. Subscription support, publication access, and learning-platform customer service.",
     },
   },
 ];
