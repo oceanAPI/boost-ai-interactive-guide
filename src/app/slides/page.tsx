@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { decodeGuideData } from "@/lib/url-encoding";
@@ -16,9 +17,9 @@ function SlidesContent() {
       <div className="min-h-screen bg-boost-bg flex items-center justify-center">
         <div className="text-center">
           <p className="text-boost-dark text-xl mb-4">Missing presentation data</p>
-          <a href="/admin" className="text-boost-green-light hover:underline">
+          <Link href="/admin" className="text-boost-green-light hover:underline">
             ← Back to admin
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -31,9 +32,9 @@ function SlidesContent() {
       <div className="min-h-screen bg-boost-bg flex items-center justify-center">
         <div className="text-center">
           <p className="text-boost-dark text-xl mb-4">Invalid guide data</p>
-          <a href="/admin" className="text-boost-green-light hover:underline">
+          <Link href="/admin" className="text-boost-green-light hover:underline">
             ← Back to admin
-          </a>
+          </Link>
         </div>
       </div>
     );

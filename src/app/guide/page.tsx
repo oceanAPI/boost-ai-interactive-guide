@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { decodeGuideData } from "@/lib/url-encoding";
@@ -15,9 +16,9 @@ function GuideContent() {
       <div className="min-h-screen bg-boost-bg flex items-center justify-center">
         <div className="text-center">
           <p className="text-white text-xl mb-4">No guide data found</p>
-          <a href="/admin" className="text-boost-green-light hover:underline">
+          <Link href="/admin" className="text-boost-green-light hover:underline">
             ← Create a new guide
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -30,9 +31,9 @@ function GuideContent() {
       <div className="min-h-screen bg-boost-bg flex items-center justify-center">
         <div className="text-center">
           <p className="text-white text-xl mb-4">Invalid guide data</p>
-          <a href="/admin" className="text-boost-green-light hover:underline">
+          <Link href="/admin" className="text-boost-green-light hover:underline">
             ← Create a new guide
-          </a>
+          </Link>
         </div>
       </div>
     );

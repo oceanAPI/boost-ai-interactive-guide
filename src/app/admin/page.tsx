@@ -635,12 +635,12 @@ export default function AdminPage() {
                 </span>
               </p>
             </div>
-            <a
+            <Link
               href="/"
               className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 focus-visible:ring-offset-boost-purple rounded-sm px-2 py-0.5 whitespace-nowrap"
             >
               ← Change mode
-            </a>
+            </Link>
           </div>
         </div>
       ) : null}
