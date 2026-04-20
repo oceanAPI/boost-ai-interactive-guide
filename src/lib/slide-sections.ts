@@ -6,6 +6,7 @@ export type SectionGroup =
   | "proof"
   | "community"
   | "commercial"
+  | "scoping"
   | "close";
 
 export interface SlideSection {
@@ -28,6 +29,7 @@ export const SECTION_GROUPS: { key: SectionGroup; label: string }[] = [
   { key: "proof", label: "Proof" },
   { key: "community", label: "Community" },
   { key: "commercial", label: "Commercial" },
+  { key: "scoping", label: "Scoping & delivery" },
   { key: "close", label: "Close" },
 ];
 
@@ -56,6 +58,12 @@ export const SLIDE_SECTIONS: SlideSection[] = [
   { id: "commercial-offer",         label: "Commercial Offer",          group: "commercial", minutes: 2,  hint: "Pricing framing + proposal terms" },
   { id: "roi",                      label: "ROI Calculator",            group: "commercial", minutes: 2,  hint: "Interactive savings + break-even modelling" },
   { id: "scope-of-work",            label: "Scope of Work",             group: "commercial", minutes: 3,  hint: "Visual SOW — scope, team, timeline, integrations/ROI" },
+  { id: "project-framing",           label: "Project Framing",           group: "scoping",    minutes: 3,  hint: "Introduction + goals + KPIs + use-cases — authored by Sales, surfaced in PS", defaultEnabled: false },
+  { id: "project-details",           label: "Project Details",           group: "scoping",    minutes: 2,  hint: "Project type, traffic mix, volume projections — authored by Sales", defaultEnabled: false },
+  { id: "build-scope",               label: "Build Scope",               group: "scoping",    minutes: 5,  hint: "Tabbed deliverables — hosting / channels / GenAI / auth / voice / APIs", defaultEnabled: false },
+  { id: "roles-and-responsibilities", label: "Roles & Responsibilities", group: "scoping",    minutes: 3,  hint: "RACI matrix with FTE allocations — Customer / boost.ai / 3rd Party", defaultEnabled: false },
+  { id: "solution-architecture",     label: "Solution Architecture",     group: "scoping",    minutes: 3,  hint: "Interactive architecture diagram of channels, boost core, and integrations", defaultEnabled: false },
+  { id: "out-of-scope",              label: "Out of Scope",              group: "scoping",    minutes: 1,  hint: "Explicit exclusions — what this SoW does NOT cover", defaultEnabled: false },
   { id: "success-plan",             label: "Success Plan",              group: "close",      minutes: 3,  hint: "Gantt timeline of committed initiatives — CE strategic plan", defaultEnabled: false },
   { id: "top-recommendations",      label: "Top Recommendations",       group: "close",      minutes: 2,  hint: "Ranked initiatives with weight + confidence + urgency — CE strategic recs", defaultEnabled: false },
   { id: "governance",               label: "Governance & Cadence",      group: "close",      minutes: 2,  hint: "Review cadence + sponsor + next BR date — CE governance", defaultEnabled: false },

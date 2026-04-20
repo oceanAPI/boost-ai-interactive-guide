@@ -104,7 +104,7 @@ export interface GuideFormData {
 /** Schema version emitted by this codebase. Additive-only evolution —
  *  fields are only added, never removed or renamed. Useful for
  *  consumer metrics / debugging; does not gate parsing. */
-export const CUSTOMER_SCHEMA_VERSION = "v1.1.0";
+export const CUSTOMER_SCHEMA_VERSION = "v1.2.0";
 
 /** Which Boost work mode is operating on this customer right now.
  *  Drives admin UI layout, default block library, landing-page route. */
@@ -544,4 +544,213 @@ export interface Customer extends GuideFormData {
    *  AgenticBeforeAfterSection — the "agentic transformation"
    *  story told as side-by-side tiles. */
   agentic_outcomes?: AgenticOutcome[];
+
+  /* ─── Scope-of-Work fields ───────────────────────────────────
+   * All optional, additive-only. Cross-audience by design: most of
+   * this content is captured by Sales (sometimes by CE for expansion
+   * or custom work), then enriched by PS with technical detail
+   * (auth specifics, voice gateway, customer APIs, architecture
+   * detail, RACI hours, out-of-scope). Together these fields form
+   * the in-guide Scope of Work surfaced primarily in the PS view. */
+
+  /** Handoff checklist — the 5 "did Sales / CE give us what we need"
+   *  items Pre-sales or CSM marks before PS picks up work. Drives the
+   *  sticky handoff chip at the top of the PS guide. */
+  handoff_checklist?: PsHandoffChecklist;
+
+  /** Project framing — introduction, goals, success criteria, KPIs,
+   *  and example use-cases. Authored during Sales; PS may refine.
+   *  Drives ProjectFramingSection. */
+  project_framing?: PsFraming;
+
+  /** Project details — type, instances, traffic mix, volume
+   *  projections. Authored during Sales. Drives ProjectDetailsSection. */
+  project_details?: PsProjectDetails;
+
+  /** Build scope — hosting, languages, knowledge coverage, channels,
+   *  GenAI config, environments, plus auth / voice / customer API
+   *  delivery components. Sales-authored "what"; PS-authored "how".
+   *  Drives the tabbed BuildScopeSection. */
+  build_scope?: PsBuildScope;
+
+  /** Roles × responsibilities × allocation across Customer / boost.ai /
+   *  3rd Party. Expectations set by Sales; hour numbers added by PS.
+   *  Drives RolesAndResponsibilitiesSection. */
+  roles_and_responsibilities?: PsRaci;
+
+  /** Solution architecture composition — which blocks / connectors /
+   *  channels are in play. PS-authored in most engagements. Drives
+   *  the interactive SolutionArchitectureSection. */
+  solution_architecture?: PsArchitecture;
+
+  /** Explicit exclusions list — "not this". Often emerges during
+   *  PS scoping. Drives OutOfScopeSection. */
+  out_of_scope?: string[];
+}
+
+/* ──────────────────────────────────────────────────────────────
+ *  Scope-of-Work schema — supporting types for the 7 SoW fields
+ *  above. All shapes additive-only. Cross-audience by design.
+ * ────────────────────────────────────────────────────────────── */
+
+/** 5-item handoff checklist filled by Sales/CSM before PS engagement.
+ *  `required` captures whether the item applies at all; `notes` / `which`
+ *  holds the free-text detail when required=true. */
+export interface PsHandoffChecklist {
+  authentication?: { required: boolean; notes?: string };
+  crm_integration?: { required: boolean; which?: string };
+  contact_center?: { required: boolean; which?: string };
+  additional_integrations?: { required: boolean; which?: string[] };
+  partner?: { required: boolean; which?: string };
+}
+
+export type PsProjectType = "external_chat" | "internal_chat" | "agent_assist" | "voice" | "other";
+
+export interface PsKpi {
+  /** Short label shown on the KPI tile (e.g. "Automation rate"). */
+  label: string;
+  /** Target value / threshold as display string (e.g. "≥ 72%"). */
+  target: string;
+  /** Optional narrative explaining how the KPI is measured. */
+  notes?: string;
+}
+
+export interface PsUseCase {
+  title: string;
+  /** The current-state experience the VA replaces or augments. */
+  today: string;
+  /** The post-launch experience this use-case creates. */
+  tomorrow: string;
+  /** Optional example call / chat flow narrative. */
+  call_flow?: string;
+}
+
+export interface PsFraming {
+  /** 1–3 paragraph introduction — what this project looks like, what
+   *  we're solving. Markdown-capable. */
+  introduction?: string;
+  /** Overriding success criteria + main user journey + objectives. */
+  goals?: string;
+  /** Target KPIs (typical: automation rate, containment, escalation). */
+  kpis?: PsKpi[];
+  /** 1–5 example use-cases with today/tomorrow deltas. */
+  use_cases?: PsUseCase[];
+}
+
+export interface PsTrafficMix {
+  /** Share of current volume handled by existing chat / live chat. 0–100. */
+  existing_chat?: number;
+  telephony?: number;
+  email?: number;
+  tickets?: number;
+  other?: number;
+}
+
+export interface PsProjectDetails {
+  /** Which project modes are in scope — multi-select. */
+  project_type: PsProjectType[];
+  /** New boost.ai instance or use of an existing one. */
+  instances: "new" | "existing";
+  /** Current traffic distribution across channels before go-live. */
+  traffic_mix?: PsTrafficMix;
+  /** Volume projections 12 months post go-live — projections only,
+   *  not contractual commitments. */
+  projections?: {
+    monthly_chat_sessions?: number;
+    monthly_voice_minutes?: number;
+    monthly_tokens?: number;
+  };
+}
+
+export type PsHosting = "aws" | "customer_on_prem" | "boost_on_prem";
+
+export type PsGenAiProvider = "openai_boost" | "openai_own" | "azure_boost" | "azure_own";
+export type PsGenAiFeature = "ai_trainer_efficiency" | "generative_action" | "ai_review" | "handover_summary";
+
+export interface PsChatChannel {
+  /** Display label (e.g. "Web", "WhatsApp", "Microsoft Teams"). */
+  label: string;
+  /** URLs or identifiers relevant to this channel. */
+  urls?: string[];
+  notes?: string;
+}
+
+export interface PsAuthentication {
+  /** Method summary (e.g. "OAuth2 → BankID", "SAML", "JWT bearer"). */
+  method: string;
+  provider?: string;
+  notes?: string;
+}
+
+export interface PsVoiceConfig {
+  telephony_provider: string;
+  gateway_type: string;
+  notes?: string;
+}
+
+export interface PsCustomerApi {
+  /** API name (e.g. "Order Status API"). */
+  name: string;
+  /** HTTP verb + intent of use (e.g. "GET · resolve order status"). */
+  method: string;
+  /** What this API enables in the VA flow. */
+  purpose: string;
+}
+
+export interface PsBuildScope {
+  /** Deliverables — the "what" of the SoW. */
+  hosting?: PsHosting;
+  languages?: string[];
+  /** High-level knowledge coverage (e.g. ["Cards", "Accounts", "Loans"]). */
+  knowledge_coverage?: string[];
+  expected_intents?: number;
+  /** Filters on deployment (e.g. ["authenticated", "web only"]). */
+  filters?: string[];
+  chat_channels?: PsChatChannel[];
+  generative_ai?: {
+    enabled: boolean;
+    provider?: PsGenAiProvider;
+    features?: PsGenAiFeature[];
+    knowledge_sync_sources?: string[];
+  };
+  staging?: boolean;
+  test_environment?: boolean;
+
+  /** Delivery components — the "how" of the SoW. Each sub-section
+   *  renders as a tab inside BuildScopeSection. */
+  authentication?: PsAuthentication;
+  voice?: PsVoiceConfig;
+  customer_apis?: PsCustomerApi[];
+}
+
+/** A single RACI role row with allocation commitments. */
+export interface PsRoleEntry {
+  role: string;
+  responsibilities: string[];
+  /** Allocation during implementation + hypercare (e.g. "20% FTE", "X hrs/month"). */
+  implementation?: string;
+  /** Allocation once in production (e.g. "Customer preference", "n/a"). */
+  production?: string;
+}
+
+export interface PsRaci {
+  customer_roles: PsRoleEntry[];
+  boost_roles: PsRoleEntry[];
+  third_party?: PsRoleEntry[];
+}
+
+/** A group of related architecture blocks, rendered as a column or
+ *  cluster in the interactive diagram. */
+export interface PsArchitectureGroup {
+  key: string;
+  label: string;
+  items: string[];
+}
+
+export interface PsArchitecture {
+  /** Architecture composition — channels, boost core, backend, etc.
+   *  Each group maps to a cluster in the diagram. */
+  groups: PsArchitectureGroup[];
+  /** Free-form notes, caveats, or deviations from the standard. */
+  notes?: string;
 }

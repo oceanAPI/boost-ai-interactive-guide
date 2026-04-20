@@ -89,13 +89,26 @@ export const CE_DEFAULTS: readonly string[] = [
 /**
  * Sections enabled-by-default for Professional Services.
  *
- * PS surface is deferred to a later phase — this stub is defensive
- * so `/admin?audience=professional-services` doesn't blow up today.
- * Architecture / implementation / security topics approximate what
- * a PS reader would care about most until the real PS section set
- * lands.
+ * The 6 ps-* sections together compose the in-guide Scope of Work
+ * for a delivery engagement (new build from Sales handoff, or
+ * custom expansion work triggered by CE). The 4 topic sections
+ * inherit depth from Sales but become the technical source of
+ * truth during PS — PS edits them with implementation detail.
+ * Orchestrator + Platform Vision carry over as solution context.
+ *
+ * Omitted relative to Sales: hero (PS uses ps-framing as its
+ * opener); voice + demo (no pitching during delivery); impact / trust /
+ * case-studies / community / boost-camp (not delivery concerns);
+ * commercial-offer / roi (Sales-owned); scope-of-work (Sales's
+ * lighter deal-scope version; the ps-* set is the full SoW).
  */
 export const PS_DEFAULTS: readonly string[] = [
+  "project-framing",
+  "project-details",
+  "build-scope",
+  "roles-and-responsibilities",
+  "solution-architecture",
+  "out-of-scope",
   "orchestrator",
   "topics",
   "topic-implementation",

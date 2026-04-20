@@ -405,6 +405,152 @@ export const CUSTOMER_FIXTURES: Record<string, Partial<Customer>> = {
         validated_on: "2026-03-10",
       },
     ],
+
+    /* ─── SoW — expansion (Launch 4 EU markets) ──────
+     * CE surfaced the expansion initiative (init-hm-002) in the
+     * success plan — H&M committed custom PS budget and triggered
+     * a fresh PS engagement targeting PL / CZ / AT / NL. The block
+     * below is the in-guide SoW for that specific expansion
+     * project, not the original H&M build (which is already live). */
+
+    handoff_checklist: {
+      authentication: { required: true, notes: "Reuse existing BankID-equivalent OAuth flow from core H&M build; markets validated one-by-one." },
+      crm_integration: { required: true, which: "Salesforce Service Cloud (H&M global instance)" },
+      contact_center: { required: true, which: "Genesys Cloud — new queues per market with overflow to HQ fallback" },
+      additional_integrations: { required: true, which: ["Loyalty system (existing)", "Regional carrier APIs (PostNord PL, Česká pošta, Österreichische Post, PostNL)", "Tax & VAT service"] },
+      partner: { required: false },
+    },
+
+    project_framing: {
+      introduction: "Extend the live H&M virtual agent to four additional EU markets — Poland, Czech Republic, Austria, and Netherlands — by localising the existing automation suite (returns, order status, membership) into native-language VAs that share the central intent model but honour per-market policy differences and carrier APIs.",
+      goals: "Maintain or exceed the live-market benchmark (72% automation, 4.3/5 CSAT) across all four new markets within 90 days of go-live. Avoid a per-market cost-to-serve increase. Preserve the single central knowledge graph while accommodating regional policy variance.",
+      kpis: [
+        { label: "Automation rate", target: "≥ 70% per new market within 90d", notes: "Benchmarked against the 72% live-market average." },
+        { label: "Containment", target: "≥ 65% of sessions resolved without agent", notes: "Return-flow containment is the headline; membership tier queries target 71%+." },
+        { label: "Escalation accuracy", target: "≥ 95% routed to correct specialist queue", notes: "Genesys queues are new per-market; misrouting has outsized CSAT cost during launch." },
+        { label: "CSAT", target: "≥ 4.2/5 rolling 30d", notes: "Lower bound; live-market average is 4.3." },
+      ],
+      use_cases: [
+        {
+          title: "Return a product bought online",
+          today: "Customer emails or calls local market CS; agent navigates 3 policy tabs + validates carrier label manually. Avg 8 min + 48-hour refund lag.",
+          tomorrow: "Customer opens chat in their language, VA reads order, confirms return policy, generates local-carrier label, schedules pickup, posts refund ETA. Avg 90s end-to-end.",
+          call_flow: "Intent: return_request → auth → fetch_order(order_id) → check_return_window → generate_label(carrier_for_market) → confirm pickup slot → email label + refund ETA.",
+        },
+        {
+          title: "Update delivery address mid-shipment",
+          today: "Not supported self-serve. Customer must call; agent coordinates with 3PL partner by email; 60% chance of success.",
+          tomorrow: "VA detects in-flight shipment, queries carrier API for diversion eligibility, offers alternative slots or pickup points, updates the order.",
+          call_flow: "Intent: change_delivery → auth → fetch_shipment_state → check_diversion_eligibility → present options → carrier_api.redirect → confirm.",
+        },
+        {
+          title: "Membership benefit inquiry per-market",
+          today: "Returns a generic benefit list; doesn't reflect regional tax or promo differences. 35% follow-up contact rate.",
+          tomorrow: "VA reads member tier, looks up market-specific promos and tax treatment, explains net impact in local currency.",
+          call_flow: "Intent: member_benefit → auth → tier_lookup → market_promo_lookup(market_code) → calculate_net_in_local_currency → explain.",
+        },
+        {
+          title: "Human handover during complex claim",
+          today: "Chat-to-email handover loses context; customer re-explains 60% of the time.",
+          tomorrow: "VA constructs a structured handover summary (order, issue, attempted resolution, customer sentiment) and routes to the correct Genesys queue for the market.",
+          call_flow: "Fallback trigger → build_handover_summary → determine_market_queue → Genesys transfer with context attached.",
+        },
+      ],
+    },
+
+    project_details: {
+      project_type: ["external_chat", "voice"],
+      instances: "existing",
+      traffic_mix: {
+        existing_chat: 42,
+        telephony: 28,
+        email: 18,
+        tickets: 10,
+        other: 2,
+      },
+      projections: {
+        monthly_chat_sessions: 380000,
+        monthly_voice_minutes: 62000,
+        monthly_tokens: 95000000,
+      },
+    },
+
+    build_scope: {
+      hosting: "aws",
+      languages: ["Polish", "Czech", "German (Austrian variant)", "Dutch"],
+      knowledge_coverage: ["Returns", "Order status", "Delivery changes", "Membership benefits", "Regional promos", "VAT & tax"],
+      expected_intents: 180,
+      filters: ["authenticated sessions only for member queries", "web + WhatsApp + App"],
+      chat_channels: [
+        { label: "Web", urls: ["https://hm.com/pl", "https://hm.com/cz", "https://hm.com/at", "https://hm.com/nl"], notes: "Shared chat widget, market detected from locale." },
+        { label: "WhatsApp Business", notes: "One number per market; shared chatbot backend." },
+        { label: "H&M App", notes: "In-app chat using existing SDK — no new binary required." },
+      ],
+      generative_ai: {
+        enabled: true,
+        provider: "azure_boost",
+        features: ["ai_trainer_efficiency", "generative_action", "ai_review", "handover_summary"],
+        knowledge_sync_sources: ["H&M policy KB (Confluence)", "Per-market promo CMS (Contentful)", "Help-centre articles (Zendesk)"],
+      },
+      staging: true,
+      test_environment: true,
+      authentication: {
+        method: "OAuth2 → H&M Member SSO",
+        provider: "Ping Identity (H&M global tenant)",
+        notes: "Reuses existing tokens from the core H&M build; per-market scope validation added to distinguish regional promo entitlements.",
+      },
+      voice: {
+        telephony_provider: "Genesys Cloud (existing H&M tenant)",
+        gateway_type: "SIP trunk via existing Genesys Voice Gateway; new DID pools per market.",
+        notes: "Voice ships Phase 2 — initial go-live is chat-only; voice follows in month 4.",
+      },
+      customer_apis: [
+        { name: "Order Status API", method: "GET · resolve order + shipment state", purpose: "VA confirms order, validates return eligibility, fetches shipment location." },
+        { name: "Carrier Label API (per market)", method: "POST · generate return label", purpose: "Issues carrier-specific return labels (PostNord, Česká pošta, Österreichische Post, PostNL)." },
+        { name: "Loyalty Lookup API", method: "GET · tier + benefits for member", purpose: "Member tier and market-specific benefits lookup — extends existing loyalty integration." },
+        { name: "Promo Engine API", method: "GET · active promos by market", purpose: "Real-time market promos for benefit-inquiry flows." },
+        { name: "Handover Summary Webhook", method: "POST · structured context → Genesys queue", purpose: "Transfers customer + issue + attempted resolution into the correct market queue." },
+      ],
+    },
+
+    roles_and_responsibilities: {
+      customer_roles: [
+        { role: "Project Sponsor", responsibilities: ["Informed on progress", "Decide VA strategy for region"], implementation: "Helena (VP Customer Service) · 5% FTE", production: "Helena · customer preference" },
+        { role: "Project / Product Manager", responsibilities: ["Manage scope, schedule, resources", "Post-launch: manage solution"], implementation: "Marcus (Head of Digital) · 20% FTE", production: "Marcus · customer preference" },
+        { role: "AI Trainers", responsibilities: ["Build, train, test per-market VA", "Maintain and develop post go-live"], implementation: "4 people = 3 FTE (one per market + lead)", production: "4 FTE sustained" },
+        { role: "User Testers", responsibilities: ["Test finished scope each sprint per market"], implementation: "2 hrs per sprint per market", production: "n/a" },
+        { role: "Technical Support / SME", responsibilities: ["Configure carrier APIs, tax service, auth scopes", "Deploy per-market to production"], implementation: "HC: as required · Auth: as required · Other: as required", production: "n/a" },
+        { role: "Marketing / Comm.", responsibilities: ["Visual identity per market", "Content guidelines & tone-of-voice"], implementation: "Per-market local team", production: "Customer preference" },
+      ],
+      boost_roles: [
+        { role: "Solution Specialist / Delivery Lead", responsibilities: ["QA", "Knowledge transfer", "Support on build, train, testing", "Coordinate boost-side resources", "Project meetings", "First-line support + escalation"], implementation: "320 hrs over 16 weeks", production: "40 hrs/month hypercare (3 months)" },
+        { role: "Technical Support / Solution Engineer", responsibilities: ["Per-market server setup", "Integration / API support (carrier + tax)", "Contact-centre support (Genesys queues)"], implementation: "200 hrs", production: "n/a" },
+      ],
+      third_party: [
+        { role: "Carrier API integration partner", responsibilities: ["Per-carrier adapter build (PostNord PL, Česká pošta, Österreichische Post, PostNL)", "Label format validation"], implementation: "160 hrs", production: "10 hrs/month" },
+      ],
+    },
+
+    solution_architecture: {
+      groups: [
+        { key: "user", label: "User", items: ["End customer (PL / CZ / AT / NL)"] },
+        { key: "channel", label: "Channels", items: ["H&M website (per-market locale)", "WhatsApp Business", "H&M mobile app", "Voice (Phase 2)"] },
+        { key: "boost_core", label: "boost.ai core", items: ["VA Model + LLM connectors (Azure OpenAI)", "Dialogue Orchestration", "Datastore", "Integrations Services", "Voice Gateway (Phase 2)"] },
+        { key: "backend", label: "Backend APIs", items: ["Order Status API", "Carrier Label APIs (4)", "Loyalty Lookup API", "Promo Engine API", "Tax & VAT service"] },
+        { key: "contact_center", label: "Contact centre", items: ["Genesys Cloud — per-market queues", "HQ fallback queue", "Handover summary webhook"] },
+        { key: "role", label: "Roles", items: ["Human chat agent", "AI Trainer (per market)", "Knowledge Manager", "Administrator"] },
+      ],
+      notes: "Single central intent model shared across markets; per-market variance is in policy, carrier, and promo layers only. Voice ships Phase 2 (month 4) once chat containment is proven in PL.",
+    },
+
+    out_of_scope: [
+      "Payment processing or refund issuance — handled upstream by H&M's existing refund engine.",
+      "Core H&M website redesign — chat widget integration only.",
+      "Migration of existing live markets (SE, NO, DK, FI, UK) to the new intent model — those stay on current release.",
+      "Voice-channel launch at Phase 1 — voice follows in month 4 after chat containment validated.",
+      "Fulfilment-centre operational changes — carrier diversion changes surface via existing 3PL flows, not new ones.",
+      "Loyalty-programme policy changes — VA reflects existing policy, does not negotiate benefits.",
+    ],
   },
 
   /* ─── CBNA ────────────────────────────────────────
