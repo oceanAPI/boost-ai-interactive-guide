@@ -41,5 +41,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 /data/
-.claude/
+# Claude Code — track shared config, ignore personal and runtime state
+.claude/settings.local.json
+.claude/backups/
+.claude/skills/
+.claude/agents/
 AGENTS.md
