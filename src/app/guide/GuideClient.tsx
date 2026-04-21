@@ -35,6 +35,7 @@ import NextStepsSection from "@/components/sections/NextStepsSection";
 import ProjectFramingSection from "@/components/sections/ProjectFramingSection";
 import BuildScopeSection from "@/components/sections/BuildScopeSection";
 import RolesAndResponsibilitiesSection from "@/components/sections/RolesAndResponsibilitiesSection";
+import SolutionArchitectureSection from "@/components/sections/SolutionArchitectureSection";
 import { TOPIC_COMPONENTS } from "@/data/topics/registry";
 import { SectionReportPill } from "@/components/SectionReportPill";
 
@@ -67,6 +68,7 @@ const SECTIONS = [
   { id: "project-framing", label: "Project Framing", icon: "◆" },
   { id: "build-scope", label: "Build Scope", icon: "◫" },
   { id: "roles-and-responsibilities", label: "Roles & Responsibilities", icon: "◈" },
+  { id: "solution-architecture", label: "Solution Architecture", icon: "⬡" },
   { id: "commercial-offer", label: "Commercial Offer", icon: "◈" },
   { id: "roi", label: "ROI Calculator", icon: "◇" },
   { id: "scope-of-work", label: "Scope of Work", icon: "◫" },
@@ -414,6 +416,13 @@ export default function GuideClient({
             <div id="roles-and-responsibilities" ref={(el) => { sectionRefs.current["roles-and-responsibilities"] = el; }}>
               <SectionReportPill sectionId="roles-and-responsibilities" displayName="Roles & Responsibilities" />
               <RolesAndResponsibilitiesSection customer={customer} sectionNumber={sn("roles-and-responsibilities")} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("solution-architecture")) && (
+            <div id="solution-architecture" ref={(el) => { sectionRefs.current["solution-architecture"] = el; }}>
+              <SectionReportPill sectionId="solution-architecture" displayName="Solution Architecture" />
+              <SolutionArchitectureSection customer={customer} sectionNumber={sn("solution-architecture")} />
             </div>
           )}
 
