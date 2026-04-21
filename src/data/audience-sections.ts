@@ -104,7 +104,6 @@ export const CE_DEFAULTS: readonly string[] = [
  */
 export const PS_DEFAULTS: readonly string[] = [
   "project-framing",
-  "project-details",
   "build-scope",
   "roles-and-responsibilities",
   "solution-architecture",

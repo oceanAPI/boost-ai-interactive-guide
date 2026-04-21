@@ -33,6 +33,7 @@ import ScopeOfWorkSection from "@/components/sections/ScopeOfWorkSection";
 import CustomSection from "@/components/sections/CustomSection";
 import NextStepsSection from "@/components/sections/NextStepsSection";
 import ProjectFramingSection from "@/components/sections/ProjectFramingSection";
+import BuildScopeSection from "@/components/sections/BuildScopeSection";
 import { TOPIC_COMPONENTS } from "@/data/topics/registry";
 import { SectionReportPill } from "@/components/SectionReportPill";
 
@@ -63,6 +64,7 @@ const SECTIONS = [
   { id: "community", label: "Boost.ai Community", icon: "◎" },
   { id: "boost-camp", label: "Boost Camp", icon: "▸" },
   { id: "project-framing", label: "Project Framing", icon: "◆" },
+  { id: "build-scope", label: "Build Scope", icon: "◫" },
   { id: "commercial-offer", label: "Commercial Offer", icon: "◈" },
   { id: "roi", label: "ROI Calculator", icon: "◇" },
   { id: "scope-of-work", label: "Scope of Work", icon: "◫" },
@@ -396,6 +398,13 @@ export default function GuideClient({
             <div id="project-framing" ref={(el) => { sectionRefs.current["project-framing"] = el; }}>
               <SectionReportPill sectionId="project-framing" displayName="Project Framing" />
               <ProjectFramingSection customer={customer} sectionNumber={sn("project-framing")} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("build-scope")) && (
+            <div id="build-scope" ref={(el) => { sectionRefs.current["build-scope"] = el; }}>
+              <SectionReportPill sectionId="build-scope" displayName="Build Scope" />
+              <BuildScopeSection customer={customer} sectionNumber={sn("build-scope")} />
             </div>
           )}
 
