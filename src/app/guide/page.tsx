@@ -2,14 +2,54 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { decodeGuideData } from "@/lib/url-encoding";
 import type { Customer, GuideData } from "@/lib/types";
 import GuideClient from "./GuideClient";
 
-function GuideContent() {
+/**
+ * Hook: read `data` + `sections` from the URL fragment (`#data=...&sections=...`)
+ * with fall-back to query-string (`?data=...`) for back-compat with existing
+ * bookmarks / shared links.
+ *
+ * Why fragment: GitHub Pages' Varnish CDN returns HTTP 414 for URLs past ~8KB.
+ * A fully-populated H&M PS guide encodes to ~32KB. Fragments are never sent
+ * to the server, so the CDN never sees the payload — no URL-length cap.
+ *
+ * Returns `null` until the first client render has read the hash, so we
+ * don't flash "Invalid guide data" for fragment URLs on initial hydration.
+ */
+function useGuideUrlParams(): URLSearchParams | null {
   const searchParams = useSearchParams();
-  const encoded = searchParams.get("data");
+  const [params, setParams] = useState<URLSearchParams | null>(null);
+  useEffect(() => {
+    const raw = window.location.hash.startsWith("#")
+      ? window.location.hash.slice(1)
+      : window.location.hash;
+    const fromFragment = new URLSearchParams(raw);
+    // Merge: fragment wins, query-string fills gaps for back-compat.
+    const merged = new URLSearchParams();
+    for (const [k, v] of searchParams.entries()) merged.set(k, v);
+    for (const [k, v] of fromFragment.entries()) merged.set(k, v);
+    setParams(merged);
+  }, [searchParams]);
+  return params;
+}
+
+function GuideContent() {
+  const urlParams = useGuideUrlParams();
+
+  // First client render — we haven't parsed the fragment yet. Fall through
+  // to the Suspense fallback rather than briefly showing "No guide data".
+  if (urlParams === null) {
+    return (
+      <div className="min-h-screen bg-boost-bg flex items-center justify-center">
+        <p className="text-boost-muted">Loading guide...</p>
+      </div>
+    );
+  }
+
+  const encoded = urlParams.get("data");
 
   if (!encoded) {
     return (
@@ -59,7 +99,7 @@ function GuideContent() {
     custom_notes: formData.custom_notes || "",
   };
 
-  const sectionsParam = searchParams.get("sections");
+  const sectionsParam = urlParams.get("sections");
   // Backwards-compat shim: old URLs reference "core-components" — rewrite to new id.
   const sectionIds = sectionsParam
     ? sectionsParam.split(",").map((id) => (id === "core-components" ? "platform-vision" : id))

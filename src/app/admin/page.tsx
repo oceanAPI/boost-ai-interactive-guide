@@ -416,11 +416,17 @@ export default function AdminPage() {
    *  bookmark-compatible. */
   const proceedWithGenerate = () => {
     const encoded = encodeGuideData(form);
-    const params = new URLSearchParams();
-    params.set("data", encoded);
-    if (audience) params.set("audience", audience);
-    params.set("sections", selectedSectionIds.join(","));
-    router.push(`/guide?${params.toString()}`);
+    // Bulky payload (`data`, `sections`) lives in the URL FRAGMENT so
+    // GitHub Pages' Varnish CDN never sees it — Varnish rejects URIs
+    // past ~8KB, and a fully-populated PS fixture encodes to ~32KB.
+    // Fragments are client-only, so there is no practical size cap.
+    // `audience` stays as a query param: it's tiny and we may want it
+    // for logging / analytics / server-side hints in the future.
+    const fragment = new URLSearchParams();
+    fragment.set("data", encoded);
+    fragment.set("sections", selectedSectionIds.join(","));
+    const qs = audience ? `?audience=${encodeURIComponent(audience)}` : "";
+    router.push(`/guide${qs}#${fragment.toString()}`);
   };
 
   const handleSubmit = () => {
@@ -438,7 +444,8 @@ export default function AdminPage() {
   const handleStartPresentation = () => {
     const encoded = encodeGuideData(form);
     const sections = selectedSectionIds.join(",");
-    router.push(`/slides?data=${encoded}&sections=${sections}`);
+    // Fragment-encoded for the same CDN-limit reason as proceedWithGenerate.
+    router.push(`/slides#data=${encoded}&sections=${encodeURIComponent(sections)}`);
   };
 
   /* ─── Salesforce import ─── */
@@ -565,7 +572,8 @@ export default function AdminPage() {
     try {
       const encoded = encodeGuideData(form);
       const base = window.location.href.split('/admin')[0];
-      const guideUrl = `${base}/guide?data=${encoded}`;
+      // Fragment URL — see proceedWithGenerate for the CDN-limit rationale.
+      const guideUrl = `${base}/guide#data=${encoded}`;
       await generateSOWPdf(form, guideUrl);
     } catch (err) {
       console.error("PDF generation failed:", err);

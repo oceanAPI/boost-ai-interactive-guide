@@ -2,15 +2,46 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { decodeGuideData } from "@/lib/url-encoding";
 import type { GuideData } from "@/lib/types";
 import SlideshowClient from "@/components/SlideshowClient";
 
-function SlidesContent() {
+/**
+ * Fragment-first URL param reader. See `src/app/guide/page.tsx` for the
+ * full rationale — in short: GitHub Pages' CDN rejects URLs past ~8KB,
+ * but fragments are never sent to the server. Falls back to query-string
+ * for back-compat with existing bookmarks.
+ */
+function useSlidesUrlParams(): URLSearchParams | null {
   const searchParams = useSearchParams();
-  const encoded = searchParams.get("data");
-  const sectionsParam = searchParams.get("sections");
+  const [params, setParams] = useState<URLSearchParams | null>(null);
+  useEffect(() => {
+    const raw = window.location.hash.startsWith("#")
+      ? window.location.hash.slice(1)
+      : window.location.hash;
+    const fromFragment = new URLSearchParams(raw);
+    const merged = new URLSearchParams();
+    for (const [k, v] of searchParams.entries()) merged.set(k, v);
+    for (const [k, v] of fromFragment.entries()) merged.set(k, v);
+    setParams(merged);
+  }, [searchParams]);
+  return params;
+}
+
+function SlidesContent() {
+  const urlParams = useSlidesUrlParams();
+
+  if (urlParams === null) {
+    return (
+      <div className="min-h-screen bg-boost-bg flex items-center justify-center">
+        <p className="text-boost-muted">Loading presentation...</p>
+      </div>
+    );
+  }
+
+  const encoded = urlParams.get("data");
+  const sectionsParam = urlParams.get("sections");
 
   if (!encoded || !sectionsParam) {
     return (
