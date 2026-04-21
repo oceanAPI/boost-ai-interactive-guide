@@ -36,6 +36,7 @@ import ProjectFramingSection from "@/components/sections/ProjectFramingSection";
 import BuildScopeSection from "@/components/sections/BuildScopeSection";
 import RolesAndResponsibilitiesSection from "@/components/sections/RolesAndResponsibilitiesSection";
 import SolutionArchitectureSection from "@/components/sections/SolutionArchitectureSection";
+import OutOfScopeSection from "@/components/sections/OutOfScopeSection";
 import { TOPIC_COMPONENTS } from "@/data/topics/registry";
 import { SectionReportPill } from "@/components/SectionReportPill";
 
@@ -69,6 +70,7 @@ const SECTIONS = [
   { id: "build-scope", label: "Build Scope", icon: "◫" },
   { id: "roles-and-responsibilities", label: "Roles & Responsibilities", icon: "◈" },
   { id: "solution-architecture", label: "Solution Architecture", icon: "⬡" },
+  { id: "out-of-scope", label: "Out of Scope", icon: "✕" },
   { id: "commercial-offer", label: "Commercial Offer", icon: "◈" },
   { id: "roi", label: "ROI Calculator", icon: "◇" },
   { id: "scope-of-work", label: "Scope of Work", icon: "◫" },
@@ -423,6 +425,13 @@ export default function GuideClient({
             <div id="solution-architecture" ref={(el) => { sectionRefs.current["solution-architecture"] = el; }}>
               <SectionReportPill sectionId="solution-architecture" displayName="Solution Architecture" />
               <SolutionArchitectureSection customer={customer} sectionNumber={sn("solution-architecture")} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("out-of-scope")) && (
+            <div id="out-of-scope" ref={(el) => { sectionRefs.current["out-of-scope"] = el; }}>
+              <SectionReportPill sectionId="out-of-scope" displayName="Out of Scope" />
+              <OutOfScopeSection customer={customer} sectionNumber={sn("out-of-scope")} />
             </div>
           )}
 
