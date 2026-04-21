@@ -3,43 +3,49 @@
 > Overwritten on every meaningful step. Read this first when resuming.
 
 ## Branch
-main — 3 commits ahead of origin/main (unpushed): 6940a2a, c01fab6, 2420e3f
+main — clean, in sync with origin/main.
 
 ## Current goal
-Stand up the structured context-management system so new Claude Code sessions resume without re-onboarding.
+Section-quality redesign pass across the PS audience sections. User's critique (2026-04-21): "Build Scope / Roles & Responsibilities / Out of Scope have nice structure but shitty design — no icons, faded colour frames for tags, quality dropped mid-sprint." Only `ProjectFramingSection` and `SolutionArchitectureSection` hit the bar set by `ImpactSection` + `ScopeOfWorkSection`.
 
 ## Step
-5 of ~8 in the setup plan.
-- [x] Audit existing CLAUDE.md / AGENTS.md / REFERENCE.md
-- [x] Move REFERENCE.md to docs/ with staleness header
-- [x] Draft docs/ARCHITECTURE.md from current code (c01fab6)
-- [x] Create STATE.md / JOURNAL.md / GOTCHAS.md (2420e3f)
-- [x] Rewire CLAUDE.md as thin @import loader (2420e3f)
-- [ ] Install hooks (SessionStart, PreCompact, Stop, PostToolUse)  ← next
-- [ ] Add /prime slash command
-- [ ] Add subagents (researcher, file-summarizer, pre-commit-reviewer)
+PS audience structurally complete (6/6 sections shipped + a critical prod fix). Redesign pass just starting.
+
+- [x] Schema v1.2.0 + H&M expansion fixture
+- [x] `audience-sections.ts` PS_DEFAULTS
+- [x] ProjectFramingSection — 4 tabs (brief / criteria / journey / math) — passing caliber bar
+- [x] BuildScopeSection — 4 tabs (overview / channels / intelligence / integrations) — **fails caliber bar**
+- [x] RolesAndResponsibilitiesSection — 3-party swim lane — **fails caliber bar**
+- [x] SolutionArchitectureSection — 3-column flow poster — passing
+- [x] OutOfScopeSection — numbered exclusions — **fails caliber bar, footprint too heavy for content**
+- [x] Prod 414 fix — fragment-encoded payloads (`327948e`)
+- [ ] Redesign BuildScope / Roles / OutOfScope using `public/icons/purple` (99 real SVGs we've been ignoring)  ← next
+- [ ] Decide whether OutOfScope folds into BuildScope
 
 ## Last-green SHA
-2420e3f (local, unpushed)
+327948e — fragment-URL prod fix, deployed + verified (Varnish returns 200 for `/guide` path, fragment payload client-only).
 
 ## Blockers
-None. 3 commits ready to push to origin/main when user is ready.
+None. Critique is clear, redesign reference sections (`ImpactSection`, `ScopeOfWorkSection`) exist, icon library available at `public/icons/purple/*.svg` (99 icons) + `public/icons/white/*.svg`. `BoostIcon.tsx` component already wraps them.
 
 ## Next action
-Install SessionStart + PreCompact + Stop + PostToolUse hooks under .claude/hooks/, wire them into .claude/settings.json.
+One section at a time, starting with **BuildScopeSection** (biggest opportunity — most content, worst current execution). Use `BoostIcon` for channel types, GenAI features, auth providers, API methods. Match the purposeful-animation + distinct-visual-metaphor bar of `ImpactSection`. Ship, verify, commit, move to next. No batching.
+
+## Key context for next session
+- Icon library: `public/icons/purple/*.svg` (99) + `public/icons/white/*.svg` (99) — see `src/components/BoostIcon.tsx` for usage pattern.
+- User explicit feedback on speed: "take your time so we produce quality section by section." No more rushing.
+- Prod payload fix means we can enrich fixtures further without 414 risk — URL now unlimited for client-parsed data.
+- Docs: `customer_excellence_raw_data_pdfs/` untracked by design (inspiration, not source).
 
 <!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
 ## Auto-snapshot
-Last updated: 2026-04-20T21:49:34+02:00
+Last updated: 2026-04-21T10:50:03+02:00
 Branch: main
-Last commit: 2420e3f docs: thin CLAUDE.md loader + STATE/JOURNAL/GOTCHAS living docs
+Last commit: 327948e fix: move guide payload to URL fragment to bypass 8KB CDN limit (prod crash)
 Working tree:
 ```
-D  .claude/settings.local.json
- M .gitignore
- M docs/JOURNAL.md
  M docs/STATE.md
-?? .claude/
+?? .claude/launch.json
 ?? customer_excellence_raw_data_pdfs/
 ```
 <!-- AUTO-HOOK-END -->
