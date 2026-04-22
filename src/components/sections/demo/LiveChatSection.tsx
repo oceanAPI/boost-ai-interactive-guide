@@ -38,6 +38,12 @@ import {
   type ChatResponse,
   type PostResponse,
 } from "@/lib/boost-chat";
+import {
+  fetchExportTrace,
+  isExportConfigured,
+  type ExportTraceError,
+  type ExportTraceSuccess,
+} from "@/lib/boost-export";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { assetPath } from "@/lib/asset-path";
@@ -58,6 +64,27 @@ type ChatPhase =
   | { kind: "ready" }
   | { kind: "posting" }
   | { kind: "error"; message: string };
+
+/** Analyze-button lifecycle. Kept separate from ChatPhase because
+ *  the chat can be ready while an analyze fetch is in flight, and
+ *  vice versa. */
+export type AnalyzePhase =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "error"; message: string };
+
+function analyzeErrorMessage(err: ExportTraceError): string {
+  switch (err.kind) {
+    case "not_configured":
+      return "Analyse is off-line — Export API is not configured for this deployment.";
+    case "not_indexed_after_retries":
+      return "Conversation is not yet in the Export index. Wait a moment and try again.";
+    case "request_failed":
+      return "Could not reach the Export API. Try again.";
+    default:
+      return "Analyse failed.";
+  }
+}
 
 /** Map a ChatResponse → ChatMessage (1:1 for MVP). */
 function toMessage(res: ChatResponse, fallbackKey: string): ChatMessage {
@@ -99,7 +126,24 @@ export default function LiveChatSection({
    *  at least one client message. START's welcome does NOT flip it
    *  (no preceding client message). Reset brings it back to false. */
   const [revealPanel, setRevealPanel] = useState(false);
+  /** User-turn message IDs collected across the conversation.
+   *  These are the Chat API v2 posted_ids, which equal Export API
+   *  v4 message.ids — the Worker uses these to find the session. */
+  const [postedIds, setPostedIds] = useState<number[]>([]);
+  /** Loaded trace from the last successful Analyze. Null = never
+   *  analysed OR trace was cleared by a reset. */
+  const [exportTrace, setExportTrace] = useState<ExportTraceSuccess | null>(
+    null,
+  );
+  const [analyzePhase, setAnalyzePhase] = useState<AnalyzePhase>({
+    kind: "idle",
+  });
+  /** How many postedIds were included in the most recent successful
+   *  analysis. Used to render "(+N new turns)" on the Refresh
+   *  button when the user has typed since. */
+  const [analyzedPostedCount, setAnalyzedPostedCount] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
+  const analyzeAbortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -117,6 +161,13 @@ export default function LiveChatSection({
       if (res.conversation.state.max_input_chars) {
         setMaxInputChars(res.conversation.state.max_input_chars);
       }
+    }
+    // Collect posted_id (integer message.id of the user's turn,
+    // per Chat API v2). START does NOT carry one; only text + action
+    // link posts do. We dedupe to protect against any retries.
+    if (typeof res.posted_id === "number") {
+      const id = res.posted_id;
+      setPostedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
     }
     if (res.response) {
       const botMsg = toMessage(res.response, `bot-${Date.now()}`);
@@ -136,6 +187,7 @@ export default function LiveChatSection({
    *  in-flight request via AbortController. */
   const start = useCallback(async () => {
     abortRef.current?.abort();
+    analyzeAbortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     setPhase({ kind: "starting" });
@@ -145,6 +197,10 @@ export default function LiveChatSection({
     setConversationState(null);
     setLastRawResponse(null);
     setRevealPanel(false);
+    setPostedIds([]);
+    setExportTrace(null);
+    setAnalyzePhase({ kind: "idle" });
+    setAnalyzedPostedCount(0);
     try {
       const res = await startConversation(
         tenant,
@@ -271,6 +327,41 @@ export default function LiveChatSection({
     }
     await start();
   }, [conversationId, tenant, start]);
+
+  /** Analyze: call the Worker proxy to enrich the conversation with
+   *  Export API v4 data. Safe to call repeatedly (Refresh pattern);
+   *  aborts any prior analyze in flight. */
+  const handleAnalyze = useCallback(async () => {
+    if (postedIds.length === 0) return;
+    analyzeAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    analyzeAbortRef.current = ctrl;
+    setAnalyzePhase({ kind: "loading" });
+    // Snapshot the count BEFORE we await so we record what we
+    // actually sent, not the size at the time the response arrived
+    // (the user might have sent more messages during the ~10s
+    // indexing wait).
+    const sentCount = postedIds.length;
+    const result = await fetchExportTrace(postedIds, { signal: ctrl.signal });
+    if (ctrl.signal.aborted) return;
+    if (result.ok) {
+      setExportTrace(result.trace);
+      setAnalyzedPostedCount(sentCount);
+      setAnalyzePhase({ kind: "idle" });
+    } else {
+      setAnalyzePhase({
+        kind: "error",
+        message: analyzeErrorMessage(result.error),
+      });
+    }
+  }, [postedIds]);
+
+  /** Cleanup: abort any in-flight analyze on unmount. */
+  useEffect(() => {
+    return () => {
+      analyzeAbortRef.current?.abort();
+    };
+  }, []);
 
   const disableInput =
     phase.kind === "starting" ||
@@ -425,6 +516,12 @@ export default function LiveChatSection({
               reference={conversationRef}
               tenant={tenant}
               lastRawResponse={lastRawResponse}
+              postedIds={postedIds}
+              exportTrace={exportTrace}
+              analyzePhase={analyzePhase}
+              analyzedPostedCount={analyzedPostedCount}
+              onAnalyze={handleAnalyze}
+              exportEnabled={isExportConfigured()}
             />
           </div>
         )}

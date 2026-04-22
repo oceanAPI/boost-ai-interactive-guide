@@ -9,8 +9,13 @@ compatibility_date = "2025-01-01"
 binding = "FEED_KV"
 id = "8f14a9597d4f44c9bdcc4841d934f450"
 
-# Non-secret vars. Set secrets (CLIENT_TOKEN, ADMIN_PASSWORD) with:
+# Non-secret vars. Set secrets with:
 #   npx wrangler secret put CLIENT_TOKEN
 #   npx wrangler secret put ADMIN_PASSWORD
+#   npx wrangler secret put BOOST_EXPORT_CLIENT_ID      # needed for /boost-export
+#   npx wrangler secret put BOOST_EXPORT_CLIENT_SECRET  # needed for /boost-export
 [vars]
 ALLOWED_ORIGINS = "https://oceanapi.github.io,http://localhost:3000"
+# Tenant used by /boost-export. Change to your tenant host if the
+# default demo tenant moves. Matches DEFAULT_DEMO_TENANT in src/lib/boost-chat.ts.
+BOOST_EXPORT_TENANT = "financewizard.boost.ai"

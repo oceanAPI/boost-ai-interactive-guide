@@ -3,49 +3,36 @@
 > Overwritten on every meaningful step. Read this first when resuming.
 
 ## Branch
-main — clean, in sync with origin/main.
+main — Phase 2b client about to push. Worker extended but not yet deployed by user.
 
 ## Current goal
-Section-quality redesign pass across the PS audience sections. User's critique (2026-04-21): "Build Scope / Roles & Responsibilities / Out of Scope have nice structure but shitty design — no icons, faded colour frames for tags, quality dropped mid-sprint." Only `ProjectFramingSection` and `SolutionArchitectureSection` hit the bar set by `ImpactSection` + `ScopeOfWorkSection`.
+Phase 2b of the live-demo Chat Preview: **Analyze with Export API** button inside `DataFunnelPanel` that calls a Cloudflare Worker proxy to boost.ai's Export API v4 and renders a "Routing & NLU trace" block (action-type distribution, intent trace, handover events, category chip) + per-turn drawer enrichment.
 
 ## Step
-PS audience structurally complete (6/6 sections shipped + a critical prod fix). Redesign pass just starting.
+Code complete. Build + typecheck green. Dev smoke-tested (LiveChatSection mounts, graceful "Failed to fetch" on expected localhost CORS, no stray `/boost-export` calls, no console errors). Worker extension is in the repo but needs `wrangler deploy` + two secrets. Client being pushed this commit.
 
-- [x] Schema v1.2.0 + H&M expansion fixture
-- [x] `audience-sections.ts` PS_DEFAULTS
-- [x] ProjectFramingSection — 4 tabs (brief / criteria / journey / math) — passing caliber bar
-- [x] BuildScopeSection — 4 tabs (overview / channels / intelligence / integrations) — **fails caliber bar**
-- [x] RolesAndResponsibilitiesSection — 3-party swim lane — **fails caliber bar**
-- [x] SolutionArchitectureSection — 3-column flow poster — passing
-- [x] OutOfScopeSection — numbered exclusions — **fails caliber bar, footprint too heavy for content**
-- [x] Prod 414 fix — fragment-encoded payloads (`327948e`)
-- [ ] Redesign BuildScope / Roles / OutOfScope using `public/icons/purple` (99 real SVGs we've been ignoring)  ← next
-- [ ] Decide whether OutOfScope folds into BuildScope
+- [x] `/boost-export` endpoint on existing `feed-me-log` Worker (OAuth2 client_credentials + KV token cache + Export search + cross-lookup by posted_id + dereference maps)
+- [x] `wrangler.toml` — `BOOST_EXPORT_TENANT = "financewizard.boost.ai"`
+- [x] `src/lib/boost-export.ts` — fetcher with 2s/3s/4s/5s retry ladder for ~10s Export indexing delay
+- [x] `LiveChatSection` — `postedIds[]`, `analyzePhase`, `exportTrace`, `analyzedPostedCount`, `handleAnalyze` with snapshot-count-before-await
+- [x] `DataFunnelPanel` — `AnalyzeOrRouting` + `RoutingBlock` + `ActionTypeBar` + `DrawerExportExtras`
+- [x] `npm run build` green
+- [x] Dev smoke-test
+- [ ] User: `wrangler secret put BOOST_EXPORT_CLIENT_ID` + `BOOST_EXPORT_CLIENT_SECRET` + `wrangler deploy` in `cloudflare-worker/`
+- [ ] Prod verify end-to-end on `oceanapi.github.io`
 
 ## Last-green SHA
-327948e — fragment-URL prod fix, deployed + verified (Varnish returns 200 for `/guide` path, fragment payload client-only).
+`4c34ede` (Phase 2a polish) — next commit is Phase 2b.
 
 ## Blockers
-None. Critique is clear, redesign reference sections (`ImpactSection`, `ScopeOfWorkSection`) exist, icon library available at `public/icons/purple/*.svg` (99 icons) + `public/icons/white/*.svg`. `BoostIcon.tsx` component already wraps them.
+None. Feature degrades gracefully at every step: no Worker deployment → Analyze button shows "off-line" message; no classical intents on tenant → rows render as em-dashes or hidden; Export indexing not-yet-ready → retries with shimmer then shows friendly error.
 
 ## Next action
-One section at a time, starting with **BuildScopeSection** (biggest opportunity — most content, worst current execution). Use `BoostIcon` for channel types, GenAI features, auth providers, API methods. Match the purposeful-animation + distinct-visual-metaphor bar of `ImpactSection`. Ship, verify, commit, move to next. No batching.
+Push this commit. User deploys Worker in parallel. Verify on prod by opening a guide in `demo_mode: "live"`, sending one message, clicking **Analyze**, confirming the Routing block appears with at least `displayed_action.action_type` populated per turn.
 
 ## Key context for next session
-- Icon library: `public/icons/purple/*.svg` (99) + `public/icons/white/*.svg` (99) — see `src/components/BoostIcon.tsx` for usage pattern.
-- User explicit feedback on speed: "take your time so we produce quality section by section." No more rushing.
-- Prod payload fix means we can enrich fixtures further without 414 risk — URL now unlimited for client-parsed data.
-- Docs: `customer_excellence_raw_data_pdfs/` untracked by design (inspiration, not source).
-
-<!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
-## Auto-snapshot
-Last updated: 2026-04-21T10:50:03+02:00
-Branch: main
-Last commit: 327948e fix: move guide payload to URL fragment to bypass 8KB CDN limit (prod crash)
-Working tree:
-```
- M docs/STATE.md
-?? .claude/launch.json
-?? customer_excellence_raw_data_pdfs/
-```
-<!-- AUTO-HOOK-END -->
+- **Worker endpoint**: `POST /boost-export` — body `{ posted_ids: number[], window_minutes?: number }`. Auth: same `x-client-token` as `/feedback`. Returns `{indexed:false}` during the ~10s Export indexing window; client retries.
+- **ID cross-lookup**: Chat API v2's `posted_id` === Export API v4's `message.id`. Confirmed empirically. `Conversation.reference` is null on financewizard — do not rely on it.
+- **Tenant reality check for financewizard**: `predicted_intent_id`, `matched_filter`, `skill`, `session.category` are all null/empty on most turns. Only `displayed_action.action_type` (`"generative"` vs `"content"`) and `predicted_language` are reliably populated. Panel designed to degrade gracefully. When pointed at a real tenant with intents + auto-review enabled, the Routing block fills out.
+- **Dev CORS**: localhost live-chat stays broken. Prod is the only verification path for the full flow.
+- **Secret rotation**: the OAuth2 client secret used during build hit chat history. Rotate via boost.ai admin → Security & Privacy → OAuth 2.0 → Reset after first successful prod verify.
