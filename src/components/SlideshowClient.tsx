@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import type { GuideData } from "@/lib/types";
+import type { Customer, GuideData } from "@/lib/types";
 import { SLIDE_SECTIONS } from "@/lib/slide-sections";
 import { getTopicSections } from "@/data/topics";
 import { TOPIC_COMPONENTS } from "@/data/topics/registry";
@@ -26,6 +26,22 @@ import NextStepsSection from "@/components/sections/NextStepsSection";
 import ScopeOfWorkSection from "@/components/sections/ScopeOfWorkSection";
 import CustomSection from "@/components/sections/CustomSection";
 import TopicSection from "@/components/sections/topics/TopicSection";
+// CE-surface sections (read from customer.* fields)
+import AgendaSection from "@/components/sections/AgendaSection";
+import PerformanceSection from "@/components/sections/PerformanceSection";
+import BenchmarkingSection from "@/components/sections/BenchmarkingSection";
+import AgenticBeforeAfterSection from "@/components/sections/AgenticBeforeAfterSection";
+import AgentSwotSection from "@/components/sections/AgentSwotSection";
+import UatStatusSection from "@/components/sections/UatStatusSection";
+import SuccessPlanSection from "@/components/sections/SuccessPlanSection";
+import TopRecommendationsSection from "@/components/sections/TopRecommendationsSection";
+import GovernanceSection from "@/components/sections/GovernanceSection";
+// PS-surface sections (Scope of Work)
+import ProjectFramingSection from "@/components/sections/ProjectFramingSection";
+import BuildScopeSection from "@/components/sections/BuildScopeSection";
+import RolesAndResponsibilitiesSection from "@/components/sections/RolesAndResponsibilitiesSection";
+import SolutionArchitectureSection from "@/components/sections/SolutionArchitectureSection";
+import OutOfScopeSection from "@/components/sections/OutOfScopeSection";
 
 /* ─── Topic data lookup ─── */
 const topicSections = getTopicSections();
@@ -36,9 +52,15 @@ const labelById = new Map(SLIDE_SECTIONS.map((s) => [s.id, s.label]));
 
 export default function SlideshowClient({
   guide,
+  customer,
   sectionIds,
 }: {
   guide: GuideData;
+  /** Full Customer record carrying optional CE/PS fields (br_context,
+   *  performance, agent_swot, recommendations, project_framing,
+   *  build_scope, etc.). Optional for back-compat — slides routed
+   *  without this prop still render the Sales section set cleanly. */
+  customer?: Customer;
   sectionIds: string[];
 }) {
   const router = useRouter();
@@ -180,6 +202,36 @@ export default function SlideshowClient({
         return <NextStepsSection guide={guide} sectionNumber={num} />;
       case "custom":
         return <CustomSection guide={guide} sectionNumber={num} />;
+      // CE sections (read from customer.* fields — SoW scope)
+      case "agenda":
+        return <AgendaSection customer={customer} sectionNumber={num} />;
+      case "performance":
+        return <PerformanceSection customer={customer} sectionNumber={num} />;
+      case "benchmarking":
+        return <BenchmarkingSection customer={customer} sectionNumber={num} />;
+      case "agentic-before-after":
+        return <AgenticBeforeAfterSection customer={customer} sectionNumber={num} />;
+      case "agent-swot":
+        return <AgentSwotSection customer={customer} sectionNumber={num} />;
+      case "uat-status":
+        return <UatStatusSection customer={customer} sectionNumber={num} />;
+      case "success-plan":
+        return <SuccessPlanSection customer={customer} sectionNumber={num} />;
+      case "top-recommendations":
+        return <TopRecommendationsSection customer={customer} sectionNumber={num} />;
+      case "governance":
+        return <GovernanceSection customer={customer} sectionNumber={num} />;
+      // PS sections (Scope of Work — read from customer.* fields)
+      case "project-framing":
+        return <ProjectFramingSection customer={customer} sectionNumber={num} />;
+      case "build-scope":
+        return <BuildScopeSection customer={customer} sectionNumber={num} />;
+      case "roles-and-responsibilities":
+        return <RolesAndResponsibilitiesSection customer={customer} sectionNumber={num} />;
+      case "solution-architecture":
+        return <SolutionArchitectureSection customer={customer} sectionNumber={num} />;
+      case "out-of-scope":
+        return <OutOfScopeSection customer={customer} sectionNumber={num} />;
     }
 
     /* Topic sections (topic-implementation, topic-integrations, etc.) */
@@ -208,7 +260,7 @@ export default function SlideshowClient({
         Section not found: {id}
       </div>
     );
-  }, [currentIndex, guide, handleTopicNavigate, sectionIds]);
+  }, [currentIndex, guide, customer, handleTopicNavigate, sectionIds]);
 
   return (
     <div className="fixed inset-0 bg-boost-bg z-[100] flex flex-col">

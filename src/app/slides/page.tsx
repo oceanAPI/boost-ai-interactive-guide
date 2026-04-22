@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { decodeGuideData } from "@/lib/url-encoding";
-import type { GuideData } from "@/lib/types";
+import type { Customer, GuideData } from "@/lib/types";
 import SlideshowClient from "@/components/SlideshowClient";
 
 /**
@@ -97,7 +97,13 @@ function SlidesContent() {
     .filter(Boolean)
     .map((id) => (id === "core-components" ? "platform-vision" : id));
 
-  return <SlideshowClient guide={guide} sectionIds={sectionIds} />;
+  // Mirror guide/page.tsx: pass the full decoded formData as `customer`
+  // so slides can render the CE + PS sections that read from
+  // customer.* fields (agenda, performance, success-plan,
+  // project-framing, build-scope, etc.).
+  const customer: Customer = { ...formData };
+
+  return <SlideshowClient guide={guide} customer={customer} sectionIds={sectionIds} />;
 }
 
 export default function SlidesPage() {

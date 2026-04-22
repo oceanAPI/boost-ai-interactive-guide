@@ -185,7 +185,7 @@ function TargetingOverlay({
           pill carries the keyboard hint without eating real estate. */}
       <div
         aria-live="polite"
-        className="fixed inset-y-0 left-0 z-[60] pointer-events-none flex items-start"
+        className="fixed inset-y-0 left-0 z-[200] pointer-events-none flex items-start"
       >
         <span
           aria-hidden="true"
@@ -217,7 +217,7 @@ function TargetingOverlay({
       <div
         ref={dotRef}
         aria-hidden="true"
-        className="fixed top-0 left-0 z-[61] pointer-events-none"
+        className="fixed top-0 left-0 z-[201] pointer-events-none"
         style={{
           width: "22px",
           height: "22px",
@@ -284,41 +284,6 @@ interface PinDraft {
    *  inside SlideshowClient (i.e. while the slideshow-bridge snapshot
    *  was live). Undefined means guide-mode / scroll-positioned pin. */
   slideIndex?: number;
-}
-
-/* ─── Visual-recall flash ────────────────────────────────────────
- *  A green ring anchored to a pin's document-space (pageX, pageY)
- *  that expands and fades over ~1.8s. Rendered when the user clicks
- *  a pin tick on the right rail — it tells the reviewer WHERE on
- *  the page the note referred to, even though the on-page icon
- *  has been moved into the rail. Mount-then-state-flip pattern so
- *  the CSS transition fires on first paint (no @keyframes needed —
- *  works in Turbopack without global CSS additions).
- * ────────────────────────────────────────────────────────────── */
-function RecallFlash({ pageX, pageY }: { pageX: number; pageY: number }) {
-  const [done, setDone] = useState(false);
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => setDone(true));
-    return () => cancelAnimationFrame(raf);
-  }, []);
-  return (
-    <div
-      aria-hidden="true"
-      className="absolute z-[63] pointer-events-none"
-      style={{
-        top: pageY,
-        left: pageX,
-        width: done ? "160px" : "28px",
-        height: done ? "160px" : "28px",
-        transform: "translate(-50%, -50%)",
-        borderRadius: "9999px",
-        border: done ? "1px solid rgba(54,181,149,0)" : "3px solid rgba(54,181,149,0.95)",
-        boxShadow: done ? "0 0 0 rgba(54,181,149,0)" : "0 0 24px rgba(54,181,149,0.75)",
-        opacity: done ? 0 : 1,
-        transition: "all 1800ms cubic-bezier(0.16,1,0.3,1)",
-      }}
-    />
-  );
 }
 
 function PinDropOverlay({
@@ -466,31 +431,21 @@ function PinDropOverlay({
       window.removeEventListener("resize", update);
     };
   }, [active]);
-  const [recall, setRecall] = useState<{ pageX: number; pageY: number; key: number } | null>(null);
-  useEffect(() => {
-    if (!recall) return;
-    const t = setTimeout(() => setRecall(null), 2000);
-    return () => clearTimeout(t);
-  }, [recall]);
-  /** Scroll to / navigate to a pin, then flash a fading ring at its
-   *  document position so the reviewer can see WHERE on the page the
-   *  note referred to — even though the on-page icon is gone. */
+  /** Scroll to / navigate to a pin, then re-open its inline editor at
+   *  the original (pageX, pageY). The editor lets the reviewer EDIT
+   *  (Enter commits) or DELETE (Esc in the field discards) the pin —
+   *  same affordance the old on-page icon had. Replaces the earlier
+   *  decorative recall-flash with something actionable. */
   const navigateToPin = useCallback(
     (pin: PinDraft) => {
       if (slideshow && typeof pin.slideIndex === "number") {
         slideshow.goToSlide(pin.slideIndex);
-        // Wait for slide transition before flashing so the ring
-        // lands on the intended slide, not the previous one.
-        setTimeout(
-          () => setRecall({ pageX: pin.pageX, pageY: pin.pageY, key: Date.now() }),
-          520,
-        );
+        // Wait for slide transition so the editor lands on the right
+        // slide, not the previous one.
+        setTimeout(() => setActiveInputId(pin.id), 520);
       } else {
         window.scrollTo({ top: Math.max(0, pin.pageY - 120), behavior: "smooth" });
-        setTimeout(
-          () => setRecall({ pageX: pin.pageX, pageY: pin.pageY, key: Date.now() }),
-          360,
-        );
+        setTimeout(() => setActiveInputId(pin.id), 360);
       }
     },
     [slideshow],
@@ -533,7 +488,7 @@ function PinDropOverlay({
           empty rail regions. */}
       <div
         aria-live="polite"
-        className="fixed inset-y-0 right-0 z-[60] flex items-start justify-end"
+        className="fixed inset-y-0 right-0 z-[200] flex items-start justify-end"
         style={{ pointerEvents: "none" }}
       >
         {/* Top-right corner pill — "Note ready" or "N notes" live count */}
@@ -551,8 +506,10 @@ function PinDropOverlay({
           <span className="text-boost-muted">&uarr; &darr; Esc</span>
         </span>
 
-        {/* The rail itself */}
-        <div className="relative h-full flex-shrink-0" style={{ width: "5px" }}>
+        {/* The rail itself — 10px wide (2× the prior 5px) so the
+            position segment + pin ticks read as deliberate UI, not
+            a seam. */}
+        <div className="relative h-full flex-shrink-0" style={{ width: "10px" }}>
           {/* Base rail — same purple gradient as the prior thin strip */}
           <span
             aria-hidden="true"
@@ -627,8 +584,8 @@ function PinDropOverlay({
                   style={{
                     top: `${topPct}%`,
                     right: 0,
-                    width: "18px",
-                    height: "14px",
+                    width: "36px",
+                    height: "22px",
                     transform: "translate(0, -50%)",
                     padding: 0,
                     background: "transparent",
@@ -643,29 +600,30 @@ function PinDropOverlay({
                     style={{
                       top: "50%",
                       right: 0,
-                      width: "14px",
-                      height: "2px",
+                      width: "28px",
+                      height: "4px",
                       transform: "translateY(-50%)",
                       backgroundColor: hasText
                         ? "#36b595"
                         : "rgba(255,255,255,0.65)",
                       boxShadow: hasText
-                        ? "0 0 6px rgba(54,181,149,0.6)"
+                        ? "0 0 8px rgba(54,181,149,0.7)"
                         : "none",
+                      borderRadius: "1px",
                     }}
                   />
-                  {/* Hover / focus affordance — thin extension leftward */}
+                  {/* Hover / focus affordance — thicker extension leftward */}
                   <span
                     aria-hidden="true"
                     className="absolute opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity"
                     style={{
                       top: "50%",
                       right: 0,
-                      width: "20px",
-                      height: "3px",
+                      width: "40px",
+                      height: "6px",
                       transform: "translateY(-50%)",
                       backgroundColor: hasText ? "#36b595" : "#ffffff",
-                      boxShadow: "0 0 10px rgba(54,181,149,0.75)",
+                      boxShadow: "0 0 12px rgba(54,181,149,0.85)",
                       borderRadius: "1px",
                     }}
                   />
@@ -675,21 +633,13 @@ function PinDropOverlay({
         </div>
       </div>
 
-      {/* Visual-recall flash — a fading green ring at the pin's
-          original (pageX, pageY). Triggered when a rail tick is
-          clicked. Keyed on `recall.key` so a fresh render fires the
-          transition even if the same pin is clicked twice in a row. */}
-      {recall && (
-        <RecallFlash key={recall.key} pageX={recall.pageX} pageY={recall.pageY} />
-      )}
-
       {/* Inline comment input for the currently-active pin. Absolute-
           positioned in document space so it stays attached to the pin
           even if the user scrolls. Offset 18px down-right so the input
           never overlaps the drop point. */}
       {activePin && (
         <div
-          className="absolute z-[62]"
+          className="absolute z-[202]"
           style={{
             top: activePin.pageY + 18,
             left: activePin.pageX + 18,
