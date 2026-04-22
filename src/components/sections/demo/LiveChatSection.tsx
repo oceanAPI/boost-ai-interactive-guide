@@ -156,8 +156,11 @@ export default function LiveChatSection({
       );
       ingestPostResponse(res);
       setPhase({ kind: "ready" });
-      // Focus input once ready so the user can start typing
-      setTimeout(() => inputRef.current?.focus(), 80);
+      // Intentionally do NOT auto-focus the input on mount —
+      // focus() scrolls the focused element into view, which
+      // yanked the page down to the Chat Preview section
+      // immediately on guide load. Users scroll to the section
+      // themselves; they can click to focus when ready.
     } catch (err) {
       if (ctrl.signal.aborted) return;
       setPhase({
@@ -321,10 +324,14 @@ export default function LiveChatSection({
           </button>
         </div>
 
-        {/* Chat + Data funnel — side-by-side once revealed */}
+        {/* Chat + Data funnel — side-by-side once revealed.
+            Pre-reveal: chat fills the column (no width constraint)
+            so the initial layout matches pre-panel behaviour. Post-
+            reveal: widen to max-w-6xl + center so the split feels
+            balanced. */}
         <div
           className={`flex flex-col md:flex-row gap-4 transition-all duration-700 ease-out ${
-            revealPanel ? "max-w-6xl mx-auto" : "max-w-2xl mx-auto"
+            revealPanel ? "max-w-6xl mx-auto" : ""
           }`}
         >
         {/* Chat frame */}
