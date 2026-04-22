@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { GuideData } from "@/lib/types";
+import type { Customer, GuideData } from "@/lib/types";
 import { getDemoScript, getEscalatedDemoScript } from "@/data/demo-scripts";
 import { SectionHeader, Badge } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import LiveChatSection from "./demo/LiveChatSection";
+import { resolveDemoTenant } from "@/lib/boost-chat";
 
 /* ─── Analysis walkthrough steps ─── */
 type AnalyzeStep = "idle" | "panel-open" | "review-running" | "review-done" | "back-to-chat";
@@ -92,7 +94,59 @@ const REVIEW_RESULTS = {
   },
 };
 
-export default function DemoPreviewSection({ guide, sectionNumber }: { guide: GuideData; sectionNumber?: string }) {
+/* ─── Router: picks the demo mode based on customer config ──────
+ * `customer.demo_mode` is the single source of truth. When it's
+ * unset or `"simulated"` we fall through to the legacy scripted
+ * demo below (zero behaviour change vs pre-demo-mode shipped
+ * builds, so every existing share URL keeps working).
+ *
+ * Modes:
+ *   - "simulated"   → existing scripted demo + AI Review panel
+ *   - "live"        → live Chat API v2 against default tenant
+ *                     (financewizard.boost.ai or env override)
+ *   - "custom_live" → live Chat API v2 against customer.demo_tenant
+ *
+ * If `"custom_live"` is selected but no tenant is configured, we
+ * fall back to the simulated demo rather than render an empty /
+ * broken chat. Safer default — avoids a half-configured share URL
+ * showing an error page to a prospect.
+ * ─────────────────────────────────────────────────────────────── */
+export default function DemoPreviewSection({
+  guide,
+  customer,
+  sectionNumber,
+}: {
+  guide: GuideData;
+  customer?: Customer;
+  sectionNumber?: string;
+}) {
+  const mode = customer?.demo_mode ?? "simulated";
+
+  if (mode === "live") {
+    const tenant = resolveDemoTenant();
+    return (
+      <LiveChatSection tenant={tenant} mode="live" sectionNumber={sectionNumber} />
+    );
+  }
+  if (mode === "custom_live") {
+    const tenant = (customer?.demo_tenant ?? "").trim();
+    if (tenant) {
+      return (
+        <LiveChatSection
+          tenant={tenant}
+          mode="custom_live"
+          sectionNumber={sectionNumber}
+        />
+      );
+    }
+    // Fall through to simulated when no tenant configured — safer
+    // than rendering a broken chat on a shared URL.
+  }
+
+  return <SimulatedDemoBody guide={guide} sectionNumber={sectionNumber} />;
+}
+
+function SimulatedDemoBody({ guide, sectionNumber }: { guide: GuideData; sectionNumber?: string }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
 
   /* ─── Script cycling: 0 = primary (automated), 1 = banking escalated ─── */

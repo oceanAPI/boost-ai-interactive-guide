@@ -80,6 +80,14 @@ export interface GuideFormData {
     image_url?: string;
     video_url?: string;
   };
+  /** Which Chat Preview mode to render. See `DemoMode` below.
+   *  Defaults to the simulated scripted demo when omitted — zero
+   *  regression for existing share URLs. Set via admin "Demos". */
+  demo_mode?: DemoMode;
+  /** Only used when `demo_mode === "custom_live"` — the tenant
+   *  domain (e.g. `"acme.boost.ai"`) for a customer's own chatbot.
+   *  Ignored in other modes. */
+  demo_tenant?: string;
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -104,7 +112,7 @@ export interface GuideFormData {
 /** Schema version emitted by this codebase. Additive-only evolution —
  *  fields are only added, never removed or renamed. Useful for
  *  consumer metrics / debugging; does not gate parsing. */
-export const CUSTOMER_SCHEMA_VERSION = "v1.2.0";
+export const CUSTOMER_SCHEMA_VERSION = "v1.3.0";
 
 /** Which Boost work mode is operating on this customer right now.
  *  Drives admin UI layout, default block library, landing-page route. */
@@ -586,7 +594,24 @@ export interface Customer extends GuideFormData {
   /** Explicit exclusions list — "not this". Often emerges during
    *  PS scoping. Drives OutOfScopeSection. */
   out_of_scope?: string[];
+
+  /* `demo_mode` + `demo_tenant` live on GuideFormData (see above)
+   * so Customer inherits them via extension. No duplicate fields
+   * needed here — admin's `updateField` can set them via the
+   * GuideFormData key set. */
 }
+
+/** Demo mode for the Chat Preview section.
+ *
+ *  - `"simulated"` — default. The existing scripted demo with the
+ *    AI Review analyzer panel. Zero external deps; works on every
+ *    shared URL regardless of whether a customer tenant exists.
+ *  - `"live"` — real chat against the shared demo tenant
+ *    (`financewizard.boost.ai`). Phase 2 adds a raw-data side panel.
+ *  - `"custom_live"` — real chat against the customer's own tenant
+ *    (Customer.demo_tenant). Chat only; no raw-data panel (MVP).
+ */
+export type DemoMode = "simulated" | "live" | "custom_live";
 
 /* ──────────────────────────────────────────────────────────────
  *  Scope-of-Work schema — supporting types for the 7 SoW fields

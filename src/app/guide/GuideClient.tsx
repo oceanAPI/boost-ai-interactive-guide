@@ -326,7 +326,7 @@ export default function GuideClient({
           {(!activeSectionSet || activeSectionSet.has("demo")) && (
             <div id="demo" ref={(el) => { sectionRefs.current["demo"] = el; }}>
               <SectionReportPill sectionId="demo" displayName="Demo Preview" />
-              <DemoPreviewSection guide={guide} sectionNumber={sn("demo")} />
+              <DemoPreviewSection guide={guide} customer={customer} sectionNumber={sn("demo")} />
             </div>
           )}
 

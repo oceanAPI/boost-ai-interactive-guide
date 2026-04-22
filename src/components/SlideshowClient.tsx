@@ -181,7 +181,7 @@ export default function SlideshowClient({
       case "voice":
         return <VoiceSection guide={guide} sectionNumber={num} />;
       case "demo":
-        return <DemoPreviewSection guide={guide} sectionNumber={num} />;
+        return <DemoPreviewSection guide={guide} customer={customer} sectionNumber={num} />;
       case "impact":
         return <ImpactSection guide={guide} sectionNumber={num} />;
       case "trust-validation":

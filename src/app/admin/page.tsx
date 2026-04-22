@@ -1787,6 +1787,127 @@ export default function AdminPage() {
             </div>
           </div>
         </CollapsibleSection>
+
+        <CollapsibleSection
+          number={11}
+          title="Demos"
+          subtitle={
+            form.demo_mode === "live"
+              ? "Live demo — shared tenant"
+              : form.demo_mode === "custom_live"
+              ? form.demo_tenant
+                ? `Live demo — ${form.demo_tenant}`
+                : "Live demo — custom tenant (needs configuration)"
+              : "Simulated — scripted demo with AI Review"
+          }
+          hasContent={!!form.demo_mode && form.demo_mode !== "simulated"}
+        >
+          <AdminPrompt
+            question="How should the Chat Preview behave for this customer?"
+            helper={
+              <>
+                The Chat Preview is section 08 in the guide. Default is the
+                simulated scripted demo with the AI Review panel — that works
+                on every share URL without any setup. Switch to live when you
+                want the prospect to chat with a real boost.ai virtual agent.
+              </>
+            }
+          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {([
+              {
+                key: "simulated",
+                label: "Simulated",
+                desc: "Existing scripted demo + AI Review analyzer. Works everywhere, no setup.",
+              },
+              {
+                key: "live",
+                label: "Live demo",
+                desc: "Real chat against our shared demo tenant (financewizard.boost.ai).",
+              },
+              {
+                key: "custom_live",
+                label: "Custom live demo",
+                desc: "Real chat against the customer's own boost.ai tenant — enter the domain below.",
+              },
+            ] as const).map((opt) => {
+              const active = (form.demo_mode ?? "simulated") === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => updateField("demo_mode", opt.key)}
+                  className={`text-left rounded-xl border px-4 py-3 transition-all ${
+                    active
+                      ? "border-boost-purple bg-boost-purple/5 shadow-sm"
+                      : "border-boost-border bg-white hover:border-boost-purple/40 hover:shadow-sm"
+                  }`}
+                  data-testid={`demo-mode-${opt.key}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      aria-hidden="true"
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        active ? "bg-boost-green-light" : "bg-boost-border"
+                      }`}
+                    />
+                    <p
+                      className={`text-sm font-semibold ${
+                        active ? "text-boost-purple" : "text-boost-dark"
+                      }`}
+                    >
+                      {opt.label}
+                    </p>
+                  </div>
+                  <p className="text-xs text-boost-muted leading-relaxed">
+                    {opt.desc}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+          {form.demo_mode === "custom_live" && (
+            <div className="mt-5 rounded-xl border border-boost-border bg-boost-surface/40 p-4">
+              <AdminMiniLabel>Tenant domain</AdminMiniLabel>
+              <input
+                type="text"
+                value={form.demo_tenant ?? ""}
+                onChange={(e) => updateField("demo_tenant", e.target.value.trim())}
+                placeholder="e.g. acme.boost.ai"
+                className={`${inputClass} mt-1.5 font-mono text-sm`}
+                data-testid="demo-tenant-input"
+              />
+              <p className="text-[11px] text-boost-muted mt-2 leading-relaxed">
+                Enter the short boost.ai domain (without <code>adminpanel-</code>{" "}
+                prefix and without <code>https://</code>). The customer's boost.ai
+                tenant must whitelist the domain{" "}
+                <code className="text-boost-dark/70">
+                  {typeof window !== "undefined" ? window.location.origin : ""}
+                </code>{" "}
+                for CORS, otherwise the chat will fail to connect.
+              </p>
+            </div>
+          )}
+          {form.demo_mode === "live" && (
+            <div className="mt-5 rounded-xl border border-boost-green-light/30 bg-boost-green-light/5 p-4">
+              <p className="text-xs text-boost-dark leading-relaxed">
+                Points at <code className="font-mono text-boost-purple">financewizard.boost.ai</code>.
+                No further setup needed — CORS is already whitelisted for this guide's origin.
+                Prospects can type freely and get real intent-driven answers.
+              </p>
+            </div>
+          )}
+          {(!form.demo_mode || form.demo_mode === "simulated") && (
+            <div className="mt-5 rounded-xl border border-boost-border bg-white/70 p-4">
+              <p className="text-xs text-boost-muted leading-relaxed">
+                Simulated mode is the safest default — the chat plays a
+                pre-scripted conversation keyed off the selected areas of
+                interest and ends with the AI Review analyzer panel. Zero
+                external dependencies; every shared guide URL works immediately.
+              </p>
+            </div>
+          )}
+        </CollapsibleSection>
       </main>
 
       {/* Salesforce import modal */}
