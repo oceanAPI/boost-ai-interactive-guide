@@ -44,6 +44,20 @@ function resolveExportEndpoint(): string | null {
   return null;
 }
 
+/** A goal event triggered during a turn. `event_type` is `"start"`
+ *  / `"end"` / `"cancel"` / `"continue"` per Export API v4. */
+export interface ExportGoalEvent {
+  id: number;
+  name: string | null;
+  value: number | null;
+  event_type: string | null;
+}
+
+export interface ExportTranslation {
+  language: string;
+  text: string | null;
+}
+
 export interface ExportTurnTrace {
   id: number;
   role: "user" | "bot" | "agent";
@@ -68,6 +82,21 @@ export interface ExportTurnTrace {
   prediction_types: string[] | null;
   matched_filter: { id: number; title: string | null } | null;
   skill: { id: number; title: string | null } | null;
+  /** Resolved human chat agent (`PersonRef` in Export API). Populated
+   *  only on human-chat turns. `.title` holds the person's name. */
+  human_agent: { id: number; title: string | null } | null;
+  /** Goal events triggered during this turn — e.g. a conversion
+   *  funnel starting or completing. Empty array when none. */
+  goals: ExportGoalEvent[];
+  /** Filter values sent from the chat panel for this turn (e.g.
+   *  `["audience=SMB"]`). Null when the tenant doesn't use filters. */
+  sent_filters: string[] | null;
+  /** Per-message thumbs feedback. Null when none. */
+  feedback: "thumbs_up" | "thumbs_down" | null;
+  /** Text of the clicked link/button, if the turn was link-triggered. */
+  link_text: string | null;
+  /** Translation attempts; null when no translation was attempted. */
+  translations: ExportTranslation[] | null;
   original_question: string | null;
   is_human_chat: boolean;
   is_human_chat_queue: boolean;
@@ -86,6 +115,15 @@ export interface ExportTraceSuccess {
     created: string;
     category: { automatic: string | null; manual: string | null } | null;
     reviewed: boolean;
+    /** Filters that generated any content in this session. Dereferenced
+     *  to titles by the proxy. Empty array when none. */
+    matched_filters: Array<{ id: number; title: string | null }>;
+    /** Filter values sent by the client across the whole session. */
+    sent_filter_values: string[];
+    /** Session characteristics logged during processing. */
+    session_tags: string[];
+    /** Customer feedback on the whole session (thumbs + optional text). */
+    feedback: { rating: "thumbs_up" | "thumbs_down"; text: string | null } | null;
   };
   turns: ExportTurnTrace[];
 }

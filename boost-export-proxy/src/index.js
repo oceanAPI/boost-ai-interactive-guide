@@ -61,6 +61,12 @@ const DEREF_NAMES = /** @type {const} */ ([
   "filters",
   "skills",
   "system-action-triggers",
+  // Added in Phase B redesign (goals = conversion events,
+  // persons = human chat agents). Both enrich the per-turn cards
+  // with "Goal triggered: account_opened" and
+  // "Assigned to Maria K (billing)" rows when populated.
+  "goals",
+  "persons",
 ]);
 
 /* ─── in-memory caches ─────────────────────────────────────── */
@@ -218,7 +224,7 @@ function extractContentSnippet(content) {
   return plain.length > 160 ? `${plain.slice(0, 157)}…` : plain;
 }
 
-function shapeTurn(m, intents, filters, skills, sats) {
+function shapeTurn(m, intents, filters, skills, sats, goals, persons) {
   const role = m.is_customer
     ? "user"
     : m.is_support_human
@@ -226,6 +232,39 @@ function shapeTurn(m, intents, filters, skills, sats) {
       : "bot";
   const displayedAction = m.displayed_action ?? null;
   const cameFromAction = m.came_from_action ?? null;
+  // Goals: Message.goals is an array of GoalTriggered
+  // ({ goal: GoalRef, event_type }). Resolve each goal ID to
+  // { id, name, value, event_type } so the card can show
+  // "Goal · account_opened (start)" as a conversion signal.
+  const shapedGoals = Array.isArray(m.goals)
+    ? m.goals
+        .map((g) => {
+          const ref = resolveRef(goals, g?.goal?.id, "name");
+          if (!ref) return null;
+          const entry = goals?.[String(ref.id)];
+          const value =
+            entry && typeof entry.value === "number" ? entry.value : null;
+          return {
+            id: ref.id,
+            name: ref.title,
+            value,
+            event_type:
+              typeof g.event_type === "string" ? g.event_type : null,
+          };
+        })
+        .filter(Boolean)
+    : [];
+  // Translations: `Message.translations` — flatten to [{ language, text }]
+  // for multi-language trace display.
+  const shapedTranslations = Array.isArray(m.translations)
+    ? m.translations
+        .map((t) =>
+          t && typeof t.language === "string"
+            ? { language: t.language, text: typeof t.text === "string" ? t.text : null }
+            : null,
+        )
+        .filter(Boolean)
+    : [];
   return {
     id: m.id,
     role,
@@ -256,6 +295,27 @@ function shapeTurn(m, intents, filters, skills, sats) {
     prediction_types: m.prediction_types ?? null,
     matched_filter: resolveRef(filters, m.matched_filter?.id, "title"),
     skill: resolveRef(skills, m.skill?.id, "name"), // upstream key; we store as .title
+    // Human chat agent (PersonRef) — resolved via /persons map so
+    // the handover card can name the assignee. Null unless the turn
+    // is from a live human agent session.
+    human_agent: resolveRef(persons, m.human_agent?.id, "name"),
+    // Goal events triggered at this turn. Key narrative signal:
+    // shows conversion flow progress.
+    goals: shapedGoals,
+    // Filter values sent from the chat panel for this turn
+    // (e.g. `audience=SMB`, `segment=retail`). Null or array of strings.
+    sent_filters: Array.isArray(m.sent_filters)
+      ? m.sent_filters.filter((v) => typeof v === "string")
+      : null,
+    // Per-message thumbs feedback if the user gave any.
+    feedback:
+      m.feedback === "thumbs_up" || m.feedback === "thumbs_down"
+        ? m.feedback
+        : null,
+    // Text of the clicked link/button, if available.
+    link_text: typeof m.link_text === "string" ? m.link_text : null,
+    // Translation attempts (original + target language pairs).
+    translations: shapedTranslations.length > 0 ? shapedTranslations : null,
     original_question: m.original_question ?? null,
     is_human_chat: Boolean(m.is_human_chat),
     is_human_chat_queue: Boolean(m.is_human_chat_queue),
@@ -362,13 +422,38 @@ async function handleBoostExport(raw) {
     };
   }
 
-  const [intents, filters, skills, sats] = await Promise.all(
+  const [intents, filters, skills, sats, goals, persons] = await Promise.all(
     DEREF_NAMES.map((n) => getMap(n, token)),
   );
   const turns = (matchedSession.messages ?? []).map((m) =>
-    shapeTurn(m, intents, filters, skills, sats),
+    shapeTurn(m, intents, filters, skills, sats, goals, persons),
   );
   const cat = matchedSession.category ?? {};
+  // Session-level filter aggregates: Session.matched_filters is
+  // an array of FilterRef ({ id }). Dereference each to a title
+  // so the session chrome strip can show actual labels, not IDs.
+  const sessionMatchedFilters = Array.isArray(matchedSession.matched_filters)
+    ? matchedSession.matched_filters
+        .map((f) => resolveRef(filters, f?.id, "title"))
+        .filter(Boolean)
+    : [];
+  const sessionSentFilterValues = Array.isArray(
+    matchedSession.sent_filter_values,
+  )
+    ? matchedSession.sent_filter_values.filter((v) => typeof v === "string")
+    : [];
+  const sessionTags = Array.isArray(matchedSession.session_tags)
+    ? matchedSession.session_tags.filter((v) => typeof v === "string")
+    : [];
+  // Feedback: Session.feedback { text, rating }
+  const fb = matchedSession.feedback ?? {};
+  const sessionFeedback =
+    fb.rating === "thumbs_up" || fb.rating === "thumbs_down"
+      ? {
+          rating: fb.rating,
+          text: typeof fb.text === "string" ? fb.text : null,
+        }
+      : null;
 
   return {
     status: 200,
@@ -389,6 +474,13 @@ async function handleBoostExport(raw) {
           manual: typeof cat.manual === "string" ? cat.manual : null,
         },
         reviewed: Boolean(matchedSession.reviewed),
+        // Aggregated across the whole session so the chrome strip
+        // can show "Filters fired · retail_banking + mortgage_flow"
+        // and "Sent · audience=SMB".
+        matched_filters: sessionMatchedFilters,
+        sent_filter_values: sessionSentFilterValues,
+        session_tags: sessionTags,
+        feedback: sessionFeedback,
       },
       turns,
     },
