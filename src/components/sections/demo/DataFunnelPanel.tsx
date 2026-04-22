@@ -258,6 +258,16 @@ export default function DataFunnelPanel({
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
+        {/* Hero — one-sentence session summary. Silent until the
+            Export trace lands; otherwise draws the CE audience to
+            the headline signals the rest of the panel unpacks. */}
+        {exportTrace && (
+          <HeroSummary
+            trace={exportTrace}
+            exchangeCount={groupExchanges(exportTrace.turns).length}
+          />
+        )}
+
         {/* 1. Signals strip */}
         <section aria-labelledby="funnel-signals">
           <p
@@ -356,6 +366,16 @@ export default function DataFunnelPanel({
             composed by the LLM in context — both powered by the same platform.
           </p>
         </section>
+
+        {/* Session chrome strip — only renders when Export trace has
+            something worth showing. Surfaces matched filters, sent
+            filter values, goals, classification, feedback in one
+            compact block above the per-turn cards. */}
+        {exportTrace && <SessionChromeStrip trace={exportTrace} />}
+
+        {/* Action-type sparkbar — horizontal flow of bot turns, one
+            segment per turn. Click to jump to the matching card. */}
+        {exportTrace && <ActionSparkbar trace={exportTrace} />}
 
         {/* 2.5 — Analyze / Routing block (Phase 2b).
               Gated behind the button so the Chat API v2 data (above)
@@ -990,30 +1010,37 @@ function RoutingBlock({
       <ol className="space-y-2">
         {exchanges.map((ex) => (
           <li key={`${ex.kind}-${ex.index}-${ex.userTurn?.id ?? ex.botTurns[0]?.id ?? ex.index}`}>
-            <ExchangeCard exchange={ex} />
+            <ExchangeCard
+              exchange={ex}
+              tenant={trace.tenant}
+              conversationId={trace.conversation.id ?? null}
+            />
           </li>
         ))}
       </ol>
 
-      {/* Category — shown only if present (auto-review is a delayed
-          batch job; may be empty for a just-completed conversation) */}
-      {category && (
-        <div className="pt-2 border-t border-boost-border">
-          <p className="text-[9px] font-semibold text-boost-muted uppercase tracking-wider mb-1">
-            Classification
-          </p>
-          <span className="inline-block px-2 py-0.5 rounded-full bg-boost-green/10 text-boost-green text-[10px] font-semibold">
-            {formatCategory(category)}
-          </span>
-        </div>
-      )}
+      {/* Classification moved to SessionChromeStrip so all session-
+          wide signals share one surface above this block. */}
     </section>
   );
 }
 
-function ExchangeCard({ exchange }: { exchange: Exchange }) {
+function ExchangeCard({
+  exchange,
+  tenant,
+  conversationId,
+}: {
+  exchange: Exchange;
+  tenant: string;
+  conversationId: number | null;
+}) {
   const { kind, index, userTurn, botTurns } = exchange;
   const primary = botTurns[0] ?? null;
+  const [inspectOpen, setInspectOpen] = useState(false);
+
+  // Visual language — driven by the PRIMARY bot turn's action_type.
+  // (For welcome exchanges the "primary" is the welcome itself.)
+  const visual = actionTypeVisual(primary?.action_type);
 
   // Routing signal — the single "where did this go?" headline.
   const routed = routedToLabel(userTurn, primary);
@@ -1100,12 +1127,19 @@ function ExchangeCard({ exchange }: { exchange: Exchange }) {
       ),
     });
   }
+  // Handover — enriched when a human agent is resolved.
   if (primary?.is_human_chat_queue || primary?.is_human_chat) {
+    const agentName = primary.human_agent?.title ?? null;
     rows.push({
       label: "Handover",
       value: (
-        <span className="text-boost-purple font-semibold">
-          {primary.is_human_chat_queue ? "In queue" : "With human agent"}
+        <span className="inline-flex items-center gap-1 text-boost-purple font-semibold">
+          <span aria-hidden className="text-boost-purple/80">→</span>
+          {primary.is_human_chat_queue
+            ? "In queue"
+            : agentName
+              ? agentName
+              : "With human agent"}
         </span>
       ),
     });
@@ -1134,26 +1168,144 @@ function ExchangeCard({ exchange }: { exchange: Exchange }) {
     });
   }
 
+  // Goals — one row per triggered goal, with event type annotation.
+  // Huge narrative signal for CE audiences ("customer reached
+  // account_opened · end").
+  const allGoals = botTurns.flatMap((t) => t.goals ?? []);
+  if (allGoals.length > 0) {
+    rows.push({
+      label: "Goal",
+      value: (
+        <span className="flex flex-wrap gap-1">
+          {allGoals.map((g, i) => (
+            <span
+              key={`${g.id}-${g.event_type}-${i}`}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-boost-green/10 text-boost-green text-[9.5px] font-semibold"
+            >
+              <span aria-hidden className="w-1 h-1 rounded-full bg-boost-green" />
+              {formatGoalEvent(g.name, g.event_type)}
+            </span>
+          ))}
+        </span>
+      ),
+    });
+  }
+
+  // Sent filters — show the client-side filter values that came in
+  // with this turn (e.g. "audience=SMB"). Small mono chips.
+  const sentFilters =
+    userTurn?.sent_filters && userTurn.sent_filters.length > 0
+      ? userTurn.sent_filters
+      : null;
+  if (sentFilters) {
+    rows.push({
+      label: "Sent filters",
+      value: (
+        <span className="flex flex-wrap gap-1 font-mono text-[9.5px]">
+          {sentFilters.map((v, i) => (
+            <span
+              key={`${v}-${i}`}
+              className="px-1.5 py-0.5 rounded bg-boost-surface border border-boost-border text-boost-dark/80"
+            >
+              {v}
+            </span>
+          ))}
+        </span>
+      ),
+    });
+  }
+
+  // Translations — when the conversation crosses languages. Shows
+  // the target languages attempted. For financewizard this rarely
+  // fires, but on multilingual tenants it's a proof point.
+  const translations =
+    botTurns.flatMap((t) => t.translations ?? []);
+  if (translations.length > 0) {
+    const langs = Array.from(new Set(translations.map((t) => t.language)));
+    rows.push({
+      label: "Translated",
+      value: (
+        <span className="flex flex-wrap gap-1 text-[10px] text-boost-dark/80">
+          {langs.map((l) => (
+            <span
+              key={l}
+              className="px-1.5 py-0.5 rounded bg-boost-surface border border-boost-border font-mono"
+            >
+              {l}
+            </span>
+          ))}
+        </span>
+      ),
+    });
+  }
+
+  // Per-turn feedback — the user's thumbs on the bot reply.
+  const fb = primary?.feedback ?? null;
+  if (fb) {
+    const positive = fb === "thumbs_up";
+    rows.push({
+      label: "Feedback",
+      value: (
+        <span
+          className={`inline-flex items-center gap-1 font-semibold ${
+            positive ? "text-boost-green" : "text-boost-orange"
+          }`}
+        >
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            aria-hidden
+            className={`w-3 h-3 ${positive ? "" : "rotate-180"}`}
+          >
+            <path
+              d="M2 7h3v7H2z M5 14h6.5a1.5 1.5 0 0 0 1.48-1.24l.76-5a1.5 1.5 0 0 0-1.48-1.76H9l.5-2.5A1.5 1.5 0 0 0 8 1.75 7 7 0 0 1 5 7v7z"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinejoin="round"
+              fill="currentColor"
+              fillOpacity="0.15"
+            />
+          </svg>
+          {positive ? "Positive" : "Negative"}
+        </span>
+      ),
+    });
+  }
+
   return (
     <article
       data-testid={`routing-exchange-${index}`}
-      className="rounded-lg border border-boost-border bg-boost-surface/40 p-2.5 space-y-1.5"
+      className={`rounded-lg border-l-2 border-y border-r border-boost-border ${visual.borderLeft} ${visual.tint} p-2.5 space-y-1.5 transition-all duration-200 ease-out hover:-translate-y-px hover:shadow-sm animate-modal-in`}
     >
-      {/* Header: turn index + either user question or welcome label */}
-      <header className="flex items-baseline gap-2">
-        <span className="text-[9px] font-mono text-boost-muted flex-shrink-0">
+      {/* Header — turn index + user question + action-type chip */}
+      <header className="flex items-start gap-2">
+        <span className="text-[9px] font-mono text-boost-muted flex-shrink-0 mt-0.5">
           #{index}
         </span>
         {kind === "welcome" ? (
-          <span className="text-[11px] text-boost-muted italic">
+          <span className="text-[11px] text-boost-muted italic flex-1 min-w-0 mt-0.5">
             Session opener · VA welcome
           </span>
         ) : (
-          <span className="text-[11px] font-semibold text-boost-dark leading-snug min-w-0 flex-1">
+          <span className="text-[11px] font-semibold text-boost-dark leading-snug min-w-0 flex-1 mt-0.5">
             <span className="text-boost-muted font-normal">You:</span>{" "}
             &ldquo;{userTurn?.original_question || "(no text)"}&rdquo;
           </span>
         )}
+        {/* Action-type chip — shimmer when generative to signal
+            "this was composed on the fly". */}
+        <span
+          className={`relative inline-flex items-center gap-1 flex-shrink-0 px-1.5 py-0.5 rounded-md text-[9px] font-semibold uppercase tracking-wider ${visual.iconBg} ${visual.accent} overflow-hidden`}
+        >
+          {visual.shimmer && (
+            <span
+              aria-hidden
+              className="absolute inset-0 chip-shimmer pointer-events-none rounded-md"
+            />
+          )}
+          <span className="relative">{visual.icon}</span>
+          <span className="relative">{visual.label}</span>
+        </span>
       </header>
 
       {/* Puzzle pieces grid */}
@@ -1168,13 +1320,67 @@ function ExchangeCard({ exchange }: { exchange: Exchange }) {
 
       {/* Bot reply snippet */}
       {primary?.content_snippet && (
-        <p className="text-[10px] text-boost-dark/75 italic leading-snug pt-1.5 border-t border-boost-border/60">
+        <p className="text-[10px] text-boost-dark/80 italic leading-snug pt-1.5 border-t border-boost-border/60">
           <span className="not-italic text-boost-muted font-normal">
             Reply ·{" "}
           </span>
           {primary.content_snippet}
         </p>
       )}
+
+      {/* Inspector footer — toggle raw JSON drawer + deep link to admin */}
+      <footer className="flex items-center justify-between gap-2 pt-1">
+        <button
+          type="button"
+          onClick={() => setInspectOpen((v) => !v)}
+          aria-expanded={inspectOpen}
+          data-testid={`routing-exchange-${index}-inspect`}
+          className="text-[9.5px] font-semibold text-boost-muted hover:text-boost-purple transition-colors"
+        >
+          {inspectOpen ? "Hide raw" : "Inspect · raw JSON"}
+        </button>
+        {conversationId != null && (
+          <a
+            href={`https://${tenant}/admin/conversations/${conversationId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[9.5px] font-semibold text-boost-muted hover:text-boost-purple transition-colors inline-flex items-center gap-1"
+            title="Open this conversation in the boost.ai admin panel"
+          >
+            Open in admin
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-2.5 h-2.5">
+              <path
+                d="M6 3h7v7M13 3 5 11M3 6v7h7"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </a>
+        )}
+      </footer>
+
+      {/* Raw JSON drawer — all turns in the exchange, pretty-printed */}
+      <div
+        className="grid transition-all duration-300 ease-out"
+        style={{ gridTemplateRows: inspectOpen ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden">
+          {inspectOpen && (
+            <pre className="mt-1 p-2 rounded bg-boost-surface border border-boost-border font-mono text-[9.5px] text-boost-dark/80 overflow-x-auto leading-snug">
+              {JSON.stringify(
+                {
+                  user: userTurn,
+                  bots: botTurns,
+                },
+                null,
+                2,
+              )}
+            </pre>
+          )}
+        </div>
+      </div>
     </article>
   );
 }
@@ -1342,6 +1548,607 @@ function DrawerExportExtras({
       ))}
     </div>
   );
+}
+
+/* ─── Phase B — hero + session chrome components ──────────────── */
+
+/** Auto-compose a single-sentence headline for the CE audience.
+ *  Reads the in-flight Export trace and builds e.g.
+ *  "6 exchanges · 5 generative · 1 curated · avg 2.4s think time · EN / NO".
+ *  Silent when there's not enough data yet (nothing to say is better
+ *  than a half-formed sentence). */
+function HeroSummary({
+  trace,
+  exchangeCount,
+}: {
+  trace: ExportTraceSuccess | null;
+  exchangeCount: number;
+}) {
+  if (!trace || exchangeCount === 0) return null;
+
+  const actionCounts: Record<string, number> = {};
+  const languages = new Set<string>();
+  const latencies: number[] = [];
+  let handovers = 0;
+  let apiCalls = 0;
+  let goalEvents = 0;
+
+  // Walk turns once, bucketing everything the hero might mention.
+  for (let i = 0; i < trace.turns.length; i++) {
+    const t = trace.turns[i];
+    if (t.language) languages.add(t.language);
+    if (t.is_human_chat_queue || t.is_human_chat) handovers += 1;
+    if (t.action_type === "api_connector") apiCalls += 1;
+    if (t.action_type && t.role !== "user") {
+      actionCounts[t.action_type] = (actionCounts[t.action_type] ?? 0) + 1;
+    }
+    if (Array.isArray(t.goals)) goalEvents += t.goals.length;
+    // Pair user→bot for latency.
+    if (t.role === "user") {
+      const next = trace.turns[i + 1];
+      if (next && next.role !== "user") {
+        const ms = thinkTimeMs(t.created, next.created);
+        if (ms != null) latencies.push(ms);
+      }
+    }
+  }
+
+  const bits: string[] = [];
+  bits.push(
+    `${exchangeCount} exchange${exchangeCount === 1 ? "" : "s"}`,
+  );
+
+  // Only show action counts that are actually > 0, prioritising
+  // "generative" and "content" as the headline buckets for CE.
+  const ordered: Array<[string, string]> = [
+    ["generative", "generative"],
+    ["content", "scripted"],
+    ["api_connector", "API"],
+    ["entity_extraction", "entity"],
+    ["orchestrator", "orchestrator"],
+  ];
+  for (const [key, label] of ordered) {
+    const c = actionCounts[key] ?? 0;
+    if (c > 0) bits.push(`${c} ${label}`);
+  }
+
+  if (handovers > 0) bits.push(`${handovers} handover${handovers === 1 ? "" : "s"}`);
+  else if (exchangeCount >= 2) bits.push("0 handovers");
+
+  if (latencies.length > 0) {
+    const avg = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+    bits.push(`avg ${formatLatency(Math.round(avg))}`);
+  }
+
+  if (apiCalls > 0) bits.push(`${apiCalls} API call${apiCalls === 1 ? "" : "s"}`);
+  if (goalEvents > 0) bits.push(`${goalEvents} goal event${goalEvents === 1 ? "" : "s"}`);
+
+  if (languages.size > 1) {
+    bits.push(Array.from(languages).sort().join(" + "));
+  }
+
+  return (
+    <section
+      aria-label="Session summary"
+      data-testid="data-funnel-hero"
+      className="relative overflow-hidden rounded-xl px-3 py-2.5 border border-boost-purple/20 bg-gradient-to-br from-boost-purple/[0.04] via-white to-boost-green/[0.04]"
+    >
+      <div className="flex items-start gap-2">
+        <span aria-hidden className="mt-0.5 flex-shrink-0">
+          <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 text-boost-purple">
+            <path
+              d="M8 1.5a6.5 6.5 0 1 0 6.5 6.5M8 1.5V8l4 2.5"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+        <p className="text-[11px] leading-snug text-boost-dark flex-1 min-w-0">
+          {bits.map((b, i) => (
+            <Fragment key={`${b}-${i}`}>
+              {i > 0 && (
+                <span aria-hidden className="text-boost-muted mx-1.5">
+                  ·
+                </span>
+              )}
+              <span
+                className={
+                  i === 0
+                    ? "font-semibold text-boost-purple"
+                    : "text-boost-dark/85"
+                }
+              >
+                {b}
+              </span>
+            </Fragment>
+          ))}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/** Session-wide chrome strip: matched filters, sent filter values,
+ *  goals triggered across the session, and the auto-review category
+ *  when present. Each grouping is its own mini-row with a compact
+ *  label, chip list, and a hide-when-empty guard so financewizard
+ *  doesn't stare at a parade of empty state. */
+function SessionChromeStrip({
+  trace,
+}: {
+  trace: ExportTraceSuccess;
+}) {
+  const session = trace.session;
+  const matchedFilters = session.matched_filters ?? [];
+  const sentValues = session.sent_filter_values ?? [];
+  const sessionTags = session.session_tags ?? [];
+  const sessionFeedback = session.feedback ?? null;
+  const category = session.category?.automatic ?? null;
+
+  // Collapse goal events across all turns into a deduped list of
+  // "goal_name · event_type" chips. Keeps visual noise down when a
+  // single goal fires many turns in a row.
+  const goalChips = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const t of trace.turns) {
+      if (!t.goals) continue;
+      for (const g of t.goals) {
+        const key = formatGoalEvent(g.name, g.event_type);
+        if (!seen.has(key)) {
+          seen.add(key);
+          out.push(key);
+        }
+      }
+    }
+    return out;
+  }, [trace.turns]);
+
+  // Nothing to say → render nothing so the panel stays clean.
+  const hasAnything =
+    matchedFilters.length > 0 ||
+    sentValues.length > 0 ||
+    sessionTags.length > 0 ||
+    goalChips.length > 0 ||
+    sessionFeedback != null ||
+    category != null;
+
+  if (!hasAnything) return null;
+
+  const catVis = category ? categoryVisual(category) : null;
+
+  const GroupLabel = ({ children }: { children: ReactNode }) => (
+    <span className="text-[9px] font-semibold uppercase tracking-wider text-boost-muted flex-shrink-0 w-[82px]">
+      {children}
+    </span>
+  );
+
+  return (
+    <section
+      aria-labelledby="funnel-session-chrome"
+      data-testid="data-funnel-session-chrome"
+      className="rounded-xl border border-boost-border bg-white p-3 space-y-1.5"
+    >
+      <p
+        id="funnel-session-chrome"
+        className="text-[10px] font-bold text-boost-muted uppercase tracking-wider mb-1"
+      >
+        Session context
+      </p>
+
+      {matchedFilters.length > 0 && (
+        <div className="flex items-start gap-2">
+          <GroupLabel>Filters fired</GroupLabel>
+          <span className="flex flex-wrap gap-1 min-w-0">
+            {matchedFilters.map((f) => (
+              <span
+                key={f.id}
+                className="px-1.5 py-0.5 rounded bg-boost-purple/5 text-boost-purple text-[10px] font-mono border border-boost-purple/15"
+              >
+                {f.title ?? `#${f.id}`}
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
+
+      {sentValues.length > 0 && (
+        <div className="flex items-start gap-2">
+          <GroupLabel>Sent</GroupLabel>
+          <span className="flex flex-wrap gap-1 min-w-0">
+            {sentValues.map((v, i) => (
+              <span
+                key={`${v}-${i}`}
+                className="px-1.5 py-0.5 rounded bg-boost-surface text-boost-dark/85 text-[10px] font-mono border border-boost-border"
+              >
+                {v}
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
+
+      {goalChips.length > 0 && (
+        <div className="flex items-start gap-2">
+          <GroupLabel>Goals</GroupLabel>
+          <span className="flex flex-wrap gap-1 min-w-0">
+            {goalChips.map((g) => (
+              <span
+                key={g}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-boost-green/10 text-boost-green text-[10px] font-semibold border border-boost-green/25"
+              >
+                <span aria-hidden className="w-1 h-1 rounded-full bg-boost-green" />
+                {g}
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
+
+      {sessionTags.length > 0 && (
+        <div className="flex items-start gap-2">
+          <GroupLabel>Tags</GroupLabel>
+          <span className="flex flex-wrap gap-1 min-w-0">
+            {sessionTags.map((t) => (
+              <span
+                key={t}
+                className="px-1.5 py-0.5 rounded bg-boost-surface text-boost-muted text-[10px] font-mono border border-boost-border"
+              >
+                {t}
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
+
+      {catVis && (
+        <div className="flex items-start gap-2">
+          <GroupLabel>Classified</GroupLabel>
+          <span
+            className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${catVis.className}`}
+          >
+            {catVis.label}
+          </span>
+        </div>
+      )}
+
+      {sessionFeedback && (
+        <div className="flex items-start gap-2">
+          <GroupLabel>Feedback</GroupLabel>
+          <span
+            className={`inline-flex items-center gap-1 text-[10px] font-semibold ${
+              sessionFeedback.rating === "thumbs_up"
+                ? "text-boost-green"
+                : "text-boost-orange"
+            }`}
+          >
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden
+              className={`w-3 h-3 ${sessionFeedback.rating === "thumbs_up" ? "" : "rotate-180"}`}
+            >
+              <path
+                d="M2 7h3v7H2z M5 14h6.5a1.5 1.5 0 0 0 1.48-1.24l.76-5a1.5 1.5 0 0 0-1.48-1.76H9l.5-2.5A1.5 1.5 0 0 0 8 1.75 7 7 0 0 1 5 7v7z"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinejoin="round"
+                fill="currentColor"
+                fillOpacity="0.15"
+              />
+            </svg>
+            {sessionFeedback.rating === "thumbs_up" ? "Positive" : "Negative"}
+            {sessionFeedback.text && (
+              <span className="font-normal text-boost-dark/75 italic">
+                · &ldquo;{sessionFeedback.text.slice(0, 80)}
+                {sessionFeedback.text.length > 80 ? "…" : ""}&rdquo;
+              </span>
+            )}
+          </span>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Tight action-type sparkbar — one colored segment per bot turn.
+ *  Reads left-to-right as conversation flow. Click a segment → scroll
+ *  the corresponding exchange card into view. Hides when there's
+ *  nothing to plot. */
+function ActionSparkbar({ trace }: { trace: ExportTraceSuccess }) {
+  const botTurns = useMemo(
+    () => trace.turns.filter((t) => t.role !== "user"),
+    [trace.turns],
+  );
+  if (botTurns.length === 0) return null;
+
+  return (
+    <section
+      aria-label="Action-type flow"
+      data-testid="data-funnel-sparkbar"
+      className="rounded-xl border border-boost-border bg-white p-2.5 space-y-1.5"
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-bold text-boost-muted uppercase tracking-wider">
+          Action flow
+        </p>
+        <p className="text-[9px] text-boost-muted">
+          {botTurns.length} bot turn{botTurns.length === 1 ? "" : "s"}
+        </p>
+      </div>
+      <div
+        role="list"
+        className="flex items-stretch gap-0.5 h-4 rounded overflow-hidden"
+      >
+        {botTurns.map((t, i) => {
+          const v = actionTypeVisual(t.action_type);
+          // Colour the segment by the action-type's accent class,
+          // flattened to a solid bg. Pull the colour via className
+          // composition (Tailwind converts to a real bg at build).
+          const segBg =
+            t.action_type === "generative" || t.action_type === "llm"
+              ? "bg-boost-purple"
+              : t.action_type === "content"
+                ? "bg-boost-green"
+                : t.action_type === "api_connector" ||
+                    t.action_type === "legacy_api"
+                  ? "bg-boost-orange"
+                  : t.action_type === "entity_extraction"
+                    ? "bg-boost-gold"
+                    : t.action_type === "orchestrator"
+                      ? "bg-boost-lavender"
+                      : "bg-boost-border";
+          return (
+            <a
+              key={`${t.id}-${i}`}
+              role="listitem"
+              href={`#routing-exchange-${i + 1}`}
+              onClick={(e) => {
+                e.preventDefault();
+                const target = document.querySelector(
+                  `[data-testid="routing-exchange-${i + 1}"]`,
+                );
+                if (target && "scrollIntoView" in target) {
+                  (target as HTMLElement).scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                  });
+                }
+              }}
+              title={`${v.label}${t.action_type ? ` · ${t.action_type}` : ""}`}
+              className={`flex-1 min-w-0 ${segBg} opacity-85 hover:opacity-100 transition-opacity cursor-pointer`}
+              aria-label={`Turn ${i + 1} · ${v.label}`}
+            />
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] text-boost-muted">
+        <LegendDot colour="bg-boost-purple" label="Generative" />
+        <LegendDot colour="bg-boost-green" label="Scripted" />
+        <LegendDot colour="bg-boost-orange" label="API" />
+        <LegendDot colour="bg-boost-gold" label="Entity" />
+      </div>
+    </section>
+  );
+}
+
+function LegendDot({ colour, label }: { colour: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${colour}`} />
+      <span>{label}</span>
+    </span>
+  );
+}
+
+/* ─── Phase B helpers — action-type visual language ──────────── */
+
+interface ActionVisual {
+  /** Thin left-border color on the exchange card. */
+  borderLeft: string;
+  /** Tiny square background used by the icon badge in the header. */
+  iconBg: string;
+  /** Text color for the routing chip + icon. */
+  accent: string;
+  /** Soft tint used as the card's background. */
+  tint: string;
+  /** Short human label (for chip). */
+  label: string;
+  /** Inline SVG icon (16×16 viewBox). */
+  icon: ReactNode;
+  /** Whether to add the funnelShimmer animation on the chip. */
+  shimmer: boolean;
+}
+
+/** Map `displayed_action.action_type` → per-type visual treatment.
+ *  Keeps all brand-color decisions in one place so the redesigned
+ *  cards read at a glance even on a generative-only tenant. */
+function actionTypeVisual(actionType: string | null | undefined): ActionVisual {
+  switch (actionType) {
+    case "generative":
+    case "llm":
+      return {
+        borderLeft: "border-l-boost-purple",
+        iconBg: "bg-boost-purple/10",
+        accent: "text-boost-purple",
+        tint: "bg-boost-purple/[0.03]",
+        label: "Generative",
+        shimmer: true,
+        icon: (
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-3 h-3">
+            <path
+              d="M9 1 3 9h4l-1 6 6-8H8l1-6z"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinejoin="round"
+              fill="currentColor"
+              fillOpacity="0.16"
+            />
+          </svg>
+        ),
+      };
+    case "content":
+      return {
+        borderLeft: "border-l-boost-green",
+        iconBg: "bg-boost-green/10",
+        accent: "text-boost-green",
+        tint: "bg-boost-green/[0.03]",
+        label: "Scripted",
+        shimmer: false,
+        icon: (
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-3 h-3">
+            <path
+              d="M3 2.5A1.5 1.5 0 0 1 4.5 1h7A1.5 1.5 0 0 1 13 2.5v11l-2-1.3-2 1.3-2-1.3-2 1.3V2.5z"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinejoin="round"
+              fill="currentColor"
+              fillOpacity="0.16"
+            />
+          </svg>
+        ),
+      };
+    case "api_connector":
+    case "legacy_api":
+      return {
+        borderLeft: "border-l-boost-orange",
+        iconBg: "bg-boost-orange/10",
+        accent: "text-boost-orange",
+        tint: "bg-boost-orange/[0.03]",
+        label: "API",
+        shimmer: false,
+        icon: (
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-3 h-3">
+            <path
+              d="M6 2v3m4-3v3M3 8h4m2 0h4M6 14v-3m4 3v-3M4 5h8v6H4z"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ),
+      };
+    case "entity_extraction":
+      return {
+        borderLeft: "border-l-boost-gold",
+        iconBg: "bg-boost-gold/10",
+        accent: "text-boost-gold",
+        tint: "bg-boost-gold/[0.03]",
+        label: "Entity",
+        shimmer: false,
+        icon: (
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-3 h-3">
+            <path
+              d="M2 4h12v3H9l-2 2H2V4z M2 9h5l2 2h5v3H2V9z"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinejoin="round"
+              fill="currentColor"
+              fillOpacity="0.12"
+            />
+          </svg>
+        ),
+      };
+    case "orchestrator":
+      return {
+        borderLeft: "border-l-boost-lavender",
+        iconBg: "bg-boost-lavender/15",
+        accent: "text-boost-purple",
+        tint: "bg-boost-lavender/[0.06]",
+        label: "Orchestrator",
+        shimmer: false,
+        icon: (
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-3 h-3">
+            <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.3" />
+            <circle cx="8" cy="2.5" r="1.2" stroke="currentColor" strokeWidth="1.3" />
+            <circle cx="8" cy="13.5" r="1.2" stroke="currentColor" strokeWidth="1.3" />
+            <circle cx="2.5" cy="8" r="1.2" stroke="currentColor" strokeWidth="1.3" />
+            <circle cx="13.5" cy="8" r="1.2" stroke="currentColor" strokeWidth="1.3" />
+          </svg>
+        ),
+      };
+    case "if":
+    case "context":
+    case "process":
+    case "end_process":
+    case "ab_test":
+    case "listen":
+      return {
+        borderLeft: "border-l-boost-border",
+        iconBg: "bg-boost-surface",
+        accent: "text-boost-dark/80",
+        tint: "bg-boost-surface/40",
+        label: actionType,
+        shimmer: false,
+        icon: (
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-3 h-3">
+            <path
+              d="M3 3h10v10H3z"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeDasharray="2 1.5"
+            />
+          </svg>
+        ),
+      };
+    default:
+      return {
+        borderLeft: "border-l-boost-border",
+        iconBg: "bg-boost-surface",
+        accent: "text-boost-muted",
+        tint: "bg-boost-surface/40",
+        label: "—",
+        shimmer: false,
+        icon: (
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-3 h-3">
+            <circle cx="8" cy="8" r="4" stroke="currentColor" strokeWidth="1.3" />
+          </svg>
+        ),
+      };
+  }
+}
+
+/** Format a goal event as "account_opened · start". */
+function formatGoalEvent(
+  name: string | null,
+  eventType: string | null,
+): string {
+  const n = (name || "").trim() || "goal";
+  if (!eventType) return n;
+  return `${n} · ${eventType}`;
+}
+
+/** Translate the session category underscore-enum into a brand-coloured
+ *  badge token — same palette as the action-type system so CE audiences
+ *  can read "automated" vs "escalated" at a glance. */
+function categoryVisual(cat: string): { label: string; className: string } {
+  const lower = cat.toLowerCase();
+  const label = formatCategory(cat);
+  if (lower.startsWith("automated")) {
+    return {
+      label,
+      className: "bg-boost-green/10 text-boost-green border border-boost-green/25",
+    };
+  }
+  if (lower.startsWith("escalated")) {
+    return {
+      label,
+      className: "bg-boost-orange/10 text-boost-orange border border-boost-orange/25",
+    };
+  }
+  if (lower === "unsolved") {
+    return {
+      label,
+      className: "bg-boost-purple/10 text-boost-purple border border-boost-purple/25",
+    };
+  }
+  return {
+    label,
+    className: "bg-boost-surface text-boost-muted border border-boost-border",
+  };
 }
 
 function chipMeta(
