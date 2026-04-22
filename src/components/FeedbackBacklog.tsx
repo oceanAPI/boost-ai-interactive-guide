@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   addFeedback,
   FEEDBACK_LABELS,
@@ -17,6 +17,14 @@ import {
   type PendingContext,
 } from "@/hooks/useFeedbackTrigger";
 import { assetPath } from "@/lib/asset-path";
+import { getSlideshow, subscribeSlideshow } from "@/lib/slideshow-bridge";
+
+/** Stable getServerSnapshot for the slideshow bridge. Hoisted here
+ *  rather than declared inline inside PinDropOverlay so it keeps the
+ *  same identity across renders — useSyncExternalStore requires stable
+ *  function references, and an inline `() => null` flunks the check
+ *  in Next.js 16 dev mode. */
+const getServerSnapshotForSlideshow = (): ReturnType<typeof getSlideshow> => null;
 
 /* ─── Label palette ─────────────────────────────────────────────
  *  Small colored dot + uppercase tracked text, matching the modal's
@@ -272,6 +280,45 @@ interface PinDraft {
   pageY: number;
   text: string;
   meta: import("@/lib/feedback-backlog").FeedbackMeta | null;
+  /** Slide index at drop time. Only present when the pin was dropped
+   *  inside SlideshowClient (i.e. while the slideshow-bridge snapshot
+   *  was live). Undefined means guide-mode / scroll-positioned pin. */
+  slideIndex?: number;
+}
+
+/* ─── Visual-recall flash ────────────────────────────────────────
+ *  A green ring anchored to a pin's document-space (pageX, pageY)
+ *  that expands and fades over ~1.8s. Rendered when the user clicks
+ *  a pin tick on the right rail — it tells the reviewer WHERE on
+ *  the page the note referred to, even though the on-page icon
+ *  has been moved into the rail. Mount-then-state-flip pattern so
+ *  the CSS transition fires on first paint (no @keyframes needed —
+ *  works in Turbopack without global CSS additions).
+ * ────────────────────────────────────────────────────────────── */
+function RecallFlash({ pageX, pageY }: { pageX: number; pageY: number }) {
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setDone(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute z-[63] pointer-events-none"
+      style={{
+        top: pageY,
+        left: pageX,
+        width: done ? "160px" : "28px",
+        height: done ? "160px" : "28px",
+        transform: "translate(-50%, -50%)",
+        borderRadius: "9999px",
+        border: done ? "1px solid rgba(54,181,149,0)" : "3px solid rgba(54,181,149,0.95)",
+        boxShadow: done ? "0 0 0 rgba(54,181,149,0)" : "0 0 24px rgba(54,181,149,0.75)",
+        opacity: done ? 0 : 1,
+        transition: "all 1800ms cubic-bezier(0.16,1,0.3,1)",
+      }}
+    />
+  );
 }
 
 function PinDropOverlay({
@@ -324,7 +371,12 @@ function PinDropOverlay({
       // anchored to the page content when the user scrolls.
       const pageX = x + window.scrollX;
       const pageY = y + window.scrollY;
-      setPins((prev) => [...prev, { id, x, y, pageX, pageY, text: "", meta }]);
+      // If SlideshowClient is live, stamp the current slide index on
+      // the pin so the rail can place its tick at the right slide
+      // position (rather than at a document-Y ratio).
+      const slideSnapshot = getSlideshow();
+      const slideIndex = slideSnapshot?.currentIndex;
+      setPins((prev) => [...prev, { id, x, y, pageX, pageY, text: "", meta, slideIndex }]);
       setActiveInputId(id);
     };
 
@@ -374,10 +426,75 @@ function PinDropOverlay({
     };
   }, [active, onComplete, onCancel, cursorRef]);
 
-  if (!active) return null;
-
   const activePin = pins.find((p) => p.id === activeInputId) ?? null;
   const noteCount = pins.filter((p) => p.text.trim().length > 0).length;
+
+  /* ─── Right-rail state (scroll-position indicator + pin ticks) ───
+   * The rail replaces the simple 3px purple strip AND the on-page
+   * speech-bubble pin icons. It needs:
+   *   - A slideshow snapshot (null in guide mode, present on /slides)
+   *   - Document-height + scrollY tracking so the position segment
+   *     and pin ticks can be placed at accurate Y-ratios
+   *   - A `recall` marker (pageX, pageY, key) that drives the
+   *     visual-recall flash when a pin tick is clicked. Re-keyed on
+   *     every trigger so the animation restarts.
+   */
+  const slideshow = useSyncExternalStore(
+    subscribeSlideshow,
+    getSlideshow,
+    getServerSnapshotForSlideshow,
+  );
+  const [scrollState, setScrollState] = useState({
+    scrollY: 0,
+    docHeight: 1,
+    innerHeight: 1,
+  });
+  useEffect(() => {
+    if (!active) return;
+    const update = () => {
+      setScrollState({
+        scrollY: window.scrollY,
+        docHeight: Math.max(1, document.documentElement.scrollHeight),
+        innerHeight: Math.max(1, window.innerHeight),
+      });
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [active]);
+  const [recall, setRecall] = useState<{ pageX: number; pageY: number; key: number } | null>(null);
+  useEffect(() => {
+    if (!recall) return;
+    const t = setTimeout(() => setRecall(null), 2000);
+    return () => clearTimeout(t);
+  }, [recall]);
+  /** Scroll to / navigate to a pin, then flash a fading ring at its
+   *  document position so the reviewer can see WHERE on the page the
+   *  note referred to — even though the on-page icon is gone. */
+  const navigateToPin = useCallback(
+    (pin: PinDraft) => {
+      if (slideshow && typeof pin.slideIndex === "number") {
+        slideshow.goToSlide(pin.slideIndex);
+        // Wait for slide transition before flashing so the ring
+        // lands on the intended slide, not the previous one.
+        setTimeout(
+          () => setRecall({ pageX: pin.pageX, pageY: pin.pageY, key: Date.now() }),
+          520,
+        );
+      } else {
+        window.scrollTo({ top: Math.max(0, pin.pageY - 120), behavior: "smooth" });
+        setTimeout(
+          () => setRecall({ pageX: pin.pageX, pageY: pin.pageY, key: Date.now() }),
+          360,
+        );
+      }
+    },
+    [slideshow],
+  );
 
   // Speech-bubble mask — the "comment left here" marker. Pac-Man is
   // intentionally reserved for the ⌘+. funnel so the two modes stay
@@ -393,20 +510,33 @@ function PinDropOverlay({
     maskRepeat: "no-repeat" as const,
   };
 
+  // Early-return AFTER all hooks have registered. Hooks must run on
+  // every render (including renders when !active) to satisfy the
+  // Rules of Hooks; only the render output is conditional.
+  if (!active) return null;
+
   return (
     <>
-      {/* Right-edge mode indicator — mirror of the targeting-mode
-          left-edge strip. Slim full-height purple strip + a quiet
-          top-right corner pill. Same visual grammar as aim-mode so
-          the two walkthrough tools read as a matched pair:
-            · left edge + green  → Pac-Man targeting (⌘+.)
-            · right edge + purple → note drop (←+→)
-          The corner pill carries live state (note count + keyboard
-          hints) without eating content real estate. */}
+      {/* Right rail — unified mini-map for the note-drop session.
+          Replaces the old 3px mode-indicator strip AND the on-page
+          speech-bubble pin icons with a single affordance:
+            · 5px purple rail (same gradient as the old strip)
+            · A brighter green segment showing current viewport
+              position (guide) or current slide (slides)
+            · Horizontal strike-ticks at each dropped pin, placed
+              by pageY/docHeight ratio (guide) or slideIndex/total
+              (slides). Click a tick to scroll-or-navigate to the
+              pin + trigger the visual-recall flash.
+            · "Note ready / N notes" corner pill stays as before.
+          Wrapper is pointer-events-none; interactive children opt
+          back in with `pointerEvents: auto` so clicks fall through
+          empty rail regions. */}
       <div
         aria-live="polite"
-        className="fixed inset-y-0 right-0 z-[60] pointer-events-none flex items-start justify-end"
+        className="fixed inset-y-0 right-0 z-[60] flex items-start justify-end"
+        style={{ pointerEvents: "none" }}
       >
+        {/* Top-right corner pill — "Note ready" or "N notes" live count */}
         <span
           aria-hidden="true"
           className="inline-flex items-center gap-2 mr-2 mt-32 px-2.5 py-1 rounded-md bg-white shadow-md border border-boost-purple/40 text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-purple"
@@ -420,65 +550,138 @@ function PinDropOverlay({
           <span className="text-boost-muted/50">·</span>
           <span className="text-boost-muted">&uarr; &darr; Esc</span>
         </span>
-        <span
-          aria-hidden="true"
-          className="w-[3px] h-full"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(89,25,93,0.95) 0%, rgba(69,17,73,1) 100%)",
-            boxShadow: "0 0 12px rgba(89,25,93,0.45)",
-          }}
-        />
+
+        {/* The rail itself */}
+        <div className="relative h-full flex-shrink-0" style={{ width: "5px" }}>
+          {/* Base rail — same purple gradient as the prior thin strip */}
+          <span
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(89,25,93,0.95) 0%, rgba(69,17,73,1) 100%)",
+              boxShadow: "0 0 12px rgba(89,25,93,0.45)",
+            }}
+          />
+
+          {/* Position segment — brighter green block tracks current
+              viewport (guide) or current slide (slides) */}
+          {(() => {
+            let topPct: number;
+            let heightPct: number;
+            if (slideshow && slideshow.total > 0) {
+              topPct = (slideshow.currentIndex / slideshow.total) * 100;
+              heightPct = (1 / slideshow.total) * 100;
+            } else {
+              const { scrollY, docHeight, innerHeight } = scrollState;
+              const visible = Math.min(1, innerHeight / docHeight);
+              topPct = Math.min(100, (scrollY / docHeight) * 100);
+              heightPct = Math.max(4, visible * 100);
+            }
+            return (
+              <span
+                aria-hidden="true"
+                className="absolute left-0 right-0"
+                style={{
+                  top: `${topPct}%`,
+                  height: `${heightPct}%`,
+                  background: "rgba(54,181,149,0.9)",
+                  boxShadow: "0 0 8px rgba(54,181,149,0.55)",
+                  transition: "top 180ms ease-out, height 180ms ease-out",
+                }}
+              />
+            );
+          })()}
+
+          {/* Pin ticks — one per dropped pin (skipping the one whose
+              inline editor is open). Each tick is a 2px horizontal
+              strike extending leftward from the rail. Click jumps +
+              flashes; hover widens and brightens. Tooltip via title
+              attribute carries the note text for longer previews. */}
+          {pins
+            .filter((p) => p.id !== activeInputId)
+            .map((p) => {
+              let topPct: number;
+              if (slideshow && slideshow.total > 0) {
+                const idx = typeof p.slideIndex === "number" ? p.slideIndex : 0;
+                // Centre of the slide's slot — makes the tick line up
+                // with the middle of the position segment when the
+                // rail is showing that slide.
+                topPct = ((idx + 0.5) / slideshow.total) * 100;
+              } else {
+                topPct =
+                  scrollState.docHeight > 0
+                    ? (p.pageY / scrollState.docHeight) * 100
+                    : 0;
+              }
+              const hasText = p.text.trim().length > 0;
+              const label = hasText ? p.text : "Empty note";
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => navigateToPin(p)}
+                  aria-label={`Jump to note: ${label.slice(0, 80)}`}
+                  title={label.slice(0, 200)}
+                  className="absolute group focus-visible:outline-none"
+                  style={{
+                    top: `${topPct}%`,
+                    right: 0,
+                    width: "18px",
+                    height: "14px",
+                    transform: "translate(0, -50%)",
+                    padding: 0,
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    pointerEvents: "auto",
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="absolute transition-all"
+                    style={{
+                      top: "50%",
+                      right: 0,
+                      width: "14px",
+                      height: "2px",
+                      transform: "translateY(-50%)",
+                      backgroundColor: hasText
+                        ? "#36b595"
+                        : "rgba(255,255,255,0.65)",
+                      boxShadow: hasText
+                        ? "0 0 6px rgba(54,181,149,0.6)"
+                        : "none",
+                    }}
+                  />
+                  {/* Hover / focus affordance — thin extension leftward */}
+                  <span
+                    aria-hidden="true"
+                    className="absolute opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity"
+                    style={{
+                      top: "50%",
+                      right: 0,
+                      width: "20px",
+                      height: "3px",
+                      transform: "translateY(-50%)",
+                      backgroundColor: hasText ? "#36b595" : "#ffffff",
+                      boxShadow: "0 0 10px rgba(54,181,149,0.75)",
+                      borderRadius: "1px",
+                    }}
+                  />
+                </button>
+              );
+            })}
+        </div>
       </div>
 
-      {/* Dropped pin markers — anchored to the document (pageX/pageY)
-          using position: absolute so they scroll with the page content
-          they were dropped on. Clicking a pin re-opens its inline input
-          pre-filled with the saved note so the presenter can read,
-          edit, or delete it (Esc in the input discards that pin).
-          Hidden for the currently-active pin since its inline input
-          already shows it. */}
-      {pins.map((p) => {
-        if (p.id === activeInputId) return null;
-        const hasText = p.text.trim().length > 0;
-        return (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => setActiveInputId(p.id)}
-            aria-label={hasText ? `Edit note: ${p.text.slice(0, 40)}` : "Edit empty note"}
-            title={hasText ? p.text : "Empty note"}
-            className="absolute z-[60] group focus-visible:outline-none"
-            style={{
-              width: "22px",
-              height: "22px",
-              top: p.pageY,
-              left: p.pageX,
-              transform: "translate(-50%, -100%)",
-              padding: 0,
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            <span
-              aria-hidden="true"
-              className="absolute inset-0 transition-transform duration-150 group-hover:scale-110 group-focus-visible:scale-110"
-              style={{
-                backgroundColor: "#59195d",
-                filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.18))",
-                opacity: hasText ? 0.85 : 0.45,
-                ...flagMaskStyle,
-              }}
-            />
-            {/* Focus ring — uses boost-green-light per global CSS rule */}
-            <span
-              aria-hidden="true"
-              className="absolute inset-[-4px] rounded-full ring-2 ring-boost-green-light opacity-0 group-focus-visible:opacity-100 transition-opacity"
-            />
-          </button>
-        );
-      })}
+      {/* Visual-recall flash — a fading green ring at the pin's
+          original (pageX, pageY). Triggered when a rail tick is
+          clicked. Keyed on `recall.key` so a fresh render fires the
+          transition even if the same pin is clicked twice in a row. */}
+      {recall && (
+        <RecallFlash key={recall.key} pageX={recall.pageX} pageY={recall.pageY} />
+      )}
 
       {/* Inline comment input for the currently-active pin. Absolute-
           positioned in document space so it stays attached to the pin

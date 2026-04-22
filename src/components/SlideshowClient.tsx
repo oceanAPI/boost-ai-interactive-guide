@@ -7,6 +7,7 @@ import { SLIDE_SECTIONS } from "@/lib/slide-sections";
 import { getTopicSections } from "@/data/topics";
 import { TOPIC_COMPONENTS } from "@/data/topics/registry";
 import { assetPath } from "@/lib/asset-path";
+import { setSlideshow } from "@/lib/slideshow-bridge";
 
 import HeroSection from "@/components/sections/HeroSection";
 import OrchestratorSection from "@/components/sections/OrchestratorSection";
@@ -82,6 +83,17 @@ export default function SlideshowClient({
   useEffect(() => {
     slideRef.current?.scrollTo(0, 0);
   }, [currentIndex]);
+
+  /* Publish slide state to the feedback layer. FeedbackProvider
+   *  lives above this component in the tree (layout.tsx), so a
+   *  React context set here wouldn't be visible to PinDropOverlay —
+   *  the bridge is a plain pub-sub that works across the provider
+   *  boundary. Clears on unmount so guide/admin routes fall back
+   *  to scroll-mode semantics. */
+  useEffect(() => {
+    setSlideshow({ total, currentIndex, goToSlide: goTo });
+    return () => setSlideshow(null);
+  }, [total, currentIndex, goTo]);
 
   /* Keyboard navigation */
   useEffect(() => {
