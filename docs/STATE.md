@@ -36,3 +36,16 @@ Push this commit. User deploys Worker in parallel. Verify on prod by opening a g
 - **Tenant reality check for financewizard**: `predicted_intent_id`, `matched_filter`, `skill`, `session.category` are all null/empty on most turns. Only `displayed_action.action_type` (`"generative"` vs `"content"`) and `predicted_language` are reliably populated. Panel designed to degrade gracefully. When pointed at a real tenant with intents + auto-review enabled, the Routing block fills out.
 - **Dev CORS**: localhost live-chat stays broken. Prod is the only verification path for the full flow.
 - **Secret rotation**: the OAuth2 client secret used during build hit chat history. Rotate via boost.ai admin → Security & Privacy → OAuth 2.0 → Reset after first successful prod verify.
+
+<!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
+## Auto-snapshot
+Last updated: 2026-04-22T13:44:08+02:00
+Branch: main
+Last commit: a76bfd4 feat(live-demo): Phase 2b — Analyze button + Export API v4 trace
+Working tree:
+```
+ M docs/STATE.md
+?? .claude/launch.json
+?? customer_excellence_raw_data_pdfs/
+```
+<!-- AUTO-HOOK-END -->

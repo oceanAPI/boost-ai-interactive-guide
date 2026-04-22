@@ -30,6 +30,11 @@ jobs:
           # Leave blank to fall back to localStorage-only mode.
           NEXT_PUBLIC_FEED_API_URL: ${{ vars.FEED_API_URL }}
           NEXT_PUBLIC_FEED_CLIENT_TOKEN: ${{ vars.FEED_CLIENT_TOKEN }}
+          # Optional: URL of the static-IP Fly.io proxy that fronts
+          # boost.ai's Export API v4. When set, the live-demo
+          # "Analyze" button becomes active and calls this host.
+          # Leave blank to hide the Analyze button entirely.
+          NEXT_PUBLIC_BOOST_EXPORT_URL: ${{ vars.BOOST_EXPORT_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

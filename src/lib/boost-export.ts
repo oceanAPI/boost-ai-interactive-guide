@@ -2,10 +2,21 @@
  *  boost-export.ts — client-side fetcher for the "Analyze with
  *  Export API" flow on the live-demo section.
  *
- *  Calls the Cloudflare Worker at POST /boost-export which proxies
+ *  Calls a static-IP proxy at POST /boost-export which fronts
  *  boost.ai's Export API v4 (OAuth2 client_credentials).
  *
- *  The Worker returns either:
+ *  Backend resolution (in priority order):
+ *    1. NEXT_PUBLIC_BOOST_EXPORT_URL — dedicated static-IP proxy
+ *       (Fly.io app). This is the production path because
+ *       boost.ai's External APIs allowlist rejects CIDR ranges so
+ *       dynamic-IP platforms (Cloudflare Workers, Vercel Hobby,
+ *       etc.) are rejected by Export API with 403.
+ *    2. NEXT_PUBLIC_FEED_API_URL + "/boost-export" — fallback to
+ *       the Cloudflare Worker. Only works on tenants that don't
+ *       enforce the External APIs IP allowlist. Kept for forward
+ *       compatibility with such tenants.
+ *
+ *  The backend returns either:
  *    - indexed=true: full trace with turns[] enriched via the
  *      Export API's dereference endpoints
  *    - indexed=false: not yet in the Export index. Indexing takes
@@ -16,7 +27,22 @@
  *  retries internally, then flip to loaded on success.
  * ────────────────────────────────────────────────────────────── */
 
-import { feedPost, isSharedBackendEnabled } from "@/lib/feed-api";
+import { FEED_API_URL, FEED_CLIENT_TOKEN } from "@/lib/feed-api";
+
+/** Dedicated static-IP proxy URL. Set as a GitHub Actions variable
+ *  to the Fly.io app URL, e.g. `https://boost-export-proxy.fly.dev`.
+ *  When set, takes precedence over the Cloudflare Worker fallback. */
+const BOOST_EXPORT_URL = (process.env.NEXT_PUBLIC_BOOST_EXPORT_URL || "")
+  .trim()
+  .replace(/\/$/, "");
+
+/** Resolve the endpoint to call. Returns null when neither backend
+ *  is configured — `isExportConfigured()` reflects that. */
+function resolveExportEndpoint(): string | null {
+  if (BOOST_EXPORT_URL) return `${BOOST_EXPORT_URL}/boost-export`;
+  if (FEED_API_URL) return `${FEED_API_URL}/boost-export`;
+  return null;
+}
 
 export interface ExportTurnTrace {
   id: number;
@@ -70,11 +96,12 @@ export type ExportTraceResult =
   | { ok: false; error: ExportTraceError };
 
 export function isExportConfigured(): boolean {
-  // We piggy-back on the feed API configuration. Worker auth uses
-  // the same x-client-token, so if feedback is configured, Export
-  // is also configured (from the client's POV — server-side may
-  // still 503 if BOOST_EXPORT_* secrets are missing).
-  return isSharedBackendEnabled();
+  // Need (a) a backend URL — Fly proxy preferred, Worker fallback —
+  // AND (b) the shared client token baked into the bundle. Server-
+  // side may still 503 if the backend's own secrets are missing,
+  // but from the client's POV we're "configured" if these two are
+  // set, so the Analyze button renders.
+  return !!FEED_CLIENT_TOKEN && resolveExportEndpoint() !== null;
 }
 
 interface FetchOptions {
@@ -120,10 +147,31 @@ export async function fetchExportTrace(
     }
     if (Date.now() - started >= budget) break;
 
-    const res = await feedPost<ExportTraceResponse>("/boost-export", {
-      posted_ids: postedIds,
-      window_minutes: opts.windowMinutes ?? 15,
-    });
+    const endpoint = resolveExportEndpoint();
+    if (!endpoint) {
+      return { ok: false, error: { kind: "not_configured" } };
+    }
+
+    let res: ExportTraceResponse | null = null;
+    try {
+      const r = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-client-token": FEED_CLIENT_TOKEN,
+        },
+        body: JSON.stringify({
+          posted_ids: postedIds,
+          window_minutes: opts.windowMinutes ?? 15,
+        }),
+        signal: opts.signal,
+      });
+      if (r.ok) {
+        res = (await r.json()) as ExportTraceResponse;
+      }
+    } catch {
+      // network error / abort — fall through to null-handling
+    }
 
     if (res === null) {
       // Network/HTTP error — treat as recoverable only briefly.

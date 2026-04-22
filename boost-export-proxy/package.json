@@ -1,0 +1,16 @@
+{
+  "name": "boost-export-proxy",
+  "version": "1.0.0",
+  "description": "Static-IP proxy to boost.ai Export API v4 for the interactive guide's live-demo Analyze panel",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
