@@ -3,47 +3,49 @@
 > Overwritten on every meaningful step. Read this first when resuming.
 
 ## Branch
-main — Phase 2b client about to push. Worker extended but not yet deployed by user.
+main — Phase 2b v2 ready to ship. Proxy still needs `fly deploy`.
 
 ## Current goal
-Phase 2b of the live-demo Chat Preview: **Analyze with Export API** button inside `DataFunnelPanel` that calls a Cloudflare Worker proxy to boost.ai's Export API v4 and renders a "Routing & NLU trace" block (action-type distribution, intent trace, handover events, category chip) + per-turn drawer enrichment.
+Phase 2b **v2** — redesigned RoutingBlock around "wow signals per conversation turn" not aggregate metrics. Every user→bot exchange renders as a card exposing the puzzle pieces boost.ai fired: Routed to (Intent / Generative fallback / Scripted content), Flow id (meta_action_id), Think time (ms), Triggers, API call (api_connector), optional Filter / Skill / Handover / Match / Language, plus a short bot-reply preview. Plus first-click-reliability fix (retry budget 14s→30s) + auto-refresh-on-new-turn (15s debounce).
 
 ## Step
-Code complete. Build + typecheck green. Dev smoke-tested (LiveChatSection mounts, graceful "Failed to fetch" on expected localhost CORS, no stray `/boost-export` calls, no console errors). Worker extension is in the repo but needs `wrangler deploy` + two secrets. Client being pushed this commit.
-
-- [x] `/boost-export` endpoint on existing `feed-me-log` Worker (OAuth2 client_credentials + KV token cache + Export search + cross-lookup by posted_id + dereference maps)
-- [x] `wrangler.toml` — `BOOST_EXPORT_TENANT = "financewizard.boost.ai"`
-- [x] `src/lib/boost-export.ts` — fetcher with 2s/3s/4s/5s retry ladder for ~10s Export indexing delay
-- [x] `LiveChatSection` — `postedIds[]`, `analyzePhase`, `exportTrace`, `analyzedPostedCount`, `handleAnalyze` with snapshot-count-before-await
-- [x] `DataFunnelPanel` — `AnalyzeOrRouting` + `RoutingBlock` + `ActionTypeBar` + `DrawerExportExtras`
+- [x] Retry budget 14s→30s, backoffs 2/3/4/5/6/7s
+- [x] Proxy (`boost-export-proxy/src/index.js`) passes through `intent_action_meta_id`, `transfer_to_human`, `came_from`, `content_snippet`, `clicked_button_id`
+- [x] `ExportTurnTrace` type extended to match proxy shape
+- [x] `RoutingBlock` rewritten → per-exchange cards (`ExchangeCard` + `groupExchanges` + `routedToLabel` + `thinkTimeMs` + `formatLatency`)
+- [x] Auto-refresh effect in `LiveChatSection` — fires 15s after new turns once user has analysed once, debounced
 - [x] `npm run build` green
-- [x] Dev smoke-test
-- [ ] User: `wrangler secret put BOOST_EXPORT_CLIENT_ID` + `BOOST_EXPORT_CLIENT_SECRET` + `wrangler deploy` in `cloudflare-worker/`
-- [ ] Prod verify end-to-end on `oceanapi.github.io`
+- [ ] **User: `cd boost-export-proxy && fly deploy`** to pick up the new turn-shape fields
+- [ ] Client commit pushed + prod verify
 
 ## Last-green SHA
-`4c34ede` (Phase 2a polish) — next commit is Phase 2b.
+`bda896d` (Fly.io static-IP proxy).
 
 ## Blockers
-None. Feature degrades gracefully at every step: no Worker deployment → Analyze button shows "off-line" message; no classical intents on tenant → rows render as em-dashes or hidden; Export indexing not-yet-ready → retries with shimmer then shows friendly error.
+None. Proxy change is additive (new fields, same endpoint contract). Client renders gracefully if the proxy hasn't redeployed yet — it just doesn't get `content_snippet` / `intent_action_meta_id` rows until the proxy ships.
 
 ## Next action
-Push this commit. User deploys Worker in parallel. Verify on prod by opening a guide in `demo_mode: "live"`, sending one message, clicking **Analyze**, confirming the Routing block appears with at least `displayed_action.action_type` populated per turn.
+1. User runs `fly deploy` in `boost-export-proxy/`
+2. User pushes the client commit
+3. Prod verify — open guide in `demo_mode: "live"`, send a message, wait for bot, click **Analyze**. Expect one card per exchange with Routed-to / Flow / Think time / etc. Send another message and wait 15s — panel should auto-refresh.
 
 ## Key context for next session
-- **Worker endpoint**: `POST /boost-export` — body `{ posted_ids: number[], window_minutes?: number }`. Auth: same `x-client-token` as `/feedback`. Returns `{indexed:false}` during the ~10s Export indexing window; client retries.
-- **ID cross-lookup**: Chat API v2's `posted_id` === Export API v4's `message.id`. Confirmed empirically. `Conversation.reference` is null on financewizard — do not rely on it.
-- **Tenant reality check for financewizard**: `predicted_intent_id`, `matched_filter`, `skill`, `session.category` are all null/empty on most turns. Only `displayed_action.action_type` (`"generative"` vs `"content"`) and `predicted_language` are reliably populated. Panel designed to degrade gracefully. When pointed at a real tenant with intents + auto-review enabled, the Routing block fills out.
-- **Dev CORS**: localhost live-chat stays broken. Prod is the only verification path for the full flow.
-- **Secret rotation**: the OAuth2 client secret used during build hit chat history. Rotate via boost.ai admin → Security & Privacy → OAuth 2.0 → Reset after first successful prod verify.
+- **Fly egress IP**: `204.93.146.71` (allowlisted in boost.ai External APIs). Fly's dedicated IPv4 `149.248.213.183` is ingress-only — egress rides on the shared pool. `fly ssh console -C 'wget -qO- https://api.ipify.org'` to re-check if 403 returns.
+- **Ingress URL**: `https://boost-export-proxy.fly.dev`. Client env var: `NEXT_PUBLIC_BOOST_EXPORT_URL`.
+- **Proxy turn shape**: `shapeTurn` in `boost-export-proxy/src/index.js`. Any further Export API field we want surfaced must be added both there AND in `ExportTurnTrace` in `src/lib/boost-export.ts`.
+- **Exchange grouping**: `groupExchanges()` pairs each user turn with the bot turns that follow. A leading bot turn (START welcome) becomes a `kind: "welcome"` card.
+- **Financewizard tenant reality**: no classical intents → `predicted_intent` null on every user turn → cards lean on `action_type === "generative"` as the routing headline. When pointed at a tenant with intents configured, the Routed-to chip flips to `Intent · <title>` and extra rows (Filter / Match) appear automatically.
+- **Auto-refresh guardrails**: only fires after first manual Analyze (gates on `analyzedPostedCount > 0`), only on new turns, only when not already loading. Dependency array covers all three.
+- **Secret rotation**: the OAuth2 client secret used during build hit chat history. Rotate via boost.ai admin → Security & Privacy → OAuth 2.0 → Reset after verifying the new prod build. KV/Fly token cache invalidates automatically on token expiry.
 
 <!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
 ## Auto-snapshot
-Last updated: 2026-04-22T13:44:08+02:00
+Last updated: 2026-04-22T15:19:37+02:00
 Branch: main
-Last commit: a76bfd4 feat(live-demo): Phase 2b — Analyze button + Export API v4 trace
+Last commit: 0782321 chore: rebuild to pick up BOOST_EXPORT_URL
 Working tree:
 ```
+ M boost-export-proxy/fly.toml
  M docs/STATE.md
 ?? .claude/launch.json
 ?? customer_excellence_raw_data_pdfs/

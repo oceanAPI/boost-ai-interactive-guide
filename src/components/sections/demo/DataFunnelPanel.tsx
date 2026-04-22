@@ -19,7 +19,7 @@
  *  "Refresh analysis · +N new turns".
  * ────────────────────────────────────────────────────────────── */
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import type {
   ChatConversationState,
   ChatElement,
@@ -859,6 +859,63 @@ function AnalyzeOrRouting({
   );
 }
 
+/* ─── RoutingBlock — per-exchange card layout ──────────────────
+ *
+ *  Design intent: each user→bot round trip becomes one "exchange
+ *  card" showing the puzzle pieces that fired — Routed to, Flow,
+ *  Think time, Triggers, API call — followed by a short reply
+ *  preview. Makes "boost.ai picked generative fallback in 840 ms"
+ *  scannable in a sales conversation.
+ *
+ *  Whole-conversation visibility is the rule — not just the last
+ *  turn. Cards render every user-initiated exchange plus a compact
+ *  opener card when the session starts with a bot welcome.
+ * ────────────────────────────────────────────────────────────── */
+
+interface Exchange {
+  kind: "welcome" | "turn";
+  /** 1-based turn index as shown to the user. */
+  index: number;
+  /** User message that initiated this exchange. Null on "welcome". */
+  userTurn: ExportTurnTrace | null;
+  /** Bot turns that followed (first is the primary reply). */
+  botTurns: ExportTurnTrace[];
+}
+
+/** Group turns into exchanges. A "welcome" exchange is any leading
+ *  bot turn before the first user turn. Subsequent bot turns are
+ *  grouped under whichever user turn preceded them. */
+function groupExchanges(turns: ExportTurnTrace[]): Exchange[] {
+  const out: Exchange[] = [];
+  let idx = 0;
+  let bucket: ExportTurnTrace[] = [];
+
+  for (const t of turns) {
+    if (t.role === "user") {
+      // Flush any leading bot-only chunk as the welcome exchange.
+      if (out.length === 0 && bucket.length > 0) {
+        idx += 1;
+        out.push({ kind: "welcome", index: idx, userTurn: null, botTurns: bucket });
+        bucket = [];
+      }
+      idx += 1;
+      out.push({ kind: "turn", index: idx, userTurn: t, botTurns: [] });
+    } else {
+      // bot or agent — attach to the current exchange if any, else
+      // accumulate for the upcoming welcome bucket.
+      const current = out[out.length - 1];
+      if (current) current.botTurns.push(t);
+      else bucket.push(t);
+    }
+  }
+  // Trailing bot-only turns with no user before them (edge case on
+  // conversations that haven't received any user input yet).
+  if (out.length === 0 && bucket.length > 0) {
+    out.push({ kind: "welcome", index: 1, userTurn: null, botTurns: bucket });
+  }
+  return out;
+}
+
 function RoutingBlock({
   trace,
   analyzePhase,
@@ -873,46 +930,14 @@ function RoutingBlock({
   const loading = analyzePhase.kind === "loading";
   const error = analyzePhase.kind === "error" ? analyzePhase.message : null;
 
-  /* Distribution of action_type across bot turns. Used for the
-     horizontal bar and the legend. */
-  const actionDist = useMemo(() => {
-    const counts: Record<string, number> = {};
-    let total = 0;
-    for (const t of trace.turns) {
-      if (t.role === "user") continue;
-      const k = t.action_type ?? "unknown";
-      counts[k] = (counts[k] ?? 0) + 1;
-      total += 1;
-    }
-    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    return { total, entries };
-  }, [trace.turns]);
-
-  /* User-turn intent roll-up. Empty when tenant has no classical
-     intents (e.g. financewizard — everything falls through to
-     generative). We still show the row, just with em-dashes. */
-  const userTurns = useMemo(
-    () => trace.turns.filter((t) => t.role === "user"),
-    [trace.turns],
-  );
-
-  /* Handover events — rendered only if any appear. Keeps the panel
-     clean for the common case (no handover in the demo). */
-  const handoverTurns = useMemo(
-    () =>
-      trace.turns.filter(
-        (t) => t.is_human_chat || t.is_human_chat_queue || t.skill,
-      ),
-    [trace.turns],
-  );
-
+  const exchanges = useMemo(() => groupExchanges(trace.turns), [trace.turns]);
   const category = trace.session.category?.automatic ?? null;
 
   return (
     <section
       aria-labelledby="funnel-routing"
       data-testid="data-funnel-routing"
-      className="rounded-xl border border-boost-purple/30 bg-white p-3 space-y-3"
+      className="rounded-xl border border-boost-purple/30 bg-white p-3 space-y-2.5"
     >
       {/* Header row */}
       <header className="flex items-center justify-between gap-2">
@@ -924,11 +949,7 @@ function RoutingBlock({
             Routing & NLU trace
           </p>
           <p className="text-[10px] text-boost-muted/80 mt-0.5 truncate">
-            Session{" "}
-            <span className="font-mono text-boost-dark/70">
-              #{trace.session.id}
-            </span>{" "}
-            · <span className="font-mono">{trace.session.duration || "—"}</span>
+            {exchanges.length} exchange{exchanges.length === 1 ? "" : "s"}
             {trace.session.reviewed && (
               <span className="ml-1.5 text-boost-green">· reviewed</span>
             )}
@@ -947,7 +968,7 @@ function RoutingBlock({
           }
         >
           {loading ? (
-            "Analyzing…"
+            "Analysing…"
           ) : (
             <>
               Refresh
@@ -965,97 +986,14 @@ function RoutingBlock({
         <p className="text-[10px] text-boost-orange leading-relaxed">{error}</p>
       )}
 
-      {/* Actions dispatched */}
-      {actionDist.total > 0 && (
-        <div>
-          <p className="text-[9px] font-semibold text-boost-muted uppercase tracking-wider mb-1">
-            Actions dispatched
-          </p>
-          <ActionTypeBar entries={actionDist.entries} total={actionDist.total} />
-        </div>
-      )}
-
-      {/* Intent trace (user turns) */}
-      <div>
-        <p className="text-[9px] font-semibold text-boost-muted uppercase tracking-wider mb-1">
-          Intent trace
-        </p>
-        {userTurns.length === 0 ? (
-          <p className="text-[10px] text-boost-muted italic">
-            No user turns yet.
-          </p>
-        ) : (
-          <ul className="space-y-0.5">
-            {userTurns.map((t, i) => (
-              <li
-                key={t.id}
-                className="flex items-baseline gap-2 text-[10px] leading-snug"
-              >
-                <span className="font-mono text-boost-muted flex-shrink-0 w-4 text-right">
-                  {i + 1}.
-                </span>
-                <span className="text-boost-dark font-medium min-w-0 flex-1 truncate">
-                  {t.original_question || "(no text)"}
-                </span>
-                <span className="flex-shrink-0">
-                  {t.predicted_intent?.title ? (
-                    <span className="font-mono text-boost-purple">
-                      {t.predicted_intent.title}
-                    </span>
-                  ) : (
-                    <span className="text-boost-muted/60">—</span>
-                  )}
-                </span>
-                {t.language && (
-                  <span className="font-mono text-[9px] text-boost-muted flex-shrink-0">
-                    {t.language}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {/* Handover (conditional) */}
-      {handoverTurns.length > 0 && (
-        <div>
-          <p className="text-[9px] font-semibold text-boost-muted uppercase tracking-wider mb-1">
-            Handover
-          </p>
-          <ul className="space-y-0.5">
-            {handoverTurns.map((t) => (
-              <li
-                key={t.id}
-                className="flex items-baseline gap-2 text-[10px] leading-snug"
-              >
-                <span
-                  aria-hidden="true"
-                  className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                    t.is_human_chat
-                      ? "bg-boost-purple"
-                      : t.is_human_chat_queue
-                        ? "bg-amber-500"
-                        : "bg-boost-green-light"
-                  }`}
-                />
-                <span className="text-boost-dark">
-                  {t.is_human_chat_queue
-                    ? "In queue"
-                    : t.is_human_chat
-                      ? "With human agent"
-                      : "Skill assigned"}
-                </span>
-                {t.skill?.title && (
-                  <span className="font-mono text-boost-muted">
-                    · {t.skill.title}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* Exchange cards */}
+      <ol className="space-y-2">
+        {exchanges.map((ex) => (
+          <li key={`${ex.kind}-${ex.index}-${ex.userTurn?.id ?? ex.botTurns[0]?.id ?? ex.index}`}>
+            <ExchangeCard exchange={ex} />
+          </li>
+        ))}
+      </ol>
 
       {/* Category — shown only if present (auto-review is a delayed
           batch job; may be empty for a just-completed conversation) */}
@@ -1073,53 +1011,253 @@ function RoutingBlock({
   );
 }
 
-function ActionTypeBar({
-  entries,
-  total,
-}: {
-  entries: [string, number][];
-  total: number;
-}) {
-  const palette = [
-    "#59195d", // purple
-    "#36b595", // green-light
-    "#e8a23b", // gold
-    "#e37547", // orange
-    "#8a6ca8", // lavender
-    "#6b7280", // muted
-  ];
-  return (
-    <div>
-      <div className="flex h-2 w-full rounded-full overflow-hidden bg-boost-surface">
-        {entries.map(([k, v], i) => (
-          <div
-            key={k}
-            title={`${k}: ${v}`}
-            style={{
-              width: `${(v / total) * 100}%`,
-              backgroundColor: palette[i % palette.length],
-            }}
-          />
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-        {entries.map(([k, v], i) => (
-          <span
-            key={k}
-            className="inline-flex items-center gap-1 text-[10px]"
-          >
-            <span
-              aria-hidden="true"
-              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-              style={{ backgroundColor: palette[i % palette.length] }}
-            />
-            <span className="text-boost-dark font-medium">{k}</span>
-            <span className="text-boost-muted font-mono">{v}</span>
+function ExchangeCard({ exchange }: { exchange: Exchange }) {
+  const { kind, index, userTurn, botTurns } = exchange;
+  const primary = botTurns[0] ?? null;
+
+  // Routing signal — the single "where did this go?" headline.
+  const routed = routedToLabel(userTurn, primary);
+
+  // Per-turn data rows. Builds a list that's dense and avoids em-
+  // dash parades: rows only appear when there's something to say.
+  const rows: Array<{ label: string; value: ReactNode }> = [];
+
+  rows.push({ label: "Routed to", value: routed });
+
+  if (primary?.intent_action_meta_id != null) {
+    rows.push({
+      label: "Flow",
+      value: (
+        <span className="font-mono text-boost-dark/80">
+          #{primary.intent_action_meta_id}
+        </span>
+      ),
+    });
+  }
+
+  // Think time — gap between user msg created and first bot turn
+  // created. For welcome-only exchanges it's the welcome trigger's
+  // own timestamp and not meaningful; skip.
+  if (userTurn && primary) {
+    const ms = thinkTimeMs(userTurn.created, primary.created);
+    if (ms != null) {
+      rows.push({
+        label: "Think time",
+        value: (
+          <span className="font-mono text-boost-dark/80">
+            {formatLatency(ms)}
           </span>
+        ),
+      });
+    }
+  }
+
+  // Triggers — combine all system_action_trigger titles across all
+  // bot turns in this exchange into a comma list.
+  const triggers = botTurns
+    .map((t) => t.system_action_trigger?.title)
+    .filter((v): v is string => typeof v === "string" && v.length > 0);
+  if (triggers.length > 0) {
+    rows.push({
+      label: "Triggers",
+      value: <span className="text-boost-dark/80">{triggers.join(" · ")}</span>,
+    });
+  }
+
+  // API call — any bot turn in the exchange that used api_connector.
+  const apiCall = botTurns.some((t) => t.action_type === "api_connector");
+  if (apiCall) {
+    rows.push({
+      label: "API call",
+      value: (
+        <span className="inline-flex items-center gap-1 font-mono text-[10px] text-boost-orange">
+          <span aria-hidden className="w-1 h-1 rounded-full bg-boost-orange" />
+          api_connector fired
+        </span>
+      ),
+    });
+  }
+
+  // Filter / skill — show only when populated (otherwise the card
+  // gets full of em-dashes on tenants like financewizard).
+  if (primary?.matched_filter?.title) {
+    rows.push({
+      label: "Filter",
+      value: (
+        <span className="font-mono text-boost-dark/80">
+          {primary.matched_filter.title}
+        </span>
+      ),
+    });
+  }
+  if (primary?.skill?.title) {
+    rows.push({
+      label: "Skill",
+      value: (
+        <span className="font-mono text-boost-dark/80">
+          {primary.skill.title}
+        </span>
+      ),
+    });
+  }
+  if (primary?.is_human_chat_queue || primary?.is_human_chat) {
+    rows.push({
+      label: "Handover",
+      value: (
+        <span className="text-boost-purple font-semibold">
+          {primary.is_human_chat_queue ? "In queue" : "With human agent"}
+        </span>
+      ),
+    });
+  }
+
+  // Prediction type chips — "Perfect Match" / "Fine-tuned (Unknown)"
+  // etc. Only present when classical intents are configured.
+  const predTypes = userTurn?.prediction_types ?? null;
+  if (predTypes && predTypes.length > 0) {
+    rows.push({
+      label: "Match",
+      value: (
+        <span className="text-boost-dark/80">{predTypes.join(" · ")}</span>
+      ),
+    });
+  }
+
+  // Language — only show when non-default or when we don't have
+  // another "main" identifier for the user turn.
+  if (userTurn?.language) {
+    rows.push({
+      label: "Language",
+      value: (
+        <span className="font-mono text-boost-dark/80">{userTurn.language}</span>
+      ),
+    });
+  }
+
+  return (
+    <article
+      data-testid={`routing-exchange-${index}`}
+      className="rounded-lg border border-boost-border bg-boost-surface/40 p-2.5 space-y-1.5"
+    >
+      {/* Header: turn index + either user question or welcome label */}
+      <header className="flex items-baseline gap-2">
+        <span className="text-[9px] font-mono text-boost-muted flex-shrink-0">
+          #{index}
+        </span>
+        {kind === "welcome" ? (
+          <span className="text-[11px] text-boost-muted italic">
+            Session opener · VA welcome
+          </span>
+        ) : (
+          <span className="text-[11px] font-semibold text-boost-dark leading-snug min-w-0 flex-1">
+            <span className="text-boost-muted font-normal">You:</span>{" "}
+            &ldquo;{userTurn?.original_question || "(no text)"}&rdquo;
+          </span>
+        )}
+      </header>
+
+      {/* Puzzle pieces grid */}
+      <dl className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5 text-[10px]">
+        {rows.map((r) => (
+          <Fragment key={r.label}>
+            <dt className="text-boost-muted">{r.label}</dt>
+            <dd className="min-w-0">{r.value}</dd>
+          </Fragment>
         ))}
-      </div>
-    </div>
+      </dl>
+
+      {/* Bot reply snippet */}
+      {primary?.content_snippet && (
+        <p className="text-[10px] text-boost-dark/75 italic leading-snug pt-1.5 border-t border-boost-border/60">
+          <span className="not-italic text-boost-muted font-normal">
+            Reply ·{" "}
+          </span>
+          {primary.content_snippet}
+        </p>
+      )}
+    </article>
   );
+}
+
+/** Single-line "where did boost.ai send this?" label.
+ *
+ *  Priority:
+ *    1. Matched classical intent → its title (or #id)
+ *    2. Bot's action type → "Generative fallback" / "Scripted
+ *       content" / the raw action_type name for exotic ones
+ *    3. Welcome trigger → "VA welcome"
+ *    4. Unknown fallback state
+ */
+function routedToLabel(
+  userTurn: ExportTurnTrace | null,
+  primary: ExportTurnTrace | null,
+): ReactNode {
+  if (userTurn?.predicted_intent?.title) {
+    return (
+      <span className="font-mono text-boost-purple font-semibold">
+        Intent · {userTurn.predicted_intent.title}
+      </span>
+    );
+  }
+  if (userTurn?.predicted_intent?.id != null) {
+    return (
+      <span className="font-mono text-boost-purple font-semibold">
+        Intent · #{userTurn.predicted_intent.id}
+      </span>
+    );
+  }
+
+  const action = primary?.action_type ?? null;
+  if (action === "generative" || action === "llm") {
+    return (
+      <span className="inline-flex items-center gap-1 text-boost-purple font-semibold">
+        <span aria-hidden className="w-1 h-1 rounded-full bg-boost-purple" />
+        Generative fallback
+      </span>
+    );
+  }
+  if (action === "content") {
+    return (
+      <span className="inline-flex items-center gap-1 text-boost-green font-semibold">
+        <span aria-hidden className="w-1 h-1 rounded-full bg-boost-green" />
+        Scripted content
+      </span>
+    );
+  }
+  if (action === "api_connector") {
+    return (
+      <span className="inline-flex items-center gap-1 text-boost-orange font-semibold">
+        <span aria-hidden className="w-1 h-1 rounded-full bg-boost-orange" />
+        API connector
+      </span>
+    );
+  }
+  if (action === "entity_extraction") {
+    return (
+      <span className="text-boost-gold font-semibold">Entity extraction</span>
+    );
+  }
+  if (action) {
+    return <span className="font-mono text-boost-dark/80">{action}</span>;
+  }
+  if (userTurn?.is_unknown) {
+    return <span className="text-boost-muted italic">Unknown (fallback)</span>;
+  }
+  return <span className="text-boost-muted italic">—</span>;
+}
+
+function thinkTimeMs(userCreated: string, botCreated: string): number | null {
+  const u = Date.parse(userCreated);
+  const b = Date.parse(botCreated);
+  if (!Number.isFinite(u) || !Number.isFinite(b)) return null;
+  const diff = b - u;
+  if (diff < 0 || diff > 60_000) return null; // sanity-cap
+  return diff;
+}
+
+function formatLatency(ms: number): string {
+  if (ms < 1000) return `${ms} ms`;
+  return `${(ms / 1000).toFixed(1)} s`;
 }
 
 function formatCategory(cat: string): string {

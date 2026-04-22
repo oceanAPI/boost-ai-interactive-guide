@@ -181,3 +181,42 @@
 **Security note**: The test OAuth2 client secret was pasted into chat history during setup. User should rotate it via the Reset button in boost.ai admin → Security & Privacy → OAuth 2.0 after verifying the feature works. KV token cache invalidates on its own via `expires_in`, so no manual flush needed after rotation.
 
 **Next**: Return to the paused PS section-quality redesign (BuildScope / Roles / OutOfScope still need `BoostIcon` + ImpactSection-caliber visual metaphors). Open follow-up on Phase 2: if a tenant with classical intents configured becomes available, point live-demo at it — the Intent trace and Matched filter rows will light up.
+
+## 2026-04-22 — Phase 2b v2: "Wow signals" redesign + first-click reliability fix
+
+**Symptoms we were fixing**:
+1. First click on **Analyze** often failed ("Could not reach…" / empty); second click worked. Cause: retry budget was 14s but Export API indexing can take 15–22s in practice.
+2. Even when analysis succeeded, the panel looked "extremely boring" — an action-type bar with 1–2 colors and a user-question list where every intent row showed an em-dash (financewizard is generative-only).
+
+**What changed**:
+
+**Retry budget**: `boost-export.ts` now uses a 30s budget with backoffs 2/3/4/5/6/7s. First click is reliable in practice.
+
+**Proxy turn shape** (`boost-export-proxy/src/index.js`) — forwards richer per-turn fields:
+- `intent_action_meta_id` (from `displayed_action`) → "Flow #N" on the card
+- `transfer_to_human` (from `displayed_action`)
+- `came_from` (from `came_from_action`) — for button-click-originated user turns
+- `content_snippet` — first ~160 chars of the bot's rendered reply text (HTML-stripped) so each card can show "what it actually said" without a second round-trip
+- `clicked_button_id` — for button-initiated user turns
+
+**Panel redesign** (`DataFunnelPanel.tsx`, `RoutingBlock`):
+- Replaced aggregated "Actions dispatched" bar + em-dashed intent trace with **per-exchange cards**. One card per user→bot round-trip. Welcome turn becomes a compact "Session opener" card.
+- `groupExchanges()` walks the `trace.turns` array and buckets bot turns under the user turn that preceded them.
+- Each card shows (rows conditionally rendered only when populated):
+  - `#<index>` + user question (or "Session opener · VA welcome" for the opener)
+  - **Routed to** — intent title · confidence if present, else "Generative fallback" / "Scripted content" / "API connector" / action_type
+  - **Flow** — `#<meta_action_id>`
+  - **Think time** — ms or seconds, computed from timestamp diff (sanity-capped at 60s)
+  - **Triggers** — joined list of `system_action_trigger.title`s across the exchange
+  - **API call** — only when any bot turn in the exchange has `action_type === "api_connector"`
+  - **Filter / Skill / Handover / Match / Language** — conditional
+  - **Reply** — italic `content_snippet` separated by a thin top-border
+- `routedToLabel()` is the single "where did boost.ai send this?" label; financewizard → "Generative fallback" is the headline story. Tenants with classical intents → "Intent · <title>".
+
+**Auto-refresh**: `LiveChatSection` gains a small `useEffect` that schedules a silent `handleAnalyze()` 15s after `postedIds.length` exceeds `analyzedPostedCount` — but only after the user has analysed at least once (`analyzedPostedCount > 0`). New turns during the wait cancel + reschedule. So the panel stays live as the conversation continues without the user needing to click Refresh.
+
+**Deploy**: Two steps — user runs `fly deploy` in `boost-export-proxy/` to pick up the new proxy fields (additive, no breaking changes to the endpoint contract), then pushes the client commit. If proxy hasn't redeployed when client ships, cards render minus `content_snippet` / `intent_action_meta_id` rows — safe, graceful.
+
+**What this changes for the demo narrative**: instead of "boost.ai returned a reply", the panel shows "boost.ai recognized this was out-of-scope for scripted flows, routed to Generative (LLM) in 840 ms, which composed the following reply". The "puzzle pieces" (action type, triggers, API connectors, intents, filters, meta action IDs) are exactly the signals a CE audience wants to see — they prove the platform's routing, not just its front-end.
+
+**Next**: push + fly deploy + prod verify. Still paused: PS section-quality redesign.

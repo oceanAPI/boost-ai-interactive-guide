@@ -190,18 +190,63 @@ function resolveRef(map, id, titleKey) {
   return { id, title: typeof raw === "string" ? raw : null };
 }
 
+/** Pull the first ~120 chars of readable reply text from a bot
+ *  message's content[] array. Used as a card preview so the panel
+ *  can show "what did the bot actually say" without a second round-
+ *  trip to Chat API v2 or local state. Strips HTML tags, collapses
+ *  whitespace, trims to a snippet size. Returns null for turns with
+ *  no text (e.g. pure image/video replies). */
+function extractContentSnippet(content) {
+  if (!Array.isArray(content)) return null;
+  const chunks = [];
+  for (const c of content) {
+    if (!c || typeof c !== "object") continue;
+    if (c.type === "text" && typeof c.text === "string") {
+      chunks.push(c.text);
+    } else if (c.type === "html" && typeof c.text === "string") {
+      chunks.push(c.text);
+    }
+    if (chunks.join(" ").length > 240) break;
+  }
+  if (chunks.length === 0) return null;
+  const plain = chunks
+    .join(" ")
+    .replace(/<[^>]+>/g, " ") // strip tags
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!plain) return null;
+  return plain.length > 160 ? `${plain.slice(0, 157)}…` : plain;
+}
+
 function shapeTurn(m, intents, filters, skills, sats) {
   const role = m.is_customer
     ? "user"
     : m.is_support_human
       ? "agent"
       : "bot";
+  const displayedAction = m.displayed_action ?? null;
+  const cameFromAction = m.came_from_action ?? null;
   return {
     id: m.id,
     role,
     created: m.created,
     language: m.predicted_language ?? null,
-    action_type: m.displayed_action?.action_type ?? null,
+    action_type: displayedAction?.action_type ?? null,
+    // Meta action ID — the "flow id" that fired on this turn. Lets
+    // the panel show "Flow #3149" as a stable fingerprint of which
+    // configured logic the tenant matched.
+    intent_action_meta_id: displayedAction?.intent_action_meta_id ?? null,
+    transfer_to_human: displayedAction?.transfer_to_human ?? false,
+    // If the user turn is the result of clicking a button, this
+    // carries the meta action that originally rendered the button.
+    came_from: cameFromAction
+      ? {
+          intent_action_meta_id: cameFromAction.intent_action_meta_id ?? null,
+          action_type: cameFromAction.action_type ?? null,
+        }
+      : null,
+    // Bot reply snippet so the card can show what was actually said.
+    content_snippet: role === "bot" ? extractContentSnippet(m.content) : null,
     system_action_trigger: resolveRef(sats, m.system_action_trigger?.id, "title"),
     predicted_intent: resolveRef(
       intents,
@@ -215,6 +260,7 @@ function shapeTurn(m, intents, filters, skills, sats) {
     is_human_chat: Boolean(m.is_human_chat),
     is_human_chat_queue: Boolean(m.is_human_chat_queue),
     is_unknown: Boolean(m.is_unknown),
+    clicked_button_id: typeof m.clicked_button_id === "number" ? m.clicked_button_id : null,
   };
 }
 

@@ -1,58 +1,35 @@
-# Fly.io config for boost-export-proxy.
+# fly.toml app configuration file generated for boost-export-proxy on 2026-04-22T14:05:48+02:00
 #
-# Deploy flow on a fresh account:
-#   1. curl -L https://fly.io/install.sh | sh          # install flyctl
-#   2. fly auth signup                                 # or: fly auth login
-#   3. cd boost-export-proxy
-#   4. fly launch --copy-config --no-deploy            # picks up this toml
-#   5. fly ips allocate-v4 --app <the app name>        # one dedicated IPv4 ($2/mo)
-#   6. fly secrets set \
-#        BOOST_EXPORT_CLIENT_ID=<...> \
-#        BOOST_EXPORT_CLIENT_SECRET=<...> \
-#        BOOST_EXPORT_TENANT=financewizard.boost.ai \
-#        CLIENT_TOKEN=<same as NEXT_PUBLIC_FEED_CLIENT_TOKEN> \
-#        ALLOWED_ORIGINS=https://oceanapi.github.io,http://localhost:3000
-#   7. fly deploy
-#   8. fly ips list                                    # grab the v4; paste it into
-#                                                      # boost.ai admin → Settings →
-#                                                      # Security & Privacy →
-#                                                      # External APIs → Add to list
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
-# Pricing (2026):
-#   - shared-cpu-1x 256MB machine running 24/7: ~$1.94/mo
-#   - Dedicated IPv4: $2/mo
-#   - Total: ~$4/mo
 
-app = "boost-export-proxy"
-primary_region = "arn"  # Stockholm — closest CF region to financewizard's EU tenant
+app = 'boost-export-proxy'
+primary_region = 'arn'
 
-# Expose HTTP internally on 8080; Fly fronts it with HTTPS on 443.
+[build]
+
 [http_service]
   internal_port = 8080
   force_https = true
-  # Keep machines running so the first Analyze click isn't a 2-5s cold start.
-  # Flip to auto_stop / min_machines_running = 0 if you want to save ~$2/mo at
-  # the cost of worse demo UX.
-  auto_stop_machines = "off"
+  auto_stop_machines = 'off'
   auto_start_machines = true
   min_machines_running = 1
 
   [http_service.concurrency]
-    type = "requests"
+    type = 'requests'
     hard_limit = 200
     soft_limit = 100
 
-# Lightweight health probe used by Fly to decide if the machine is alive.
-[[http_service.checks]]
-  grace_period = "5s"
-  interval = "30s"
-  method = "GET"
-  path = "/health"
-  timeout = "3s"
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '3s'
+    grace_period = '5s'
+    method = 'GET'
+    path = '/health'
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "256mb"
+  size = 'shared-cpu-1x'
+  memory = '256mb'
+  cpu_kind = 'shared'
   cpus = 1
-
-# No build section — Fly auto-detects the Dockerfile.
+  memory_mb = 256

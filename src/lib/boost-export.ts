@@ -50,6 +50,19 @@ export interface ExportTurnTrace {
   created: string;
   language: string | null;
   action_type: string | null;
+  /** Meta action ID that fired on this turn — shown as "Flow #N" in
+   *  the per-turn card. Stable per-tenant fingerprint of which
+   *  configured logic matched. */
+  intent_action_meta_id: number | null;
+  /** True when the displayed action was flagged to transfer to a
+   *  human. A handover signal independent of `is_human_chat`. */
+  transfer_to_human: boolean;
+  /** For user turns originating from a button click: which meta
+   *  action's button was clicked. Null for free-text messages. */
+  came_from: { intent_action_meta_id: number | null; action_type: string | null } | null;
+  /** For bot turns: first ~160 chars of the rendered reply text,
+   *  HTML-stripped. Null for non-text replies. */
+  content_snippet: string | null;
   system_action_trigger: { id: number; title: string | null } | null;
   predicted_intent: { id: number; title: string | null } | null;
   prediction_types: string[] | null;
@@ -59,6 +72,7 @@ export interface ExportTurnTrace {
   is_human_chat: boolean;
   is_human_chat_queue: boolean;
   is_unknown: boolean;
+  clicked_button_id: number | null;
 }
 
 export interface ExportTraceSuccess {
@@ -105,7 +119,7 @@ export function isExportConfigured(): boolean {
 }
 
 interface FetchOptions {
-  /** Total ms budget for retries on not-yet-indexed. Default 14000. */
+  /** Total ms budget for retries on not-yet-indexed. Default 30000. */
   timeoutMs?: number;
   /** AbortSignal so the caller can cancel on reset/unmount. */
   signal?: AbortSignal;
@@ -115,9 +129,10 @@ interface FetchOptions {
 
 /** Fetch Export-API trace for a set of Chat API v2 posted_ids.
  *
- *  Retry schedule when indexed=false: 2s, 3s, 4s, 5s. Caps total
- *  wait at ~14s so the UI doesn't spin forever when something is
- *  genuinely missing. */
+ *  Retry schedule when indexed=false: 2s, 3s, 4s, 5s, 6s, 7s. Caps
+ *  total wait at ~30s so we cover slow-index runs (Export indexing
+ *  has been observed between 10s and 22s post-POST in practice) but
+ *  don't spin forever if something is genuinely missing. */
 export async function fetchExportTrace(
   postedIds: number[],
   opts: FetchOptions = {},
@@ -129,8 +144,8 @@ export async function fetchExportTrace(
     return { ok: false, error: { kind: "request_failed" } };
   }
 
-  const budget = opts.timeoutMs ?? 14_000;
-  const backoffs = [0, 2_000, 3_000, 4_000, 5_000];
+  const budget = opts.timeoutMs ?? 30_000;
+  const backoffs = [0, 2_000, 3_000, 4_000, 5_000, 6_000, 7_000];
   const started = Date.now();
 
   for (let i = 0; i < backoffs.length; i++) {

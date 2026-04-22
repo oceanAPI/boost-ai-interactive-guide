@@ -363,6 +363,20 @@ export default function LiveChatSection({
     };
   }, []);
 
+  /** Auto-refresh after new turns. Once the user has analysed at
+   *  least once, subsequent turns trigger a silent re-analysis
+   *  15s later (Export indexing delay). Additional turns during
+   *  the wait reset the timer so we only fire one fetch per burst. */
+  useEffect(() => {
+    if (analyzedPostedCount === 0) return; // never manually analysed
+    if (postedIds.length <= analyzedPostedCount) return; // nothing new
+    if (analyzePhase.kind === "loading") return; // already fetching
+    const timer = window.setTimeout(() => {
+      handleAnalyze();
+    }, 15_000);
+    return () => window.clearTimeout(timer);
+  }, [postedIds.length, analyzedPostedCount, analyzePhase.kind, handleAnalyze]);
+
   const disableInput =
     phase.kind === "starting" ||
     phase.kind === "posting" ||
