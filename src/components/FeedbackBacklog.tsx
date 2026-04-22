@@ -431,6 +431,59 @@ function PinDropOverlay({
       window.removeEventListener("resize", update);
     };
   }, [active]);
+  /* ─── Rail-tick placement with bucket spread ───
+   * Stacking bug-fix: multiple pins dropped in the same slide (or
+   * within ~30px on the same scrollable page) used to collapse onto
+   * identical topPct values, so only the last one was clickable.
+   * Here we bucket pins by shared position and spread them evenly
+   * within each bucket — every pin gets its own tick, every tick
+   * stays visually attached to the section it belongs to.
+   */
+  const pinTicks = useMemo(() => {
+    const pinsToRender = pins.filter((p) => p.id !== activeInputId);
+    // Bucket key identifies pins that should stack together.
+    const bucketKeyOf = (p: PinDraft): string => {
+      if (slideshow && slideshow.total > 0) {
+        return `slide:${typeof p.slideIndex === "number" ? p.slideIndex : -1}`;
+      }
+      return `scroll:${Math.floor(p.pageY / 30)}`;
+    };
+    const buckets = new Map<string, PinDraft[]>();
+    for (const p of pinsToRender) {
+      const key = bucketKeyOf(p);
+      const existing = buckets.get(key);
+      if (existing) existing.push(p);
+      else buckets.set(key, [p]);
+    }
+    // Compute a unique topPct per pin.
+    const result: Array<{ pin: PinDraft; topPct: number; stackCount: number; stackIndex: number }> = [];
+    for (const bucketPins of buckets.values()) {
+      const N = bucketPins.length;
+      bucketPins.forEach((p, i) => {
+        let topPct: number;
+        if (slideshow && slideshow.total > 0) {
+          const idx = typeof p.slideIndex === "number" ? p.slideIndex : 0;
+          const slotStart = (idx / slideshow.total) * 100;
+          const slotHeight = (1 / slideshow.total) * 100;
+          // Even spread: each pin gets its own (i + 0.5)/N fraction of
+          // the slide's slot. Single pin → centre. N pins → evenly
+          // distributed across the slot.
+          topPct = slotStart + ((i + 0.5) / N) * slotHeight;
+        } else {
+          const basePct =
+            scrollState.docHeight > 0 ? (p.pageY / scrollState.docHeight) * 100 : 0;
+          // Guide mode: pageY is usually distinct already, but pins
+          // within the same 30px bucket get a small symmetric offset
+          // around the base so they don't fully overlap.
+          const offset = N > 1 ? (i - (N - 1) / 2) * 0.4 : 0;
+          topPct = Math.max(0, Math.min(100, basePct + offset));
+        }
+        result.push({ pin: p, topPct, stackCount: N, stackIndex: i });
+      });
+    }
+    return result;
+  }, [pins, activeInputId, slideshow, scrollState.docHeight]);
+
   /** Scroll to / navigate to a pin, then re-open its inline editor at
    *  the original (pageX, pageY). The editor lets the reviewer EDIT
    *  (Enter commits) or DELETE (Esc in the field discards) the pin —
@@ -551,26 +604,14 @@ function PinDropOverlay({
           })()}
 
           {/* Pin ticks — one per dropped pin (skipping the one whose
-              inline editor is open). Each tick is a 2px horizontal
-              strike extending leftward from the rail. Click jumps +
-              flashes; hover widens and brightens. Tooltip via title
-              attribute carries the note text for longer previews. */}
-          {pins
-            .filter((p) => p.id !== activeInputId)
-            .map((p) => {
-              let topPct: number;
-              if (slideshow && slideshow.total > 0) {
-                const idx = typeof p.slideIndex === "number" ? p.slideIndex : 0;
-                // Centre of the slide's slot — makes the tick line up
-                // with the middle of the position segment when the
-                // rail is showing that slide.
-                topPct = ((idx + 0.5) / slideshow.total) * 100;
-              } else {
-                topPct =
-                  scrollState.docHeight > 0
-                    ? (p.pageY / scrollState.docHeight) * 100
-                    : 0;
-              }
+              inline editor is open). Positions come from `pinTicks`
+              which spreads stacked pins within their shared bucket
+              so every note gets a visible, clickable tick. Click
+              re-opens the pin's inline editor at its original
+              (pageX, pageY) — Enter commits edits, Esc in the field
+              deletes. Tooltip via title attribute carries the full
+              note text for longer previews. */}
+          {pinTicks.map(({ pin: p, topPct }) => {
               const hasText = p.text.trim().length > 0;
               const label = hasText ? p.text : "Empty note";
               return (
