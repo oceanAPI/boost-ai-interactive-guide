@@ -32,6 +32,7 @@ import {
   postActionLink,
   postText,
   startConversation,
+  type ChatConversationState,
   type ChatElement,
   type ChatMessage,
   type ChatResponse,
@@ -40,6 +41,7 @@ import {
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { assetPath } from "@/lib/asset-path";
+import DataFunnelPanel from "./DataFunnelPanel";
 
 interface LiveChatSectionProps {
   /** Tenant domain, e.g. `"financewizard.boost.ai"`. No protocol. */
@@ -84,24 +86,49 @@ export default function LiveChatSection({
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [phase, setPhase] = useState<ChatPhase>({ kind: "idle" });
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversationRef, setConversationRef] = useState<string | null>(null);
+  const [conversationState, setConversationState] =
+    useState<ChatConversationState | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [maxInputChars, setMaxInputChars] = useState(110);
+  const [lastRawResponse, setLastRawResponse] = useState<PostResponse | null>(
+    null,
+  );
+  /** Panel reveal: flips true on the first bot reply that follows
+   *  at least one client message. START's welcome does NOT flip it
+   *  (no preceding client message). Reset brings it back to false. */
+  const [revealPanel, setRevealPanel] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   /** Append a PostResponse's bot reply + ingest state. */
   const ingestPostResponse = useCallback((res: PostResponse) => {
+    setLastRawResponse(res);
     if (res.conversation?.id) {
       setConversationId(res.conversation.id);
     }
-    if (res.conversation?.state?.max_input_chars) {
-      setMaxInputChars(res.conversation.state.max_input_chars);
+    if (res.conversation?.reference) {
+      setConversationRef(res.conversation.reference);
+    }
+    if (res.conversation?.state) {
+      setConversationState(res.conversation.state);
+      if (res.conversation.state.max_input_chars) {
+        setMaxInputChars(res.conversation.state.max_input_chars);
+      }
     }
     if (res.response) {
       const botMsg = toMessage(res.response, `bot-${Date.now()}`);
-      setMessages((prev) => [...prev, botMsg]);
+      setMessages((prev) => {
+        // Reveal the data panel on the first bot reply that
+        // follows at least one client-sourced turn. Uses the
+        // pre-update `prev` so we reliably detect "there was a
+        // client message before this bot reply".
+        const hadClientTurn = prev.some((m) => m.source === "client");
+        if (hadClientTurn) setRevealPanel(true);
+        return [...prev, botMsg];
+      });
     }
   }, []);
 
@@ -114,6 +141,10 @@ export default function LiveChatSection({
     setPhase({ kind: "starting" });
     setMessages([]);
     setConversationId(null);
+    setConversationRef(null);
+    setConversationState(null);
+    setLastRawResponse(null);
+    setRevealPanel(false);
     try {
       const res = await startConversation(
         tenant,
@@ -290,8 +321,19 @@ export default function LiveChatSection({
           </button>
         </div>
 
+        {/* Chat + Data funnel — side-by-side once revealed */}
+        <div
+          className={`flex flex-col md:flex-row gap-4 transition-all duration-700 ease-out ${
+            revealPanel ? "max-w-6xl mx-auto" : "max-w-2xl mx-auto"
+          }`}
+        >
         {/* Chat frame */}
-        <div className="rounded-2xl border border-boost-border bg-white overflow-hidden flex flex-col" style={{ height: "600px", maxHeight: "80vh" }}>
+        <div
+          className={`flex-1 min-w-0 rounded-2xl border border-boost-border bg-white overflow-hidden flex flex-col transition-all duration-700 ease-out ${
+            revealPanel ? "md:basis-[58%]" : "w-full"
+          }`}
+          style={{ height: "600px", maxHeight: "80vh" }}
+        >
           {/* Messages area */}
           <div
             ref={scrollRef}
@@ -365,6 +407,20 @@ export default function LiveChatSection({
               Send
             </button>
           </div>
+        </div>
+
+        {/* Data funnel panel — mounts after first client→bot exchange */}
+        {revealPanel && (
+          <div className="flex-1 min-w-0 md:basis-[42%] animate-modal-in">
+            <DataFunnelPanel
+              messages={messages}
+              conversationState={conversationState}
+              reference={conversationRef}
+              tenant={tenant}
+              lastRawResponse={lastRawResponse}
+            />
+          </div>
+        )}
         </div>
 
         {/* Footnote */}
