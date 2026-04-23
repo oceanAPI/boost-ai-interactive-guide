@@ -479,68 +479,82 @@ function AnalyzeOrRouting({
       />
     );
   }
-  // State A/B — pre-Analyze. The analysis auto-kicks off 15 s after
-  // the first posted message (Export indexing window), so this is
-  // either (a) waiting silently, (b) in-flight, or (c) errored.
-  // No manual CTA — just a soft status line. Manual override is
-  // the "Refresh" button inside RoutingBlock once cards render.
+  // State A/B — pre-Analyze. The analysis ALSO kicks off automatically
+  // 15 s after the first posted message (Export indexing window), so
+  // by the time the user notices this button their trace is usually
+  // already in-flight. The button is an affordance — a visible handle
+  // on a thing that's already happening — and a way to skip the wait
+  // if the user wants it now.
   const loading = analyzePhase.kind === "loading";
   const error = analyzePhase.kind === "error" ? analyzePhase.message : null;
 
-  if (!canAnalyze && !loading && !error) {
-    // Haven't even seen a user turn yet — say nothing at all.
-    return null;
-  }
+  if (!canAnalyze && !loading && !error) return null;
 
   return (
     <section
       aria-live="polite"
       data-testid="data-funnel-analyze-card"
-      className="flex items-center gap-2 px-1 py-1 text-[10.5px] text-boost-muted"
+      className="rounded-xl border border-boost-border bg-white p-3 flex items-center justify-between gap-3"
     >
-      {loading ? (
-        <>
-          <span
-            aria-hidden
-            className="inline-flex gap-0.5"
-          >
-            <span className="w-1 h-1 rounded-full bg-boost-purple animate-pulse" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-semibold text-boost-dark leading-tight">
+          {loading ? "Analysing the conversation" : "Analyze this conversation"}
+        </p>
+        <p className="text-[10.5px] text-boost-muted leading-snug mt-0.5">
+          {loading
+            ? "Reading intents, routing, goals, and handover signals from the Export API…"
+            : error
+              ? error
+              : "It's auto-running in the background already — click to run it now."}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onAnalyze}
+        disabled={!canAnalyze || loading}
+        data-testid="data-funnel-analyze-btn"
+        className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-boost-purple text-white text-[11px] font-semibold hover:bg-boost-purple/90 disabled:bg-boost-muted/30 disabled:cursor-not-allowed transition-colors"
+      >
+        {loading ? (
+          <>
             <span
-              className="w-1 h-1 rounded-full bg-boost-purple animate-pulse"
-              style={{ animationDelay: "150ms" }}
-            />
-            <span
-              className="w-1 h-1 rounded-full bg-boost-purple animate-pulse"
-              style={{ animationDelay: "300ms" }}
-            />
-          </span>
-          <span className="text-boost-purple font-semibold">Analysing</span>
-          <span>the conversation…</span>
-        </>
-      ) : error ? (
-        <>
-          <span
-            aria-hidden
-            className="w-1.5 h-1.5 rounded-full bg-boost-orange"
-          />
-          <span className="text-boost-orange">{error}</span>
-          <button
-            type="button"
-            onClick={onAnalyze}
-            className="ml-1 underline decoration-dotted hover:text-boost-purple"
-          >
-            Retry
-          </button>
-        </>
-      ) : (
-        <>
-          <span
-            aria-hidden
-            className="w-1.5 h-1.5 rounded-full bg-boost-muted/60"
-          />
-          <span>Waiting for Export to index the conversation…</span>
-        </>
-      )}
+              aria-hidden
+              className="inline-flex gap-0.5"
+            >
+              <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
+              <span
+                className="w-1 h-1 rounded-full bg-white animate-pulse"
+                style={{ animationDelay: "150ms" }}
+              />
+              <span
+                className="w-1 h-1 rounded-full bg-white animate-pulse"
+                style={{ animationDelay: "300ms" }}
+              />
+            </span>
+            Analysing
+          </>
+        ) : error ? (
+          "Retry"
+        ) : (
+          <>
+            Analyze
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden
+              className="w-2.5 h-2.5"
+            >
+              <path
+                d="M3 8h10m0 0-4-4m4 4-4 4"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </>
+        )}
+      </button>
     </section>
   );
 }

@@ -379,11 +379,16 @@ export default function LiveChatSection({
     return () => window.clearTimeout(timer);
   }, [postedIds.length, analyzedPostedCount, analyzePhase.kind, handleAnalyze]);
 
+  // Hard input block: only while the conversation itself can't accept
+  // text (opening / errored / no server id). `posting` NO LONGER gates
+  // the textarea — the user can keep typing their next message while
+  // the bot is still responding to the previous one. The Send button
+  // is the one that waits (see `disableSend` below).
   const disableInput =
-    phase.kind === "starting" ||
-    phase.kind === "posting" ||
-    phase.kind === "error" ||
-    !conversationId;
+    phase.kind === "starting" || phase.kind === "error" || !conversationId;
+  // Send is gated on the previous POST settling AND a non-empty input.
+  const disableSend =
+    disableInput || phase.kind === "posting" || !input.trim();
 
   const tenantLabel = tenant;
   const modeLabel = mode === "live" ? "Live · demo tenant" : "Live · custom tenant";
@@ -513,7 +518,7 @@ export default function LiveChatSection({
             <button
               type="button"
               onClick={() => void handleSend()}
-              disabled={disableInput || !input.trim()}
+              disabled={disableSend}
               className="px-4 py-2 rounded-lg bg-boost-purple text-white text-sm font-semibold hover:bg-boost-purple/90 disabled:bg-boost-muted/30 disabled:cursor-not-allowed transition-colors"
               data-testid="live-chat-send"
             >
