@@ -797,10 +797,11 @@ interface CardMeta {
   tierOne: string;
   /** TIER 2 — how it was answered. */
   tierTwo: string;
-  /** Text accent colour class (boost-green / boost-purple / …). */
-  accent: string;
-  /** Left-border colour class. */
-  borderLeft: string;
+  /** Background + text colour classes for the card's coloured top
+   *  band (mirrors SoW phase-card pattern). */
+  bandBg: string;
+  /** Outer card border colour class. */
+  cardBorder: string;
   /** Marketing-voice context sentence. Null when not meaningful. */
   context: string | null;
 }
@@ -830,8 +831,8 @@ function resolveCardMeta(
         answerType: "system",
         tierOne: "System trigger",
         tierTwo: "Welcome greeting",
-        accent: "text-boost-dark",
-        borderLeft: "border-l-boost-gold",
+        bandBg: "bg-boost-dark text-white",
+        cardBorder: "border-boost-dark/20",
         context:
           "The agent's scripted welcome fired when the conversation opened — no user input was needed.",
       };
@@ -841,8 +842,8 @@ function resolveCardMeta(
         answerType: "system",
         tierOne: "System trigger",
         tierTwo: "Fallback",
-        accent: "text-boost-dark",
-        borderLeft: "border-l-boost-gold",
+        bandBg: "bg-boost-dark text-white",
+        cardBorder: "border-boost-dark/20",
         context:
           "The agent fell back to its safety net — no scripted answer matched the customer's input.",
       };
@@ -852,8 +853,8 @@ function resolveCardMeta(
         answerType: "system",
         tierOne: "System trigger",
         tierTwo: title.includes("timeout") ? "Timeout" : "Error recovery",
-        accent: "text-boost-dark",
-        borderLeft: "border-l-boost-gold",
+        bandBg: "bg-boost-dark text-white",
+        cardBorder: "border-boost-dark/20",
         context:
           "The agent handled an unexpected state gracefully and kept the conversation going.",
       };
@@ -862,8 +863,8 @@ function resolveCardMeta(
       answerType: "system",
       tierOne: "System trigger",
       tierTwo: trigger.title ?? "System event",
-      accent: "text-boost-dark",
-      borderLeft: "border-l-boost-gold",
+      bandBg: "bg-boost-dark text-white",
+      cardBorder: "border-boost-dark/20",
       context: null,
     };
   }
@@ -875,8 +876,8 @@ function resolveCardMeta(
       answerType: "human",
       tierOne: team ? `${team} team` : "Handover",
       tierTwo: "Human response",
-      accent: "text-boost-purple",
-      borderLeft: "border-l-boost-purple",
+      bandBg: "bg-boost-dark text-white",
+      cardBorder: "border-boost-dark/20",
       context: primary.is_human_chat_queue
         ? team
           ? `Queued for the ${team} team.`
@@ -920,8 +921,8 @@ function answerTypeMeta(
         answerType: "generated",
         tierOne: "", // caller fills
         tierTwo: "Generated answer",
-        accent: "text-boost-purple",
-        borderLeft: "border-l-boost-purple",
+        bandBg: "bg-boost-purple text-white",
+        cardBorder: "border-boost-purple/20",
         context: quoted
           ? `The customer asked ${quoted}. No scripted answer matched, so the language model composed a reply in context.`
           : "The language model composed a reply in context, on the fly.",
@@ -931,8 +932,8 @@ function answerTypeMeta(
         answerType: "pre_defined",
         tierOne: "",
         tierTwo: "Pre-defined answer",
-        accent: "text-boost-green",
-        borderLeft: "border-l-boost-green",
+        bandBg: "bg-boost-green text-white",
+        cardBorder: "border-boost-green/20",
         context: quoted
           ? `Matched ${quoted} to a curated answer from the knowledge base.`
           : "Served a curated answer from the knowledge base.",
@@ -943,8 +944,8 @@ function answerTypeMeta(
         answerType: "api",
         tierOne: "",
         tierTwo: "API response",
-        accent: "text-boost-orange",
-        borderLeft: "border-l-boost-orange",
+        bandBg: "bg-boost-orange text-white",
+        cardBorder: "border-boost-orange/20",
         context:
           "Called out to a connected system and returned live data.",
       };
@@ -953,8 +954,8 @@ function answerTypeMeta(
         answerType: "other",
         tierOne: "",
         tierTwo: "Detail captured",
-        accent: "text-boost-gold",
-        borderLeft: "border-l-boost-gold",
+        bandBg: "bg-boost-gold text-white",
+        cardBorder: "border-boost-gold/20",
         context:
           "Captured a detail from the customer into the conversation state.",
       };
@@ -963,8 +964,8 @@ function answerTypeMeta(
         answerType: "orchestrator",
         tierOne: "",
         tierTwo: "Routed to a specialist",
-        accent: "text-boost-purple",
-        borderLeft: "border-l-boost-lavender",
+        bandBg: "bg-boost-purple text-white",
+        cardBorder: "border-boost-purple/20",
         context:
           "Routed the conversation to the right specialist agent across the VA network.",
       };
@@ -973,8 +974,8 @@ function answerTypeMeta(
         answerType: "other",
         tierOne: "",
         tierTwo: actionType ?? "A turn happened",
-        accent: "text-boost-dark",
-        borderLeft: "border-l-boost-border",
+        bandBg: "bg-boost-surface text-boost-dark",
+        cardBorder: "border-boost-border",
         context: null,
       };
   }
@@ -1134,95 +1135,91 @@ function ExchangeCard({
   const thinkMs =
     userTurn && primary ? thinkTimeMs(userTurn.created, primary.created) : null;
 
-  // Shimmer under the header only for generated answers (the LLM
-  // signature touch — animated wash of purple behind the text).
-  const hasShimmer = meta.answerType === "generated";
-
-  // User quote line — truncated preview of the question that drove
-  // this exchange.
+  // User quote — truncated preview of the question that drove this
+  // exchange. Rendered as the first diamond bullet in the body.
   const userQuote = userTurn?.original_question ?? null;
   const userQuoteShort = userQuote
-    ? userQuote.length > 72
-      ? `${userQuote.slice(0, 69)}…`
+    ? userQuote.length > 80
+      ? `${userQuote.slice(0, 77)}…`
       : userQuote
     : null;
+
+  // Eyebrow for the card's coloured band.
+  const eyebrow = kind === "welcome" ? "Welcome" : `Exchange ${index}`;
 
   return (
     <article
       data-testid={`routing-exchange-${index}`}
-      className={`relative rounded-xl border border-boost-border border-l-[3px] ${meta.borderLeft} bg-white p-4 transition-shadow duration-200 hover:shadow-sm animate-modal-in`}
+      className={`rounded-xl border ${meta.cardBorder} bg-white overflow-hidden transition-shadow duration-200 hover:shadow-sm animate-modal-in`}
     >
-      {/* Top line — #N · You wrote: "…" */}
-      <p className="flex items-baseline gap-1.5 text-[10px] font-mono text-boost-muted mb-3">
-        <span className="tabular-nums">#{index}</span>
-        {kind === "welcome" ? (
-          <span className="font-sans normal-case tracking-normal text-boost-muted">
-            · The welcome
-          </span>
-        ) : userQuoteShort ? (
-          <span className="font-sans normal-case tracking-normal text-boost-dark font-normal">
-            · You wrote: &ldquo;{userQuoteShort}&rdquo;
-          </span>
-        ) : null}
-      </p>
-
-      {/* Divider + tier block */}
-      <div className="border-t border-boost-border pt-3 relative">
-        {/* Shimmer overlay — purple wash behind the tier block on
-            generated answers. Pointer-events none so it doesn't eat
-            button clicks underneath. */}
-        {hasShimmer && (
-          <span
-            aria-hidden
-            className="absolute inset-x-0 top-0 h-full chip-shimmer pointer-events-none rounded"
-          />
-        )}
-
-        <div className="relative space-y-2">
-          {/* Tier 1 + think time */}
-          <div className="flex items-baseline justify-between gap-3">
-            <p
-              className={`text-[10.5px] font-semibold uppercase tracking-[0.14em] ${meta.accent}`}
-            >
-              {meta.tierOne}
+      {/* Coloured header band — SoW phase-card pattern. Eyebrow +
+          tier-2 headline + tier-1 / time subtitle. */}
+      <div className={`${meta.bandBg} px-4 py-2.5`}>
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+            {eyebrow}
+          </p>
+          {thinkMs != null && (
+            <p className="text-[10px] font-mono opacity-75 tabular-nums">
+              {formatLatency(thinkMs)}
             </p>
-            {thinkMs != null && (
-              <p className="text-[10px] font-mono text-boost-muted tabular-nums">
-                {formatLatency(thinkMs)}
-              </p>
-            )}
-          </div>
-
-          {/* Tier 2 — the marketing headline */}
-          <h4
-            className={`text-[15px] font-semibold leading-tight ${meta.accent}`}
-          >
-            {meta.tierTwo}
-          </h4>
-
-          {/* Context sentence */}
-          {meta.context && (
-            <p className="text-[12px] leading-relaxed text-boost-dark">
-              {meta.context}
-            </p>
-          )}
-
-          {/* Conditional rows */}
-          {rows.length > 0 && (
-            <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-[11px] pt-1">
-              {rows.map((r) => (
-                <Fragment key={r.label}>
-                  <dt className="text-boost-muted">{r.label}</dt>
-                  <dd className="min-w-0 text-boost-dark">{r.value}</dd>
-                </Fragment>
-              ))}
-            </dl>
           )}
         </div>
+        <p className="text-sm font-bold leading-snug mt-0.5">{meta.tierTwo}</p>
+        {meta.tierOne && (
+          <p className="text-[10.5px] opacity-80 mt-0.5">{meta.tierOne}</p>
+        )}
       </div>
 
-      {/* Footer */}
-      <footer className="flex items-center justify-between gap-3 text-[10px] pt-3 mt-3 border-t border-boost-border">
+      {/* Body — bullet list: diamond for primary items (user quote +
+          context sentence), middle dot for secondary data rows. */}
+      <div className="p-3 space-y-1.5">
+        {userQuoteShort && (
+          <div className="flex items-start gap-2">
+            <span
+              aria-hidden
+              className="text-boost-green-light text-[10px] mt-0.5 shrink-0"
+            >
+              ◆
+            </span>
+            <p className="text-[11.5px] text-boost-dark font-medium leading-snug">
+              You wrote: &ldquo;{userQuoteShort}&rdquo;
+            </p>
+          </div>
+        )}
+
+        {meta.context && (
+          <div className="flex items-start gap-2">
+            <span
+              aria-hidden
+              className="text-boost-green-light text-[10px] mt-0.5 shrink-0"
+            >
+              ◆
+            </span>
+            <p className="text-[11.5px] text-boost-dark leading-snug">
+              {meta.context}
+            </p>
+          </div>
+        )}
+
+        {rows.map((r) => (
+          <div key={r.label} className="flex items-start gap-2">
+            <span
+              aria-hidden
+              className="text-boost-muted text-[10px] mt-0.5 shrink-0"
+            >
+              ·
+            </span>
+            <p className="text-[11px] text-boost-muted leading-snug">
+              <span className="text-boost-dark font-medium">{r.label}:</span>{" "}
+              {r.value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer — small links, no box chrome. */}
+      <div className="px-3 pb-2.5 pt-0 flex items-center justify-between gap-3 text-[10px]">
         <button
           type="button"
           onClick={() => setInspectOpen((v) => !v)}
@@ -1257,12 +1254,12 @@ function ExchangeCard({
             </svg>
           </a>
         )}
-      </footer>
+      </div>
 
-      {/* Drawer — raw turn JSON, includes the flow / template IDs for
+      {/* Drawer — raw turn JSON, includes flow / template IDs for
           power users. */}
       {inspectOpen && (
-        <pre className="mt-3 p-3 rounded-lg bg-boost-surface font-mono text-[10px] text-boost-dark overflow-x-auto leading-snug">
+        <pre className="mx-3 mb-3 p-3 rounded-lg bg-boost-surface font-mono text-[10px] text-boost-dark overflow-x-auto leading-snug">
           {JSON.stringify({ user: userTurn, bots: botTurns }, null, 2)}
         </pre>
       )}
