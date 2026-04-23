@@ -258,120 +258,12 @@ export default function DataFunnelPanel({
           />
         )}
 
-        {/* 1. At-a-glance signals strip */}
-        <section aria-labelledby="funnel-signals">
-          <p
-            id="funnel-signals"
-            className="text-[10px] font-bold text-boost-muted uppercase tracking-wider mb-2"
-          >
-            At a glance
-          </p>
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              type="button"
-              onClick={handleCopyRef}
-              disabled={!reference}
-              data-testid="data-funnel-reference"
-              title={reference ? `Click to copy · ${reference}` : "No reference yet"}
-              className="flex flex-col items-start gap-0.5 px-2.5 py-2 rounded-lg border border-boost-border bg-white hover:bg-boost-surface transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-boost-muted">
-                Reference
-              </span>
-              <span className="text-[11px] font-mono text-boost-dark truncate w-full">
-                {copied ? "Copied ✓" : (shortRef ?? "—")}
-              </span>
-            </button>
-            <div
-              data-testid="data-funnel-status-pill"
-              className={`flex flex-col items-start gap-0.5 px-2.5 py-2 rounded-lg border ${sm.bg}`}
-            >
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-boost-muted">
-                Status
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${sm.dot}`} />
-                <span className={`text-[11px] font-semibold ${sm.text}`}>
-                  {sm.label}
-                </span>
-              </span>
-            </div>
-            <div className="flex flex-col items-start gap-0.5 px-2.5 py-2 rounded-lg border border-boost-border bg-white">
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-boost-muted">
-                Language
-              </span>
-              <span className="text-[11px] font-mono text-boost-dark">
-                {language ?? "—"}
-              </span>
-            </div>
-            <div className="flex flex-col items-start gap-0.5 px-2.5 py-2 rounded-lg border border-boost-border bg-white">
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-boost-muted">
-                Turns
-              </span>
-              <span className="text-[11px] text-boost-dark">
-                <span className="font-mono">{turnCount}</span>
-                <span className="text-boost-muted">
-                  {" "}
-                  ({clientTurnCount}↑ {botTurnCount}↓
-                  {humanTurnCount > 0 ? ` ${humanTurnCount}◇` : ""})
-                </span>
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {/* 2. Provenance donut */}
-        <section aria-labelledby="funnel-provenance" data-testid="data-funnel-provenance">
-          <p
-            id="funnel-provenance"
-            className="text-[10px] font-bold text-boost-muted uppercase tracking-wider mb-2"
-          >
-            Where the answers came from
-          </p>
-          <div className="flex items-center gap-3">
-            <ProvenanceDonut {...provenance} />
-            <div className="min-w-0 flex-1 space-y-1">
-              <LegendRow
-                color="bg-boost-green"
-                label="Curated"
-                count={provenance.curated}
-                total={provenance.total}
-              />
-              <LegendRow
-                color="bg-boost-purple"
-                label="Generated"
-                count={provenance.generated}
-                total={provenance.total}
-              />
-              <LegendRow
-                color="bg-boost-muted/40"
-                label="Other"
-                count={provenance.other}
-                total={provenance.total}
-              />
-            </div>
-          </div>
-          <p className="text-[10px] text-boost-muted leading-relaxed mt-2">
-            Curated answers come from verified knowledge. Generated answers are
-            composed by the LLM in context — both powered by the same platform.
-          </p>
-        </section>
-
-        {/* Session chrome strip — only renders when Export trace has
-            something worth showing. Surfaces matched filters, sent
-            filter values, goals, classification, feedback in one
-            compact block above the per-turn cards. */}
+        {/* Session context — personalisation signals (filters, sent
+            profile, goals, verdict). Silent when nothing to say. */}
         {exportTrace && <SessionChromeStrip trace={exportTrace} />}
 
-        {/* Action-type sparkbar — horizontal flow of bot turns, one
-            segment per turn. Click to jump to the matching card. */}
-        {exportTrace && <ActionSparkbar trace={exportTrace} />}
-
-        {/* 2.5 — Analyze / Routing block (Phase 2b).
-              Gated behind the button so the Chat API v2 data (above)
-              renders free of cost, and the paid Export API fetch is
-              explicit. Hidden entirely when the client can't reach
-              the worker proxy. */}
+        {/* Analyze / routing block — per-exchange cards live here
+            once Analyze has run; before that it's the CTA. */}
         {exportEnabled && (
           <AnalyzeOrRouting
             postedIds={postedIds}
@@ -383,202 +275,22 @@ export default function DataFunnelPanel({
           />
         )}
 
-        {/* 3. Turn timeline (Chat API v2 — unified into showroom
-              cards in the follow-up commit). */}
-        <section aria-labelledby="funnel-timeline">
-          <p
-            id="funnel-timeline"
-            className="text-[10px] font-bold text-boost-muted uppercase tracking-wider mb-2"
-          >
-            Every turn
+        {/* Empty state — nothing to analyse yet. */}
+        {messages.length === 0 && !exportTrace && (
+          <p className="text-[11px] text-boost-muted italic">
+            Send a message to see the funnel come alive.
           </p>
-          {messages.length === 0 ? (
-            <p className="text-[11px] text-boost-muted italic">
-              No turns yet — send a message to see the funnel.
-            </p>
-          ) : (
-            <ol className="space-y-1">
-              {messages.map((m, i) => {
-                const meta = describeElements(m.elements);
-                const latency = latenciesMs[m.key];
-                const isExpanded = expandedTurn === m.key;
-                const sourceLabel =
-                  m.source === "client"
-                    ? "You"
-                    : m.source === "agent"
-                      ? "Human agent"
-                      : "Agent";
-                const sourceDot =
-                  m.source === "client"
-                    ? "bg-boost-purple"
-                    : m.source === "agent"
-                      ? "bg-amber-500"
-                      : "bg-boost-green-light";
-                const styleChipMeta = chipMeta(meta.styleChip);
-                return (
-                  <li key={m.key}>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedTurn(isExpanded ? null : m.key)
-                      }
-                      aria-expanded={isExpanded}
-                      data-testid={`data-funnel-turn-${String(i + 1).padStart(2, "0")}`}
-                      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-left transition-all ${
-                        isExpanded
-                          ? "border-boost-purple/40 bg-boost-purple/5"
-                          : "border-boost-border bg-white hover:bg-boost-surface"
-                      }`}
-                    >
-                      <span className="text-[9px] font-mono text-boost-muted w-6 flex-shrink-0">
-                        #{String(i + 1).padStart(2, "0")}
-                      </span>
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${sourceDot}`}
-                        aria-hidden="true"
-                      />
-                      <span className="text-[11px] font-semibold text-boost-dark flex-shrink-0 w-[76px]">
-                        {sourceLabel}
-                      </span>
-                      <span className="text-[10px] text-boost-muted flex-shrink-0 w-[58px]">
-                        {relativeTime(m.date_created)}
-                      </span>
-                      {typeof latency === "number" && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded font-mono bg-boost-surface text-boost-muted flex-shrink-0">
-                          {latency < 1000
-                            ? `${latency}ms`
-                            : `${(latency / 1000).toFixed(1)}s`}
-                        </span>
-                      )}
-                      <span
-                        className={`ml-auto text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border flex-shrink-0 ${styleChipMeta.className}`}
-                      >
-                        {styleChipMeta.label}
-                      </span>
-                    </button>
+        )}
 
-                    {/* Expanded drawer */}
-                    <div
-                      className="grid transition-all duration-300 ease-out"
-                      style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
-                    >
-                      <div className="overflow-hidden">
-                        {isExpanded && (
-                          <div className="mt-1 ml-8 p-2.5 rounded-lg border border-boost-border bg-boost-surface/40 space-y-1.5">
-                            <Kv label="Message ID" value={m.id ?? "(client echo)"} mono />
-                            <Kv label="Timestamp" value={m.date_created} mono />
-                            <Kv
-                              label="Elements"
-                              value={formatCount(meta.counts) || "(none)"}
-                            />
-                            {m.language && (
-                              <Kv label="Language" value={m.language} mono />
-                            )}
-                            {/* Export API extras — only when Analyze has
-                                  run and the ID matches. We look up by the
-                                  Chat API v2 response.id which equals
-                                  Export API's message.id. */}
-                            <DrawerExportExtras
-                              messageId={m.id}
-                              traceByMsgId={traceByMsgId}
-                            />
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowRawJson((prev) => ({
-                                  ...prev,
-                                  [m.key]: !prev[m.key],
-                                }));
-                              }}
-                              className="text-[10px] font-semibold text-boost-purple hover:text-boost-green transition-colors mt-1"
-                            >
-                              {showRawJson[m.key]
-                                ? "Hide raw JSON"
-                                : "View raw JSON"}
-                            </button>
-                            {showRawJson[m.key] && (
-                              <pre
-                                tabIndex={0}
-                                className="mt-1 p-2 rounded bg-white border border-boost-border text-[10px] font-mono leading-snug whitespace-pre-wrap overflow-x-auto max-h-60 focus:outline-none focus:ring-2 focus:ring-boost-green-light"
-                              >
-                                {JSON.stringify(
-                                  {
-                                    id: m.id,
-                                    source: m.source,
-                                    date_created: m.date_created,
-                                    language: m.language,
-                                    avatar_url: m.avatar_url,
-                                    elements: m.elements,
-                                  },
-                                  null,
-                                  2,
-                                )}
-                              </pre>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
+        {/* Educational tile — what responses can include */}
+        {messages.length > 0 && <RichResponsesTile />}
+
+        {/* Educational tile — auto-classification pitch. Hides if the
+            session already has an auto-review verdict. */}
+        {messages.length > 0 &&
+          (!exportTrace || !exportTrace.session.category?.automatic) && (
+            <AutoClassificationTile tenant={tenant} />
           )}
-        </section>
-
-        {/* 4. Raw wire footer */}
-        <section aria-labelledby="funnel-raw">
-          <button
-            type="button"
-            onClick={() => setRawFooterOpen((v) => !v)}
-            aria-expanded={rawFooterOpen}
-            data-testid="data-funnel-raw-toggle"
-            className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-boost-border bg-white hover:bg-boost-surface transition-colors"
-          >
-            <span
-              id="funnel-raw"
-              className="text-[10px] font-bold text-boost-muted uppercase tracking-wider"
-            >
-              Raw response (last)
-            </span>
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              className={`text-boost-muted transition-transform duration-200 ${
-                rawFooterOpen ? "rotate-180" : ""
-              }`}
-              aria-hidden="true"
-            >
-              <path
-                d="M6 9l6 6 6-6"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-          <div
-            className="grid transition-all duration-300 ease-out"
-            style={{ gridTemplateRows: rawFooterOpen ? "1fr" : "0fr" }}
-          >
-            <div className="overflow-hidden">
-              {rawFooterOpen && (
-                <pre
-                  tabIndex={0}
-                  className="mt-1.5 p-2.5 rounded-lg bg-boost-dark text-white text-[10px] font-mono leading-snug whitespace-pre-wrap overflow-x-auto max-h-80 focus:outline-none focus:ring-2 focus:ring-boost-green-light"
-                >
-                  {lastRawResponse
-                    ? JSON.stringify(lastRawResponse, null, 2)
-                    : "(no response yet)"}
-                </pre>
-              )}
-            </div>
-          </div>
-        </section>
       </div>
     </div>
   );
@@ -1016,6 +728,230 @@ function RoutingBlock({
   );
 }
 
+/** The five answer-type buckets we expose to stakeholders. */
+type AnswerType =
+  | "pre_defined"   // action_type: content — curated knowledge matched
+  | "generated"     // action_type: generative | llm — LLM composed on the fly
+  | "api"           // action_type: api_connector | legacy_api
+  | "human"         // is_human_chat | transfer_to_human
+  | "system"        // system_action_trigger fired (welcome / fallback / error / timeout)
+  | "orchestrator"  // action_type: orchestrator
+  | "other";        // fallback
+
+interface CardMeta {
+  answerType: AnswerType;
+  /** TIER 1 — who handled this moment. */
+  tierOne: string;
+  /** TIER 2 — how it was answered. */
+  tierTwo: string;
+  /** Text accent colour class (boost-green / boost-purple / …). */
+  accent: string;
+  /** Left-border colour class. */
+  borderLeft: string;
+  /** Marketing-voice context sentence. Null when not meaningful. */
+  context: string | null;
+}
+
+/** Classify the exchange into an AnswerType + Tier labels + copy.
+ *  Priority:
+ *    1. System trigger (welcome / fallback / error / timeout)
+ *    2. Handover (human chat / queue / transfer_to_human)
+ *    3. Predicted intent title → TIER 1 = intent title; TIER 2 from action
+ *    4. action_type fallback → TIER 1 = tenant agent name; TIER 2 from action
+ */
+function resolveCardMeta(
+  kind: Exchange["kind"],
+  userTurn: ExportTurnTrace | null,
+  primary: ExportTurnTrace | null,
+  tenant: string,
+): CardMeta {
+  // 1. System trigger — welcome / fallback / error / timeout.
+  //    The system_action_trigger on a bot turn takes priority: the
+  //    conversation didn't happen because a user asked a question,
+  //    it happened because the platform fired a trigger.
+  const trigger = primary?.system_action_trigger;
+  if (trigger && (kind === "welcome" || !userTurn)) {
+    const title = (trigger.title ?? "").toLowerCase();
+    if (title.includes("welcome") || kind === "welcome") {
+      return {
+        answerType: "system",
+        tierOne: "System trigger",
+        tierTwo: "Welcome greeting",
+        accent: "text-boost-dark",
+        borderLeft: "border-l-boost-gold",
+        context:
+          "The agent's scripted welcome fired when the conversation opened — no user input was needed.",
+      };
+    }
+    if (title.includes("fallback") || title.includes("unknown")) {
+      return {
+        answerType: "system",
+        tierOne: "System trigger",
+        tierTwo: "Fallback",
+        accent: "text-boost-dark",
+        borderLeft: "border-l-boost-gold",
+        context:
+          "The agent fell back to its safety net — no scripted answer matched the customer's input.",
+      };
+    }
+    if (title.includes("error") || title.includes("timeout")) {
+      return {
+        answerType: "system",
+        tierOne: "System trigger",
+        tierTwo: title.includes("timeout") ? "Timeout" : "Error recovery",
+        accent: "text-boost-dark",
+        borderLeft: "border-l-boost-gold",
+        context:
+          "The agent handled an unexpected state gracefully and kept the conversation going.",
+      };
+    }
+    return {
+      answerType: "system",
+      tierOne: "System trigger",
+      tierTwo: trigger.title ?? "System event",
+      accent: "text-boost-dark",
+      borderLeft: "border-l-boost-gold",
+      context: null,
+    };
+  }
+
+  // 2. Handover — human response.
+  if (primary?.is_human_chat || primary?.is_human_chat_queue || primary?.transfer_to_human) {
+    const team = primary.skill?.title ?? null;
+    return {
+      answerType: "human",
+      tierOne: team ? `${team} team` : "Handover",
+      tierTwo: "Human response",
+      accent: "text-boost-purple",
+      borderLeft: "border-l-boost-purple",
+      context: primary.is_human_chat_queue
+        ? team
+          ? `Queued for the ${team} team.`
+          : "Queued for a human agent."
+        : team
+          ? `Passed the conversation to the ${team} team.`
+          : "Passed the conversation to a human agent.",
+    };
+  }
+
+  // 3. Intent matched — TIER 1 = intent title, TIER 2 from action
+  if (userTurn?.predicted_intent?.title) {
+    const inner = answerTypeMeta(primary?.action_type, userTurn);
+    return {
+      ...inner,
+      tierOne: userTurn.predicted_intent.title,
+    };
+  }
+
+  // 4. Fallback — TIER 1 = tenant agent name, TIER 2 from action
+  const inner = answerTypeMeta(primary?.action_type, userTurn);
+  return {
+    ...inner,
+    tierOne: tierOneFallback(primary?.action_type, tenant),
+  };
+}
+
+/** TIER 2 label + colours + context sentence, driven by action_type. */
+function answerTypeMeta(
+  actionType: string | null | undefined,
+  userTurn: ExportTurnTrace | null,
+): CardMeta {
+  const q = userTurn?.original_question?.trim() ?? null;
+  const quoted = q
+    ? `"${q.length > 56 ? `${q.slice(0, 53)}…` : q}"`
+    : null;
+  switch (actionType) {
+    case "generative":
+    case "llm":
+      return {
+        answerType: "generated",
+        tierOne: "", // caller fills
+        tierTwo: "Generated answer",
+        accent: "text-boost-purple",
+        borderLeft: "border-l-boost-purple",
+        context: quoted
+          ? `The customer asked ${quoted}. No scripted answer matched, so the language model composed a reply in context.`
+          : "The language model composed a reply in context, on the fly.",
+      };
+    case "content":
+      return {
+        answerType: "pre_defined",
+        tierOne: "",
+        tierTwo: "Pre-defined answer",
+        accent: "text-boost-green",
+        borderLeft: "border-l-boost-green",
+        context: quoted
+          ? `Matched ${quoted} to a curated answer from the knowledge base.`
+          : "Served a curated answer from the knowledge base.",
+      };
+    case "api_connector":
+    case "legacy_api":
+      return {
+        answerType: "api",
+        tierOne: "",
+        tierTwo: "API response",
+        accent: "text-boost-orange",
+        borderLeft: "border-l-boost-orange",
+        context:
+          "Called out to a connected system and returned live data.",
+      };
+    case "entity_extraction":
+      return {
+        answerType: "other",
+        tierOne: "",
+        tierTwo: "Detail captured",
+        accent: "text-boost-gold",
+        borderLeft: "border-l-boost-gold",
+        context:
+          "Captured a detail from the customer into the conversation state.",
+      };
+    case "orchestrator":
+      return {
+        answerType: "orchestrator",
+        tierOne: "",
+        tierTwo: "Routed to a specialist",
+        accent: "text-boost-purple",
+        borderLeft: "border-l-boost-lavender",
+        context:
+          "Routed the conversation to the right specialist agent across the VA network.",
+      };
+    default:
+      return {
+        answerType: "other",
+        tierOne: "",
+        tierTwo: actionType ?? "A turn happened",
+        accent: "text-boost-dark",
+        borderLeft: "border-l-boost-border",
+        context: null,
+      };
+  }
+}
+
+/** TIER 1 label when no predicted intent exists. Financewizard's
+ *  generative-default surfaces as "Banking agent"; orchestrator turns
+ *  always read as "Orchestrator"; future industries plug in here. */
+function tierOneFallback(
+  actionType: string | null | undefined,
+  tenant: string,
+): string {
+  if (actionType === "orchestrator") return "Orchestrator";
+  const t = tenant.toLowerCase();
+  if (t.includes("financewizard") || t.includes("banking") || t.includes("bank")) {
+    return "Banking agent";
+  }
+  return "Agent";
+}
+
+/** Translate boost.ai's prediction-type labels into stakeholder voice. */
+function prettyPrediction(types: string[] | null | undefined): string {
+  if (!types || types.length === 0) return "";
+  const joined = types.join(" ").toLowerCase();
+  if (joined.includes("perfect")) return "Exact match";
+  if (joined.includes("fine-tuned") && joined.includes("unknown")) return "Partial match";
+  if (joined.includes("unknown")) return "No match";
+  return types[0];
+}
+
 function ExchangeCard({
   exchange,
   tenant,
@@ -1029,134 +965,77 @@ function ExchangeCard({
   const primary = botTurns[0] ?? null;
   const [inspectOpen, setInspectOpen] = useState(false);
 
-  // Visual language — driven by the PRIMARY bot turn's action_type.
-  // (For welcome exchanges the "primary" is the welcome itself.)
-  const visual = actionTypeVisual(primary?.action_type);
+  // Derive tier labels + context sentence + colours from the exchange
+  const meta = resolveCardMeta(kind, userTurn, primary, tenant);
 
-  // Routing signal — the single "where did this go?" headline.
-  const routed = routedToLabel(userTurn, primary);
-
-  // Per-turn data rows. Builds a list that's dense and avoids em-
-  // dash parades: rows only appear when there's something to say.
-  // "Routed to" is rendered separately above as the card's headline,
-  // so it's NOT in this list.
+  // Conditional rows — only appear when content is populated and
+  // actually relevant to this answer type. User's rule: no em-dash
+  // parade; skip confidence + language on generative turns, surface
+  // handover team only when handed over, etc.
   const rows: Array<{ label: string; value: ReactNode }> = [];
 
-  if (primary?.intent_action_meta_id != null) {
-    rows.push({
-      label: "Flow",
-      value: (
-        <span className="font-mono">#{primary.intent_action_meta_id}</span>
-      ),
-    });
-  }
-
-  // Think time — gap between user msg created and first bot turn
-  // created. For welcome-only exchanges it's the welcome trigger's
-  // own timestamp and not meaningful; skip.
-  if (userTurn && primary) {
-    const ms = thinkTimeMs(userTurn.created, primary.created);
-    if (ms != null) {
-      rows.push({
-        label: "Think time",
-        value: <span className="font-mono">{formatLatency(ms)}</span>,
-      });
+  // Confidence — only meaningful on pre-defined (NLU-matched) turns
+  const predTypes = userTurn?.prediction_types ?? null;
+  if (meta.answerType === "pre_defined" && predTypes && predTypes.length > 0) {
+    const pretty = prettyPrediction(predTypes);
+    if (pretty) {
+      rows.push({ label: "Confidence", value: <span>{pretty}</span> });
     }
   }
 
-  // Triggers — combine all system_action_trigger titles across all
-  // bot turns in this exchange into a comma list.
-  const triggers = botTurns
-    .map((t) => t.system_action_trigger?.title)
-    .filter((v): v is string => typeof v === "string" && v.length > 0);
-  if (triggers.length > 0) {
-    rows.push({
-      label: "Triggers",
-      value: <span>{triggers.join(" · ")}</span>,
-    });
-  }
-
-  // API call — any bot turn in the exchange that used api_connector.
-  const apiCall = botTurns.some((t) => t.action_type === "api_connector");
-  if (apiCall) {
-    rows.push({
-      label: "API call",
-      value: (
-        <span className="inline-flex items-center gap-1 font-mono text-[10px] text-boost-orange">
-          <span aria-hidden className="w-1 h-1 rounded-full bg-boost-orange" />
-          api_connector fired
-        </span>
-      ),
-    });
-  }
-
-  // Filter / skill — show only when populated (otherwise the card
-  // gets full of em-dashes on tenants like financewizard).
-  if (primary?.matched_filter?.title) {
-    rows.push({
-      label: "Filter",
-      value: <span className="font-mono">{primary.matched_filter.title}</span>,
-    });
-  }
-  if (primary?.skill?.title) {
-    rows.push({
-      label: "Skill",
-      value: <span className="font-mono">{primary.skill.title}</span>,
-    });
-  }
-  // Handover — enriched when a human agent is resolved.
-  if (primary?.is_human_chat_queue || primary?.is_human_chat) {
-    const agentName = primary.human_agent?.title ?? null;
-    rows.push({
-      label: "Handover",
-      value: (
-        <span className="inline-flex items-center gap-1 text-boost-purple font-semibold">
-          <span aria-hidden className="text-boost-purple/80">→</span>
-          {primary.is_human_chat_queue
-            ? "In queue"
-            : agentName
-              ? agentName
-              : "With human agent"}
-        </span>
-      ),
-    });
-  }
-
-  // Prediction type chips — "Perfect Match" / "Fine-tuned (Unknown)"
-  // etc. Only present when classical intents are configured.
-  const predTypes = userTurn?.prediction_types ?? null;
-  if (predTypes && predTypes.length > 0) {
-    rows.push({
-      label: "Match",
-      value: <span>{predTypes.join(" · ")}</span>,
-    });
-  }
-
-  // Language — only show when non-default or when we don't have
-  // another "main" identifier for the user turn.
-  if (userTurn?.language) {
+  // Language — only on pre-defined / system trigger turns. For
+  // generative answers language isn't known, so hide rather than
+  // mislead.
+  if (
+    (meta.answerType === "pre_defined" || meta.answerType === "system") &&
+    userTurn?.language
+  ) {
     rows.push({
       label: "Language",
       value: <span className="font-mono">{userTurn.language}</span>,
     });
   }
 
-  // Goals — one row per triggered goal, with event type annotation.
-  // Huge narrative signal for CE audiences ("customer reached
-  // account_opened · end").
+  // Personalised for — matched audience filter from the session.
+  if (primary?.matched_filter?.title) {
+    rows.push({
+      label: "Personalised for",
+      value: (
+        <span className="font-mono">{primary.matched_filter.title}</span>
+      ),
+    });
+  }
+
+  // Customer context — filter values the client sent with the turn.
+  if (userTurn?.sent_filters && userTurn.sent_filters.length > 0) {
+    rows.push({
+      label: "Customer context",
+      value: (
+        <span className="font-mono">
+          {userTurn.sent_filters.join(" · ")}
+        </span>
+      ),
+    });
+  }
+
+  // Goals — one row lists every goal event fired in this exchange.
   const allGoals = botTurns.flatMap((t) => t.goals ?? []);
   if (allGoals.length > 0) {
     rows.push({
-      label: "Goal",
+      label: "Goal reached",
       value: (
-        <span className="flex flex-wrap gap-1">
+        <span className="flex flex-wrap gap-x-3 gap-y-0.5 text-boost-green font-medium">
           {allGoals.map((g, i) => (
             <span
               key={`${g.id}-${g.event_type}-${i}`}
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-boost-green/10 text-boost-green text-[9.5px] font-semibold"
+              className="inline-flex items-center gap-1"
             >
-              <span aria-hidden className="w-1 h-1 rounded-full bg-boost-green" />
               {formatGoalEvent(g.name, g.event_type)}
+              {g.value != null && g.value > 0 && (
+                <span className="text-boost-muted font-normal">
+                  · €{g.value.toFixed(2)}
+                </span>
+              )}
             </span>
           ))}
         </span>
@@ -1164,63 +1043,15 @@ function ExchangeCard({
     });
   }
 
-  // Sent filters — show the client-side filter values that came in
-  // with this turn (e.g. "audience=SMB"). Small mono chips.
-  const sentFilters =
-    userTurn?.sent_filters && userTurn.sent_filters.length > 0
-      ? userTurn.sent_filters
-      : null;
-  if (sentFilters) {
-    rows.push({
-      label: "Sent filters",
-      value: (
-        <span className="flex flex-wrap gap-1 font-mono text-[10px]">
-          {sentFilters.map((v, i) => (
-            <span
-              key={`${v}-${i}`}
-              className="px-1.5 py-0.5 rounded bg-boost-surface text-boost-dark"
-            >
-              {v}
-            </span>
-          ))}
-        </span>
-      ),
-    });
-  }
-
-  // Translations — when the conversation crosses languages. Shows
-  // the target languages attempted. For financewizard this rarely
-  // fires, but on multilingual tenants it's a proof point.
-  const translations =
-    botTurns.flatMap((t) => t.translations ?? []);
-  if (translations.length > 0) {
-    const langs = Array.from(new Set(translations.map((t) => t.language)));
-    rows.push({
-      label: "Translated",
-      value: (
-        <span className="flex flex-wrap gap-1 text-[10px] text-boost-dark">
-          {langs.map((l) => (
-            <span
-              key={l}
-              className="px-1.5 py-0.5 rounded bg-boost-surface font-mono"
-            >
-              {l}
-            </span>
-          ))}
-        </span>
-      ),
-    });
-  }
-
-  // Per-turn feedback — the user's thumbs on the bot reply.
+  // CSAT — per-message feedback thumbs.
   const fb = primary?.feedback ?? null;
   if (fb) {
     const positive = fb === "thumbs_up";
     rows.push({
-      label: "Feedback",
+      label: "CSAT",
       value: (
         <span
-          className={`inline-flex items-center gap-1 font-semibold ${
+          className={`inline-flex items-center gap-1.5 font-medium ${
             positive ? "text-boost-green" : "text-boost-orange"
           }`}
         >
@@ -1245,84 +1076,87 @@ function ExchangeCard({
     });
   }
 
-  // Context sentence — marketing-voice explainer of what happened.
-  const contextSentence = actionContextSentence(
-    primary?.action_type,
-    userTurn?.original_question ?? null,
-    kind === "welcome",
-  );
+  // Think time — right-aligned next to Tier 1 (not a row). Compute here
+  // so we can render it in the header.
+  const thinkMs =
+    userTurn && primary ? thinkTimeMs(userTurn.created, primary.created) : null;
 
-  // Meta line — tiny subdued spec strip for technical folks
-  const metaBits: string[] = [];
-  if (userTurn?.language) metaBits.push(userTurn.language);
-  if (userTurn && primary) {
-    const ms = thinkTimeMs(userTurn.created, primary.created);
-    if (ms != null) metaBits.push(formatLatency(ms));
-  }
-  if (primary?.intent_action_meta_id != null) {
-    metaBits.push(`Template ${primary.intent_action_meta_id}`);
-  }
+  // Shimmer under the header only for generated answers (the LLM
+  // signature touch — animated wash of purple behind the text).
+  const hasShimmer = meta.answerType === "generated";
+
+  // User quote line — truncated preview of the question that drove
+  // this exchange.
+  const userQuote = userTurn?.original_question ?? null;
+  const userQuoteShort = userQuote
+    ? userQuote.length > 72
+      ? `${userQuote.slice(0, 69)}…`
+      : userQuote
+    : null;
 
   return (
     <article
       data-testid={`routing-exchange-${index}`}
-      className={`relative rounded-xl border border-boost-border border-l-[3px] ${visual.borderLeft} bg-white overflow-hidden transition-all duration-200 ease-out hover:shadow-sm animate-modal-in`}
+      className={`relative rounded-xl border border-boost-border border-l-[3px] ${meta.borderLeft} bg-white p-4 transition-shadow duration-200 hover:shadow-sm animate-modal-in`}
     >
-      {/* Subtle shimmer wash behind the card header for generative turns */}
-      {visual.shimmer && (
-        <span
-          aria-hidden
-          className="absolute inset-x-0 top-0 h-20 chip-shimmer pointer-events-none"
-        />
-      )}
-      <div className="relative flex gap-3 p-3.5">
-        {/* Illustrated icon — the "component" image */}
-        <div
-          className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${visual.iconBg} ${visual.accent}`}
-        >
-          <div className="w-8 h-8">{visual.icon}</div>
-        </div>
+      {/* Top line — #N · You wrote: "…" */}
+      <p className="flex items-baseline gap-1.5 text-[10px] font-mono text-boost-muted mb-3">
+        <span className="tabular-nums">#{index}</span>
+        {kind === "welcome" ? (
+          <span className="font-sans normal-case tracking-normal text-boost-muted">
+            · The welcome
+          </span>
+        ) : userQuoteShort ? (
+          <span className="font-sans normal-case tracking-normal text-boost-dark font-normal">
+            · You wrote: &ldquo;{userQuoteShort}&rdquo;
+          </span>
+        ) : null}
+      </p>
 
-        {/* Body */}
-        <div className="min-w-0 flex-1 space-y-1.5">
-          {/* Top line: turn index + user's question/opener */}
-          <p className="text-[10px] font-mono text-boost-muted">
-            #{index}
-            {kind === "welcome" ? (
-              <span className="ml-1.5 text-boost-muted uppercase tracking-wider">
-                · The welcome
-              </span>
-            ) : userTurn?.original_question ? (
-              <span className="ml-1.5 text-boost-dark font-sans normal-case font-normal">
-                You: &ldquo;{userTurn.original_question.length > 60
-                  ? `${userTurn.original_question.slice(0, 57)}…`
-                  : userTurn.original_question}&rdquo;
-              </span>
-            ) : null}
-          </p>
+      {/* Divider + tier block */}
+      <div className="border-t border-boost-border pt-3 relative">
+        {/* Shimmer overlay — purple wash behind the tier block on
+            generated answers. Pointer-events none so it doesn't eat
+            button clicks underneath. */}
+        {hasShimmer && (
+          <span
+            aria-hidden
+            className="absolute inset-x-0 top-0 h-full chip-shimmer pointer-events-none rounded"
+          />
+        )}
 
-          {/* Marketing headline — the "what it did" moment */}
-          <h4 className={`text-[14px] font-semibold leading-tight ${visual.accent}`}>
-            {routed}
+        <div className="relative space-y-2">
+          {/* Tier 1 + think time */}
+          <div className="flex items-baseline justify-between gap-3">
+            <p
+              className={`text-[10.5px] font-semibold uppercase tracking-[0.14em] ${meta.accent}`}
+            >
+              {meta.tierOne}
+            </p>
+            {thinkMs != null && (
+              <p className="text-[10px] font-mono text-boost-muted tabular-nums">
+                {formatLatency(thinkMs)}
+              </p>
+            )}
+          </div>
+
+          {/* Tier 2 — the marketing headline */}
+          <h4
+            className={`text-[15px] font-semibold leading-tight ${meta.accent}`}
+          >
+            {meta.tierTwo}
           </h4>
 
-          {/* One-sentence context — explainer voice */}
-          {contextSentence && (
-            <p className="text-[11px] text-boost-dark/90 leading-snug">
-              {contextSentence}
+          {/* Context sentence */}
+          {meta.context && (
+            <p className="text-[12px] leading-relaxed text-boost-dark">
+              {meta.context}
             </p>
           )}
 
-          {/* Inline meta line — tiny spec strip */}
-          {metaBits.length > 0 && (
-            <p className="text-[10px] font-mono text-boost-muted">
-              {metaBits.join(" · ")}
-            </p>
-          )}
-
-          {/* Supplementary rows — only when populated */}
+          {/* Conditional rows */}
           {rows.length > 0 && (
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[11px] pt-0.5">
+            <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-[11px] pt-1">
               {rows.map((r) => (
                 <Fragment key={r.label}>
                   <dt className="text-boost-muted">{r.label}</dt>
@@ -1331,66 +1165,54 @@ function ExchangeCard({
               ))}
             </dl>
           )}
-
-          {/* Bot reply — quote-style, no label box */}
-          {primary?.content_snippet && (
-            <blockquote className="relative pl-3 mt-2 text-[11px] text-boost-dark/90 italic leading-snug">
-              <span
-                aria-hidden
-                className={`absolute left-0 top-0 bottom-0 w-[2px] rounded ${visual.iconBg.replace("/8", "").replace("/10", "").replace("/15", "")}`}
-              />
-              {primary.content_snippet}
-            </blockquote>
-          )}
-
-          {/* Inspector footer — re-worded as "Behind the scenes" */}
-          <footer className="flex items-center justify-between gap-3 text-[10px] pt-1">
-            <button
-              type="button"
-              onClick={() => setInspectOpen((v) => !v)}
-              aria-expanded={inspectOpen}
-              data-testid={`routing-exchange-${index}-inspect`}
-              className="text-boost-muted hover:text-boost-purple transition-colors"
-            >
-              {inspectOpen ? "Hide details" : "Behind the scenes"}
-            </button>
-            {conversationId != null && (
-              <a
-                href={`https://${tenant}/admin/conversations/${conversationId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-boost-muted hover:text-boost-purple transition-colors inline-flex items-center gap-1"
-                title="Open this conversation in the boost.ai admin panel"
-              >
-                Open in admin
-                <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-2.5 h-2.5">
-                  <path
-                    d="M6 3h7v7M13 3 5 11M3 6v7h7"
-                    stroke="currentColor"
-                    strokeWidth="1.4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </a>
-            )}
-          </footer>
-
-          {/* Raw JSON drawer */}
-          <div
-            className="grid transition-all duration-300 ease-out"
-            style={{ gridTemplateRows: inspectOpen ? "1fr" : "0fr" }}
-          >
-            <div className="overflow-hidden">
-              {inspectOpen && (
-                <pre className="mt-1 p-2 rounded bg-boost-surface font-mono text-[10px] text-boost-dark overflow-x-auto leading-snug">
-                  {JSON.stringify({ user: userTurn, bots: botTurns }, null, 2)}
-                </pre>
-              )}
-            </div>
-          </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="flex items-center justify-between gap-3 text-[10px] pt-3 mt-3 border-t border-boost-border">
+        <button
+          type="button"
+          onClick={() => setInspectOpen((v) => !v)}
+          aria-expanded={inspectOpen}
+          data-testid={`routing-exchange-${index}-inspect`}
+          className="text-boost-muted hover:text-boost-purple transition-colors"
+        >
+          {inspectOpen ? "Hide details" : "Behind the scenes"}
+        </button>
+        {conversationId != null && (
+          <a
+            href={`https://${tenant}/admin/conversations/${conversationId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-boost-muted hover:text-boost-purple transition-colors inline-flex items-center gap-1"
+            title="Open this conversation in the boost.ai admin panel"
+          >
+            Open in admin
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden
+              className="w-2.5 h-2.5"
+            >
+              <path
+                d="M6 3h7v7M13 3 5 11M3 6v7h7"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </a>
+        )}
+      </footer>
+
+      {/* Drawer — raw turn JSON, includes the flow / template IDs for
+          power users. */}
+      {inspectOpen && (
+        <pre className="mt-3 p-3 rounded-lg bg-boost-surface font-mono text-[10px] text-boost-dark overflow-x-auto leading-snug">
+          {JSON.stringify({ user: userTurn, bots: botTurns }, null, 2)}
+        </pre>
+      )}
     </article>
   );
 }
@@ -1878,6 +1700,217 @@ function SessionChromeStrip({
  *  Reads left-to-right as conversation flow. Click a segment → scroll
  *  the corresponding exchange card into view. Hides when there's
  *  nothing to plot. */
+/** Educational tile — capability pitch for the *kinds* of response
+ *  the agent can return. Renders as evergreen content (same whether
+ *  this conversation exercised them or not) because the chat column
+ *  already shows whichever elements actually fired. */
+function RichResponsesTile() {
+  const Row = ({
+    icon,
+    label,
+    desc,
+  }: {
+    icon: ReactNode;
+    label: string;
+    desc: string;
+  }) => (
+    <div className="flex items-start gap-2.5">
+      <span
+        aria-hidden
+        className="flex-shrink-0 w-7 h-7 rounded-md bg-boost-surface flex items-center justify-center text-boost-purple"
+      >
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-[11.5px] font-semibold text-boost-dark leading-tight">
+          {label}
+        </p>
+        <p className="text-[10.5px] text-boost-muted leading-snug">{desc}</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <section
+      aria-labelledby="funnel-rich-responses"
+      className="rounded-xl border border-boost-border bg-white p-4 space-y-3"
+    >
+      <p
+        id="funnel-rich-responses"
+        className="text-[10px] font-bold text-boost-muted uppercase tracking-wider"
+      >
+        What the agent can respond with
+      </p>
+      <div className="grid grid-cols-1 gap-2.5">
+        <Row
+          label="Text &amp; formatted HTML"
+          desc="Rich-text replies with bold, links, bullet lists, code blocks."
+          icon={
+            <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5">
+              <path
+                d="M3 5h10M3 8h10M3 11h6"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+            </svg>
+          }
+        />
+        <Row
+          label="Action buttons &amp; URL links"
+          desc="Clickable follow-ups — route the customer, trigger actions, deep-link into your product."
+          icon={
+            <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5">
+              <rect
+                x="2"
+                y="4"
+                width="12"
+                height="4"
+                rx="1.2"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                fill="currentColor"
+                fillOpacity="0.1"
+              />
+              <path
+                d="M5 11h6"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+            </svg>
+          }
+        />
+        <Row
+          label="Images &amp; videos"
+          desc="Inline media — product shots, short explainers, screenshots."
+          icon={
+            <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5">
+              <rect
+                x="2"
+                y="3"
+                width="12"
+                height="10"
+                rx="1.2"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                fill="currentColor"
+                fillOpacity="0.1"
+              />
+              <path
+                d="m3 11 3-3 3 3 2-2 2 2"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="10" cy="6" r="1" fill="currentColor" />
+            </svg>
+          }
+        />
+        <Row
+          label="Structured JSON for custom UI"
+          desc="Render anything — forms, carousels, charts — from a payload your frontend owns."
+          icon={
+            <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5">
+              <path
+                d="M5 3c-1 0-2 .5-2 2v2c0 .5-.5 1-1 1s1 .5 1 1v2c0 1.5 1 2 2 2M11 3c1 0 2 .5 2 2v2c0 .5.5 1 1 1s-1 .5-1 1v2c0 1.5-1 2-2 2"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          }
+        />
+        <Row
+          label="Voice (SSML)"
+          desc="Spoken replies with pacing and pronunciation control for IVR and voice channels."
+          icon={
+            <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5">
+              <path
+                d="M4 7v2m3-4v6m3-8v10m3-7v4"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+          }
+        />
+      </div>
+      <p className="text-[10.5px] text-boost-muted leading-snug pt-0.5">
+        The chat column renders any of these as the agent returns them
+        during the conversation.
+      </p>
+    </section>
+  );
+}
+
+/** Educational tile — pitch for the platform's auto-classification +
+ *  human-supervised review feature. Shown when the current session
+ *  has no auto-verdict yet (most demos). Deep-links to the admin panel
+ *  so stakeholders can see the feature live. */
+function AutoClassificationTile({ tenant }: { tenant: string }) {
+  return (
+    <section
+      aria-labelledby="funnel-auto-classify"
+      className="rounded-xl border border-boost-border bg-gradient-to-br from-boost-green/[0.03] via-white to-boost-purple/[0.03] p-4 space-y-2"
+    >
+      <div className="flex items-start gap-2.5">
+        <span
+          aria-hidden
+          className="flex-shrink-0 w-7 h-7 rounded-md bg-boost-green/10 flex items-center justify-center text-boost-green"
+        >
+          <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5">
+            <path
+              d="M2 8l3 3 6-6M10 2l4 4-4 4"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+        <div className="min-w-0 flex-1">
+          <p
+            id="funnel-auto-classify"
+            className="text-[11.5px] font-semibold text-boost-dark leading-tight"
+          >
+            Every conversation can be auto-classified
+          </p>
+          <p className="text-[10.5px] text-boost-muted leading-snug mt-1">
+            In the admin panel, boost.ai can review conversations end-to-end
+            and bucket them as Automated, Escalated, Unsolved or Not relevant —
+            with human oversight so your team keeps the final say.
+          </p>
+          <a
+            href={`https://${tenant}/admin/conversations`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 mt-2 text-[10px] font-semibold text-boost-purple hover:text-boost-green transition-colors"
+          >
+            Open in admin
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden
+              className="w-2.5 h-2.5"
+            >
+              <path
+                d="M6 3h7v7M13 3 5 11M3 6v7h7"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ActionSparkbar({ trace }: { trace: ExportTraceSuccess }) {
   const botTurns = useMemo(
     () => trace.turns.filter((t) => t.role !== "user"),
