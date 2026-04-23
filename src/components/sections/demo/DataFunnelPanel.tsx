@@ -783,7 +783,7 @@ function AnalyzeOrRouting({
     <section
       aria-labelledby="funnel-analyze"
       data-testid="data-funnel-analyze-card"
-      className="relative overflow-hidden rounded-xl border border-boost-purple/30 bg-gradient-to-br from-boost-purple/5 via-white to-boost-green/5 p-3.5"
+      className="relative overflow-hidden rounded-xl border border-boost-border bg-white p-3.5"
     >
       {loading && (
         <span
@@ -957,7 +957,7 @@ function RoutingBlock({
     <section
       aria-labelledby="funnel-routing"
       data-testid="data-funnel-routing"
-      className="rounded-xl border border-boost-purple/30 bg-white p-3 space-y-2.5"
+      className="rounded-xl border border-boost-border bg-white p-3 space-y-2.5"
     >
       {/* Header row */}
       <header className="flex items-center justify-between gap-2">
@@ -1047,17 +1047,15 @@ function ExchangeCard({
 
   // Per-turn data rows. Builds a list that's dense and avoids em-
   // dash parades: rows only appear when there's something to say.
+  // "Routed to" is rendered separately above as the card's headline,
+  // so it's NOT in this list.
   const rows: Array<{ label: string; value: ReactNode }> = [];
-
-  rows.push({ label: "Routed to", value: routed });
 
   if (primary?.intent_action_meta_id != null) {
     rows.push({
       label: "Flow",
       value: (
-        <span className="font-mono text-boost-dark/80">
-          #{primary.intent_action_meta_id}
-        </span>
+        <span className="font-mono">#{primary.intent_action_meta_id}</span>
       ),
     });
   }
@@ -1070,11 +1068,7 @@ function ExchangeCard({
     if (ms != null) {
       rows.push({
         label: "Think time",
-        value: (
-          <span className="font-mono text-boost-dark/80">
-            {formatLatency(ms)}
-          </span>
-        ),
+        value: <span className="font-mono">{formatLatency(ms)}</span>,
       });
     }
   }
@@ -1087,7 +1081,7 @@ function ExchangeCard({
   if (triggers.length > 0) {
     rows.push({
       label: "Triggers",
-      value: <span className="text-boost-dark/80">{triggers.join(" · ")}</span>,
+      value: <span>{triggers.join(" · ")}</span>,
     });
   }
 
@@ -1110,21 +1104,13 @@ function ExchangeCard({
   if (primary?.matched_filter?.title) {
     rows.push({
       label: "Filter",
-      value: (
-        <span className="font-mono text-boost-dark/80">
-          {primary.matched_filter.title}
-        </span>
-      ),
+      value: <span className="font-mono">{primary.matched_filter.title}</span>,
     });
   }
   if (primary?.skill?.title) {
     rows.push({
       label: "Skill",
-      value: (
-        <span className="font-mono text-boost-dark/80">
-          {primary.skill.title}
-        </span>
-      ),
+      value: <span className="font-mono">{primary.skill.title}</span>,
     });
   }
   // Handover — enriched when a human agent is resolved.
@@ -1151,9 +1137,7 @@ function ExchangeCard({
   if (predTypes && predTypes.length > 0) {
     rows.push({
       label: "Match",
-      value: (
-        <span className="text-boost-dark/80">{predTypes.join(" · ")}</span>
-      ),
+      value: <span>{predTypes.join(" · ")}</span>,
     });
   }
 
@@ -1162,9 +1146,7 @@ function ExchangeCard({
   if (userTurn?.language) {
     rows.push({
       label: "Language",
-      value: (
-        <span className="font-mono text-boost-dark/80">{userTurn.language}</span>
-      ),
+      value: <span className="font-mono">{userTurn.language}</span>,
     });
   }
 
@@ -1201,11 +1183,11 @@ function ExchangeCard({
     rows.push({
       label: "Sent filters",
       value: (
-        <span className="flex flex-wrap gap-1 font-mono text-[9.5px]">
+        <span className="flex flex-wrap gap-1 font-mono text-[10px]">
           {sentFilters.map((v, i) => (
             <span
               key={`${v}-${i}`}
-              className="px-1.5 py-0.5 rounded bg-boost-surface border border-boost-border text-boost-dark/80"
+              className="px-1.5 py-0.5 rounded bg-boost-surface text-boost-dark"
             >
               {v}
             </span>
@@ -1225,11 +1207,11 @@ function ExchangeCard({
     rows.push({
       label: "Translated",
       value: (
-        <span className="flex flex-wrap gap-1 text-[10px] text-boost-dark/80">
+        <span className="flex flex-wrap gap-1 text-[10px] text-boost-dark">
           {langs.map((l) => (
             <span
               key={l}
-              className="px-1.5 py-0.5 rounded bg-boost-surface border border-boost-border font-mono"
+              className="px-1.5 py-0.5 rounded bg-boost-surface font-mono"
             >
               {l}
             </span>
@@ -1275,76 +1257,87 @@ function ExchangeCard({
   return (
     <article
       data-testid={`routing-exchange-${index}`}
-      className={`rounded-lg border-l-2 border-y border-r border-boost-border ${visual.borderLeft} ${visual.tint} p-2.5 space-y-1.5 transition-all duration-200 ease-out hover:-translate-y-px hover:shadow-sm animate-modal-in`}
+      className={`rounded-lg border border-boost-border border-l-[3px] ${visual.borderLeft} bg-white p-3 space-y-2 transition-all duration-200 ease-out hover:shadow-sm animate-modal-in`}
     >
-      {/* Header — turn index + user question + action-type chip */}
-      <header className="flex items-start gap-2">
-        <span className="text-[9px] font-mono text-boost-muted flex-shrink-0 mt-0.5">
+      {/* Header — turn index, question, action-type tag (right) */}
+      <header className="flex items-start gap-2.5">
+        <span className="text-[10px] font-mono text-boost-muted flex-shrink-0 mt-0.5">
           #{index}
         </span>
         {kind === "welcome" ? (
-          <span className="text-[11px] text-boost-muted italic flex-1 min-w-0 mt-0.5">
-            Session opener · VA welcome
+          <span className="text-[12px] text-boost-muted italic flex-1 min-w-0 mt-0.5">
+            Session opener
           </span>
         ) : (
-          <span className="text-[11px] font-semibold text-boost-dark leading-snug min-w-0 flex-1 mt-0.5">
-            <span className="text-boost-muted font-normal">You:</span>{" "}
+          <span className="text-[12px] font-semibold text-boost-dark leading-snug min-w-0 flex-1 mt-0.5">
             &ldquo;{userTurn?.original_question || "(no text)"}&rdquo;
           </span>
         )}
-        {/* Action-type chip — shimmer when generative to signal
-            "this was composed on the fly". */}
+        {/* Action-type tag — typographic, no box chrome. Shimmer on
+            generative rides behind the label, no surrounding border. */}
         <span
-          className={`relative inline-flex items-center gap-1 flex-shrink-0 px-1.5 py-0.5 rounded-md text-[9px] font-semibold uppercase tracking-wider ${visual.iconBg} ${visual.accent} overflow-hidden`}
+          className={`relative inline-flex items-center gap-1 flex-shrink-0 text-[10px] font-semibold uppercase tracking-[0.09em] ${visual.accent}`}
         >
           {visual.shimmer && (
             <span
               aria-hidden
-              className="absolute inset-0 chip-shimmer pointer-events-none rounded-md"
+              className="absolute -inset-x-1.5 -inset-y-0.5 chip-shimmer pointer-events-none rounded-sm"
             />
           )}
-          <span className="relative">{visual.icon}</span>
-          <span className="relative">{visual.label}</span>
+          <span className="relative flex items-center gap-1">
+            {visual.icon}
+            {visual.label}
+          </span>
         </span>
       </header>
 
-      {/* Puzzle pieces grid */}
-      <dl className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5 text-[10px]">
-        {rows.map((r) => (
-          <Fragment key={r.label}>
-            <dt className="text-boost-muted">{r.label}</dt>
-            <dd className="min-w-0">{r.value}</dd>
-          </Fragment>
-        ))}
-      </dl>
+      {/* Primary routing — the card's headline. Typographic, no chip. */}
+      <p className="flex items-baseline gap-1.5 text-[12px] font-semibold text-boost-dark">
+        <span aria-hidden className="text-boost-muted font-normal">
+          →
+        </span>
+        {routed}
+      </p>
 
-      {/* Bot reply snippet */}
+      {/* Secondary data rows */}
+      {rows.length > 0 && (
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[11px]">
+          {rows.map((r) => (
+            <Fragment key={r.label}>
+              <dt className="text-boost-muted">{r.label}</dt>
+              <dd className="min-w-0 text-boost-dark">{r.value}</dd>
+            </Fragment>
+          ))}
+        </dl>
+      )}
+
+      {/* Bot reply snippet — typography-first, no italic box */}
       {primary?.content_snippet && (
-        <p className="text-[10px] text-boost-dark/80 italic leading-snug pt-1.5 border-t border-boost-border/60">
-          <span className="not-italic text-boost-muted font-normal">
-            Reply ·{" "}
+        <p className="text-[11px] text-boost-dark leading-snug pt-2 border-t border-boost-border">
+          <span className="text-[9.5px] text-boost-muted font-semibold uppercase tracking-wider mr-2">
+            Reply
           </span>
           {primary.content_snippet}
         </p>
       )}
 
-      {/* Inspector footer — toggle raw JSON drawer + deep link to admin */}
-      <footer className="flex items-center justify-between gap-2 pt-1">
+      {/* Inspector footer — plain links, no chrome */}
+      <footer className="flex items-center justify-between gap-3 text-[10px]">
         <button
           type="button"
           onClick={() => setInspectOpen((v) => !v)}
           aria-expanded={inspectOpen}
           data-testid={`routing-exchange-${index}-inspect`}
-          className="text-[9.5px] font-semibold text-boost-muted hover:text-boost-purple transition-colors"
+          className="text-boost-muted hover:text-boost-purple transition-colors"
         >
-          {inspectOpen ? "Hide raw" : "Inspect · raw JSON"}
+          {inspectOpen ? "Hide raw" : "Inspect raw"}
         </button>
         {conversationId != null && (
           <a
             href={`https://${tenant}/admin/conversations/${conversationId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[9.5px] font-semibold text-boost-muted hover:text-boost-purple transition-colors inline-flex items-center gap-1"
+            className="text-boost-muted hover:text-boost-purple transition-colors inline-flex items-center gap-1"
             title="Open this conversation in the boost.ai admin panel"
           >
             Open in admin
@@ -1361,14 +1354,14 @@ function ExchangeCard({
         )}
       </footer>
 
-      {/* Raw JSON drawer — all turns in the exchange, pretty-printed */}
+      {/* Raw JSON drawer */}
       <div
         className="grid transition-all duration-300 ease-out"
         style={{ gridTemplateRows: inspectOpen ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">
           {inspectOpen && (
-            <pre className="mt-1 p-2 rounded bg-boost-surface border border-boost-border font-mono text-[9.5px] text-boost-dark/80 overflow-x-auto leading-snug">
+            <pre className="mt-1 p-2 rounded bg-boost-surface font-mono text-[10px] text-boost-dark overflow-x-auto leading-snug">
               {JSON.stringify(
                 {
                   user: userTurn,
@@ -1631,7 +1624,7 @@ function HeroSummary({
     <section
       aria-label="Session summary"
       data-testid="data-funnel-hero"
-      className="relative overflow-hidden rounded-xl px-3 py-2.5 border border-boost-purple/20 bg-gradient-to-br from-boost-purple/[0.04] via-white to-boost-green/[0.04]"
+      className="relative overflow-hidden rounded-xl px-3 py-2.5 border border-boost-border bg-gradient-to-br from-boost-purple/[0.04] via-white to-boost-green/[0.04]"
     >
       <div className="flex items-start gap-2">
         <span aria-hidden className="mt-0.5 flex-shrink-0">
@@ -1745,7 +1738,7 @@ function SessionChromeStrip({
             {matchedFilters.map((f) => (
               <span
                 key={f.id}
-                className="px-1.5 py-0.5 rounded bg-boost-purple/5 text-boost-purple text-[10px] font-mono border border-boost-purple/15"
+                className="px-1.5 py-0.5 rounded bg-boost-purple/10 text-boost-purple text-[10px] font-mono"
               >
                 {f.title ?? `#${f.id}`}
               </span>
@@ -1761,7 +1754,7 @@ function SessionChromeStrip({
             {sentValues.map((v, i) => (
               <span
                 key={`${v}-${i}`}
-                className="px-1.5 py-0.5 rounded bg-boost-surface text-boost-dark/85 text-[10px] font-mono border border-boost-border"
+                className="px-1.5 py-0.5 rounded bg-boost-surface text-boost-dark text-[10px] font-mono"
               >
                 {v}
               </span>
@@ -1777,7 +1770,7 @@ function SessionChromeStrip({
             {goalChips.map((g) => (
               <span
                 key={g}
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-boost-green/10 text-boost-green text-[10px] font-semibold border border-boost-green/25"
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-boost-green/10 text-boost-green text-[10px] font-semibold"
               >
                 <span aria-hidden className="w-1 h-1 rounded-full bg-boost-green" />
                 {g}
@@ -1794,7 +1787,7 @@ function SessionChromeStrip({
             {sessionTags.map((t) => (
               <span
                 key={t}
-                className="px-1.5 py-0.5 rounded bg-boost-surface text-boost-muted text-[10px] font-mono border border-boost-border"
+                className="px-1.5 py-0.5 rounded bg-boost-surface text-boost-muted text-[10px] font-mono"
               >
                 {t}
               </span>
@@ -2128,27 +2121,15 @@ function categoryVisual(cat: string): { label: string; className: string } {
   const lower = cat.toLowerCase();
   const label = formatCategory(cat);
   if (lower.startsWith("automated")) {
-    return {
-      label,
-      className: "bg-boost-green/10 text-boost-green border border-boost-green/25",
-    };
+    return { label, className: "bg-boost-green/10 text-boost-green" };
   }
   if (lower.startsWith("escalated")) {
-    return {
-      label,
-      className: "bg-boost-orange/10 text-boost-orange border border-boost-orange/25",
-    };
+    return { label, className: "bg-boost-orange/10 text-boost-orange" };
   }
   if (lower === "unsolved") {
-    return {
-      label,
-      className: "bg-boost-purple/10 text-boost-purple border border-boost-purple/25",
-    };
+    return { label, className: "bg-boost-purple/10 text-boost-purple" };
   }
-  return {
-    label,
-    className: "bg-boost-surface text-boost-muted border border-boost-border",
-  };
+  return { label, className: "bg-boost-surface text-boost-muted" };
 }
 
 function chipMeta(
