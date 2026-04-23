@@ -258,13 +258,13 @@ export default function DataFunnelPanel({
           />
         )}
 
-        {/* 1. Signals strip */}
+        {/* 1. At-a-glance signals strip */}
         <section aria-labelledby="funnel-signals">
           <p
             id="funnel-signals"
             className="text-[10px] font-bold text-boost-muted uppercase tracking-wider mb-2"
           >
-            Conversation signals
+            At a glance
           </p>
           <div className="grid grid-cols-2 gap-1.5">
             <button
@@ -326,7 +326,7 @@ export default function DataFunnelPanel({
             id="funnel-provenance"
             className="text-[10px] font-bold text-boost-muted uppercase tracking-wider mb-2"
           >
-            Response provenance
+            Where the answers came from
           </p>
           <div className="flex items-center gap-3">
             <ProvenanceDonut {...provenance} />
@@ -383,13 +383,14 @@ export default function DataFunnelPanel({
           />
         )}
 
-        {/* 3. Turn timeline */}
+        {/* 3. Turn timeline (Chat API v2 — unified into showroom
+              cards in the follow-up commit). */}
         <section aria-labelledby="funnel-timeline">
           <p
             id="funnel-timeline"
             className="text-[10px] font-bold text-boost-muted uppercase tracking-wider mb-2"
           >
-            Turn timeline
+            Every turn
           </p>
           {messages.length === 0 ? (
             <p className="text-[11px] text-boost-muted italic">
@@ -956,10 +957,10 @@ function RoutingBlock({
             id="funnel-routing"
             className="text-[10px] font-bold text-boost-muted uppercase tracking-wider"
           >
-            Routing & NLU trace
+            What the agent did
           </p>
-          <p className="text-[10px] text-boost-muted/80 mt-0.5 truncate">
-            {exchanges.length} exchange{exchanges.length === 1 ? "" : "s"}
+          <p className="text-[10px] text-boost-muted mt-0.5 truncate">
+            {exchanges.length} moment{exchanges.length === 1 ? "" : "s"} in the ride
             {trace.session.reviewed && (
               <span className="ml-1.5 text-boost-green">· reviewed</span>
             )}
@@ -1244,124 +1245,150 @@ function ExchangeCard({
     });
   }
 
+  // Context sentence — marketing-voice explainer of what happened.
+  const contextSentence = actionContextSentence(
+    primary?.action_type,
+    userTurn?.original_question ?? null,
+    kind === "welcome",
+  );
+
+  // Meta line — tiny subdued spec strip for technical folks
+  const metaBits: string[] = [];
+  if (userTurn?.language) metaBits.push(userTurn.language);
+  if (userTurn && primary) {
+    const ms = thinkTimeMs(userTurn.created, primary.created);
+    if (ms != null) metaBits.push(formatLatency(ms));
+  }
+  if (primary?.intent_action_meta_id != null) {
+    metaBits.push(`Template ${primary.intent_action_meta_id}`);
+  }
+
   return (
     <article
       data-testid={`routing-exchange-${index}`}
-      className={`rounded-lg border border-boost-border border-l-[3px] ${visual.borderLeft} bg-white p-3 space-y-2 transition-all duration-200 ease-out hover:shadow-sm animate-modal-in`}
+      className={`relative rounded-xl border border-boost-border border-l-[3px] ${visual.borderLeft} bg-white overflow-hidden transition-all duration-200 ease-out hover:shadow-sm animate-modal-in`}
     >
-      {/* Header — turn index, question, action-type tag (right) */}
-      <header className="flex items-start gap-2.5">
-        <span className="text-[10px] font-mono text-boost-muted flex-shrink-0 mt-0.5">
-          #{index}
-        </span>
-        {kind === "welcome" ? (
-          <span className="text-[12px] text-boost-muted italic flex-1 min-w-0 mt-0.5">
-            Session opener
-          </span>
-        ) : (
-          <span className="text-[12px] font-semibold text-boost-dark leading-snug min-w-0 flex-1 mt-0.5">
-            &ldquo;{userTurn?.original_question || "(no text)"}&rdquo;
-          </span>
-        )}
-        {/* Action-type tag — typographic, no box chrome. Shimmer on
-            generative rides behind the label, no surrounding border. */}
+      {/* Subtle shimmer wash behind the card header for generative turns */}
+      {visual.shimmer && (
         <span
-          className={`relative inline-flex items-center gap-1 flex-shrink-0 text-[10px] font-semibold uppercase tracking-[0.09em] ${visual.accent}`}
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-20 chip-shimmer pointer-events-none"
+        />
+      )}
+      <div className="relative flex gap-3 p-3.5">
+        {/* Illustrated icon — the "component" image */}
+        <div
+          className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${visual.iconBg} ${visual.accent}`}
         >
-          {visual.shimmer && (
-            <span
-              aria-hidden
-              className="absolute -inset-x-1.5 -inset-y-0.5 chip-shimmer pointer-events-none rounded-sm"
-            />
+          <div className="w-8 h-8">{visual.icon}</div>
+        </div>
+
+        {/* Body */}
+        <div className="min-w-0 flex-1 space-y-1.5">
+          {/* Top line: turn index + user's question/opener */}
+          <p className="text-[10px] font-mono text-boost-muted">
+            #{index}
+            {kind === "welcome" ? (
+              <span className="ml-1.5 text-boost-muted uppercase tracking-wider">
+                · The welcome
+              </span>
+            ) : userTurn?.original_question ? (
+              <span className="ml-1.5 text-boost-dark font-sans normal-case font-normal">
+                You: &ldquo;{userTurn.original_question.length > 60
+                  ? `${userTurn.original_question.slice(0, 57)}…`
+                  : userTurn.original_question}&rdquo;
+              </span>
+            ) : null}
+          </p>
+
+          {/* Marketing headline — the "what it did" moment */}
+          <h4 className={`text-[14px] font-semibold leading-tight ${visual.accent}`}>
+            {routed}
+          </h4>
+
+          {/* One-sentence context — explainer voice */}
+          {contextSentence && (
+            <p className="text-[11px] text-boost-dark/90 leading-snug">
+              {contextSentence}
+            </p>
           )}
-          <span className="relative flex items-center gap-1">
-            {visual.icon}
-            {visual.label}
-          </span>
-        </span>
-      </header>
 
-      {/* Primary routing — the card's headline. Typographic, no chip. */}
-      <p className="flex items-baseline gap-1.5 text-[12px] font-semibold text-boost-dark">
-        <span aria-hidden className="text-boost-muted font-normal">
-          →
-        </span>
-        {routed}
-      </p>
+          {/* Inline meta line — tiny spec strip */}
+          {metaBits.length > 0 && (
+            <p className="text-[10px] font-mono text-boost-muted">
+              {metaBits.join(" · ")}
+            </p>
+          )}
 
-      {/* Secondary data rows */}
-      {rows.length > 0 && (
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[11px]">
-          {rows.map((r) => (
-            <Fragment key={r.label}>
-              <dt className="text-boost-muted">{r.label}</dt>
-              <dd className="min-w-0 text-boost-dark">{r.value}</dd>
-            </Fragment>
-          ))}
-        </dl>
-      )}
+          {/* Supplementary rows — only when populated */}
+          {rows.length > 0 && (
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[11px] pt-0.5">
+              {rows.map((r) => (
+                <Fragment key={r.label}>
+                  <dt className="text-boost-muted">{r.label}</dt>
+                  <dd className="min-w-0 text-boost-dark">{r.value}</dd>
+                </Fragment>
+              ))}
+            </dl>
+          )}
 
-      {/* Bot reply snippet — typography-first, no italic box */}
-      {primary?.content_snippet && (
-        <p className="text-[11px] text-boost-dark leading-snug pt-2 border-t border-boost-border">
-          <span className="text-[9.5px] text-boost-muted font-semibold uppercase tracking-wider mr-2">
-            Reply
-          </span>
-          {primary.content_snippet}
-        </p>
-      )}
-
-      {/* Inspector footer — plain links, no chrome */}
-      <footer className="flex items-center justify-between gap-3 text-[10px]">
-        <button
-          type="button"
-          onClick={() => setInspectOpen((v) => !v)}
-          aria-expanded={inspectOpen}
-          data-testid={`routing-exchange-${index}-inspect`}
-          className="text-boost-muted hover:text-boost-purple transition-colors"
-        >
-          {inspectOpen ? "Hide raw" : "Inspect raw"}
-        </button>
-        {conversationId != null && (
-          <a
-            href={`https://${tenant}/admin/conversations/${conversationId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-boost-muted hover:text-boost-purple transition-colors inline-flex items-center gap-1"
-            title="Open this conversation in the boost.ai admin panel"
-          >
-            Open in admin
-            <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-2.5 h-2.5">
-              <path
-                d="M6 3h7v7M13 3 5 11M3 6v7h7"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+          {/* Bot reply — quote-style, no label box */}
+          {primary?.content_snippet && (
+            <blockquote className="relative pl-3 mt-2 text-[11px] text-boost-dark/90 italic leading-snug">
+              <span
+                aria-hidden
+                className={`absolute left-0 top-0 bottom-0 w-[2px] rounded ${visual.iconBg.replace("/8", "").replace("/10", "").replace("/15", "")}`}
               />
-            </svg>
-          </a>
-        )}
-      </footer>
-
-      {/* Raw JSON drawer */}
-      <div
-        className="grid transition-all duration-300 ease-out"
-        style={{ gridTemplateRows: inspectOpen ? "1fr" : "0fr" }}
-      >
-        <div className="overflow-hidden">
-          {inspectOpen && (
-            <pre className="mt-1 p-2 rounded bg-boost-surface font-mono text-[10px] text-boost-dark overflow-x-auto leading-snug">
-              {JSON.stringify(
-                {
-                  user: userTurn,
-                  bots: botTurns,
-                },
-                null,
-                2,
-              )}
-            </pre>
+              {primary.content_snippet}
+            </blockquote>
           )}
+
+          {/* Inspector footer — re-worded as "Behind the scenes" */}
+          <footer className="flex items-center justify-between gap-3 text-[10px] pt-1">
+            <button
+              type="button"
+              onClick={() => setInspectOpen((v) => !v)}
+              aria-expanded={inspectOpen}
+              data-testid={`routing-exchange-${index}-inspect`}
+              className="text-boost-muted hover:text-boost-purple transition-colors"
+            >
+              {inspectOpen ? "Hide details" : "Behind the scenes"}
+            </button>
+            {conversationId != null && (
+              <a
+                href={`https://${tenant}/admin/conversations/${conversationId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-boost-muted hover:text-boost-purple transition-colors inline-flex items-center gap-1"
+                title="Open this conversation in the boost.ai admin panel"
+              >
+                Open in admin
+                <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-2.5 h-2.5">
+                  <path
+                    d="M6 3h7v7M13 3 5 11M3 6v7h7"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </a>
+            )}
+          </footer>
+
+          {/* Raw JSON drawer */}
+          <div
+            className="grid transition-all duration-300 ease-out"
+            style={{ gridTemplateRows: inspectOpen ? "1fr" : "0fr" }}
+          >
+            <div className="overflow-hidden">
+              {inspectOpen && (
+                <pre className="mt-1 p-2 rounded bg-boost-surface font-mono text-[10px] text-boost-dark overflow-x-auto leading-snug">
+                  {JSON.stringify({ user: userTurn, bots: botTurns }, null, 2)}
+                </pre>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </article>
@@ -1597,33 +1624,61 @@ function HeroSummary({
     <section
       aria-label="Session summary"
       data-testid="data-funnel-hero"
-      className="relative overflow-hidden rounded-xl px-3 py-2.5 border border-boost-border bg-gradient-to-br from-boost-purple/[0.04] via-white to-boost-green/[0.04]"
+      className="relative overflow-hidden rounded-xl"
     >
-      <div className="flex items-start gap-2">
+      {/* Deep layered purple — the Overview-section brand treatment.
+          Radial purple glow top + green accent bottom-right + green
+          hint bottom-left over a deep purple-black base. */}
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          background: `
+            radial-gradient(ellipse 80% 60% at 50% 0%, rgba(89,25,93,0.55) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 40% at 85% 100%, rgba(54,181,149,0.18) 0%, transparent 60%),
+            radial-gradient(ellipse 40% 35% at 10% 90%, rgba(54,181,149,0.08) 0%, transparent 60%),
+            linear-gradient(180deg, #231528 0%, #1a1020 45%, #141118 100%)
+          `,
+        }}
+      />
+      {/* Subtle grid overlay for depth */}
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-[0.04]"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(255,255,255,0.25) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.25) 1px, transparent 1px)
+          `,
+          backgroundSize: "40px 40px",
+        }}
+      />
+
+      <div className="relative z-10 px-4 py-3.5 flex items-start gap-2.5">
         <span aria-hidden className="mt-0.5 flex-shrink-0">
-          <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 text-boost-purple">
+          <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 text-boost-green-light">
             <path
               d="M8 1.5a6.5 6.5 0 1 0 6.5 6.5M8 1.5V8l4 2.5"
               stroke="currentColor"
-              strokeWidth="1.4"
+              strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
           </svg>
         </span>
-        <p className="text-[11px] leading-snug text-boost-dark flex-1 min-w-0">
+        <p className="text-[11px] leading-relaxed text-white/85 flex-1 min-w-0">
           {bits.map((b, i) => (
             <Fragment key={`${b}-${i}`}>
               {i > 0 && (
-                <span aria-hidden className="text-boost-muted mx-1.5">
+                <span aria-hidden className="text-white/40 mx-1.5">
                   ·
                 </span>
               )}
               <span
                 className={
                   i === 0
-                    ? "font-semibold text-boost-purple"
-                    : "text-boost-dark/85"
+                    ? "font-semibold text-boost-green-light"
+                    : "text-white/90"
                 }
               >
                 {b}
@@ -1701,12 +1756,12 @@ function SessionChromeStrip({
         id="funnel-session-chrome"
         className="text-[10px] font-bold text-boost-muted uppercase tracking-wider mb-1"
       >
-        Session context
+        Tuned for this customer
       </p>
 
       {matchedFilters.length > 0 && (
         <div className="flex items-start gap-2">
-          <GroupLabel>Filters fired</GroupLabel>
+          <GroupLabel>Personalised for</GroupLabel>
           <span className="flex flex-wrap gap-1 min-w-0">
             {matchedFilters.map((f) => (
               <span
@@ -1722,7 +1777,7 @@ function SessionChromeStrip({
 
       {sentValues.length > 0 && (
         <div className="flex items-start gap-2">
-          <GroupLabel>Sent</GroupLabel>
+          <GroupLabel>Customer profile</GroupLabel>
           <span className="flex flex-wrap gap-1 min-w-0">
             {sentValues.map((v, i) => (
               <span
@@ -1738,7 +1793,7 @@ function SessionChromeStrip({
 
       {goalChips.length > 0 && (
         <div className="flex items-start gap-2">
-          <GroupLabel>Goals</GroupLabel>
+          <GroupLabel>Reached</GroupLabel>
           <span className="flex flex-wrap gap-1 min-w-0">
             {goalChips.map((g) => (
               <span
@@ -1771,7 +1826,7 @@ function SessionChromeStrip({
 
       {catVis && (
         <div className="flex items-start gap-2">
-          <GroupLabel>Classified</GroupLabel>
+          <GroupLabel>Verdict</GroupLabel>
           <span
             className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${catVis.className}`}
           >
@@ -1912,45 +1967,63 @@ function LegendDot({ colour, label }: { colour: string; label: string }) {
 /* ─── Phase B helpers — action-type visual language ──────────── */
 
 interface ActionVisual {
-  /** Thin left-border color on the exchange card. */
+  /** Left-border colour on the exchange card. */
   borderLeft: string;
-  /** Tiny square background used by the icon badge in the header. */
+  /** Background for the illustrated-icon wrapper (soft tint). */
   iconBg: string;
-  /** Text color for the routing chip + icon. */
+  /** Text colour for the headline + label. */
   accent: string;
-  /** Soft tint used as the card's background. */
-  tint: string;
-  /** Short human label (for chip). */
+  /** Tailwind bg class for segment in the ribbon / sparkbar. */
+  segmentBg: string;
+  /** Short tag label used in small UI (ribbon legend, inspector drawer). */
   label: string;
-  /** Inline SVG icon (16×16 viewBox). */
+  /** Marketing headline shown as the card title. */
+  headline: string;
+  /** Hand-drawn illustrated SVG (40×40 viewBox). */
   icon: ReactNode;
-  /** Whether to add the funnelShimmer animation on the chip. */
+  /** True → apply the subtle funnelShimmer behind the card header. */
   shimmer: boolean;
 }
 
-/** Map `displayed_action.action_type` → per-type visual treatment.
- *  Keeps all brand-color decisions in one place so the redesigned
- *  cards read at a glance even on a generative-only tenant. */
+/** Map `displayed_action.action_type` → per-type visual + copy.
+ *  Single source of truth for the "what component did the agent use"
+ *  narrative. Icons are hand-drawn scenes sized to read at ~36-40px
+ *  on the card — big enough to feel illustrated, small enough that
+ *  the full SVG still ships under a few hundred bytes. */
 function actionTypeVisual(actionType: string | null | undefined): ActionVisual {
   switch (actionType) {
     case "generative":
     case "llm":
       return {
         borderLeft: "border-l-boost-purple",
-        iconBg: "bg-boost-purple/10",
+        iconBg: "bg-boost-purple/8",
         accent: "text-boost-purple",
-        tint: "bg-boost-purple/[0.03]",
-        label: "Generative",
+        segmentBg: "bg-boost-purple",
+        label: "Composed",
+        headline: "Composed a fresh answer",
         shimmer: true,
         icon: (
-          <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-3 h-3">
+          // Brain with a spark rising out of it — "it thought this up"
+          <svg viewBox="0 0 40 40" fill="none" aria-hidden className="w-full h-full">
             <path
-              d="M9 1 3 9h4l-1 6 6-8H8l1-6z"
+              d="M12 14c0-3.5 3-6 7-6s7 2.5 7 6v1c2 1 3 3 3 5 0 3-2.5 5-5 5v3c0 2-2 4-5 4s-5-2-5-4v-1h-2c-2.5 0-5-2-5-5 0-2 1-4 3-5v-1c0-1-1-2-2-2"
               stroke="currentColor"
-              strokeWidth="1.3"
+              strokeWidth="1.5"
+              strokeLinecap="round"
               strokeLinejoin="round"
               fill="currentColor"
-              fillOpacity="0.16"
+              fillOpacity="0.08"
+            />
+            <path
+              d="M16 15c1-1 3-1 4 0m0 4c1-1 3-1 4 0M16 22c1 1 3 1 4 0"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+              opacity="0.7"
+            />
+            <path
+              d="M30 6l1 3-3-1 3-1zm-2-3l.6 1.8 1.8.6-1.8.6L28 8l-.6-1.8-1.8-.6 1.8-.6L28 3z"
+              fill="currentColor"
             />
           </svg>
         ),
@@ -1958,20 +2031,30 @@ function actionTypeVisual(actionType: string | null | undefined): ActionVisual {
     case "content":
       return {
         borderLeft: "border-l-boost-green",
-        iconBg: "bg-boost-green/10",
+        iconBg: "bg-boost-green/8",
         accent: "text-boost-green",
-        tint: "bg-boost-green/[0.03]",
-        label: "Scripted",
+        segmentBg: "bg-boost-green",
+        label: "Curated",
+        headline: "Delivered a curated answer",
         shimmer: false,
         icon: (
-          <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-3 h-3">
+          // Scroll / document with a checkmark — "pulled from verified knowledge"
+          <svg viewBox="0 0 40 40" fill="none" aria-hidden className="w-full h-full">
             <path
-              d="M3 2.5A1.5 1.5 0 0 1 4.5 1h7A1.5 1.5 0 0 1 13 2.5v11l-2-1.3-2 1.3-2-1.3-2 1.3V2.5z"
+              d="M11 8c0-1.5 1.2-3 3-3h16a3 3 0 0 1 3 3v22a5 5 0 0 1-5 5H14c-1.5 0-3-1-3-3V8z"
               stroke="currentColor"
-              strokeWidth="1.3"
+              strokeWidth="1.5"
               strokeLinejoin="round"
               fill="currentColor"
-              fillOpacity="0.16"
+              fillOpacity="0.08"
+            />
+            <path d="M16 12h12M16 16h12M16 20h8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity="0.55"/>
+            <path
+              d="m14 27 3 3 6-7"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             />
           </svg>
         ),
@@ -1980,20 +2063,25 @@ function actionTypeVisual(actionType: string | null | undefined): ActionVisual {
     case "legacy_api":
       return {
         borderLeft: "border-l-boost-orange",
-        iconBg: "bg-boost-orange/10",
+        iconBg: "bg-boost-orange/8",
         accent: "text-boost-orange",
-        tint: "bg-boost-orange/[0.03]",
-        label: "API",
+        segmentBg: "bg-boost-orange",
+        label: "Live data",
+        headline: "Pulled live data",
         shimmer: false,
         icon: (
-          <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-3 h-3">
+          // Plug meeting socket across the gap — "it called out to another system"
+          <svg viewBox="0 0 40 40" fill="none" aria-hidden className="w-full h-full">
             <path
-              d="M6 2v3m4-3v3M3 8h4m2 0h4M6 14v-3m4 3v-3M4 5h8v6H4z"
+              d="M5 20h7m5 0h6m5 0h7M11 14v12a3 3 0 0 0 3 3h3V11h-3a3 3 0 0 0-3 3zm15-3h3a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3h-3V11z"
               stroke="currentColor"
-              strokeWidth="1.3"
+              strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
+              fill="currentColor"
+              fillOpacity="0.08"
             />
+            <path d="M18 20h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         ),
       };
@@ -2002,19 +2090,17 @@ function actionTypeVisual(actionType: string | null | undefined): ActionVisual {
         borderLeft: "border-l-boost-gold",
         iconBg: "bg-boost-gold/10",
         accent: "text-boost-gold",
-        tint: "bg-boost-gold/[0.03]",
-        label: "Entity",
+        segmentBg: "bg-boost-gold",
+        label: "Captured",
+        headline: "Captured a detail",
         shimmer: false,
         icon: (
-          <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-3 h-3">
-            <path
-              d="M2 4h12v3H9l-2 2H2V4z M2 9h5l2 2h5v3H2V9z"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinejoin="round"
-              fill="currentColor"
-              fillOpacity="0.12"
-            />
+          // Form with a magnifier picking out a field — "it read out the key info"
+          <svg viewBox="0 0 40 40" fill="none" aria-hidden className="w-full h-full">
+            <rect x="8" y="7" width="20" height="24" rx="2.5" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.08"/>
+            <path d="M12 13h12M12 17h12M12 21h7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity="0.55"/>
+            <circle cx="25" cy="26" r="5" stroke="currentColor" strokeWidth="1.6" fill="white"/>
+            <path d="m29 30 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
         ),
       };
@@ -2023,16 +2109,19 @@ function actionTypeVisual(actionType: string | null | undefined): ActionVisual {
         borderLeft: "border-l-boost-lavender",
         iconBg: "bg-boost-lavender/15",
         accent: "text-boost-purple",
-        tint: "bg-boost-lavender/[0.06]",
-        label: "Orchestrator",
+        segmentBg: "bg-boost-lavender",
+        label: "Routed",
+        headline: "Routed to a specialist",
         shimmer: false,
         icon: (
-          <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-3 h-3">
-            <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.3" />
-            <circle cx="8" cy="2.5" r="1.2" stroke="currentColor" strokeWidth="1.3" />
-            <circle cx="8" cy="13.5" r="1.2" stroke="currentColor" strokeWidth="1.3" />
-            <circle cx="2.5" cy="8" r="1.2" stroke="currentColor" strokeWidth="1.3" />
-            <circle cx="13.5" cy="8" r="1.2" stroke="currentColor" strokeWidth="1.3" />
+          // Central hub with 4 satellite nodes — "it chose the right specialist"
+          <svg viewBox="0 0 40 40" fill="none" aria-hidden className="w-full h-full">
+            <circle cx="20" cy="20" r="5" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.14"/>
+            <circle cx="20" cy="6" r="3" stroke="currentColor" strokeWidth="1.5" fill="white"/>
+            <circle cx="20" cy="34" r="3" stroke="currentColor" strokeWidth="1.5" fill="white"/>
+            <circle cx="6" cy="20" r="3" stroke="currentColor" strokeWidth="1.5" fill="white"/>
+            <circle cx="34" cy="20" r="3" stroke="currentColor" strokeWidth="1.5" fill="white"/>
+            <path d="M20 9v6m0 10v6m-9-11h6m10 0h6" stroke="currentColor" strokeWidth="1.3" opacity="0.5"/>
           </svg>
         ),
       };
@@ -2045,18 +2134,14 @@ function actionTypeVisual(actionType: string | null | undefined): ActionVisual {
       return {
         borderLeft: "border-l-boost-border",
         iconBg: "bg-boost-surface",
-        accent: "text-boost-dark/80",
-        tint: "bg-boost-surface/40",
-        label: actionType,
+        accent: "text-boost-dark",
+        segmentBg: "bg-boost-border",
+        label: "Flow",
+        headline: "Moved through a flow step",
         shimmer: false,
         icon: (
-          <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-3 h-3">
-            <path
-              d="M3 3h10v10H3z"
-              stroke="currentColor"
-              strokeWidth="1.3"
-              strokeDasharray="2 1.5"
-            />
+          <svg viewBox="0 0 40 40" fill="none" aria-hidden className="w-full h-full">
+            <path d="M8 10h14l6 6-6 6H8l6-6-6-6zM8 22h14l6 6-6 6H8l6-6-6-6z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="currentColor" fillOpacity="0.08"/>
           </svg>
         ),
       };
@@ -2065,26 +2150,78 @@ function actionTypeVisual(actionType: string | null | undefined): ActionVisual {
         borderLeft: "border-l-boost-border",
         iconBg: "bg-boost-surface",
         accent: "text-boost-muted",
-        tint: "bg-boost-surface/40",
+        segmentBg: "bg-boost-border",
         label: "—",
+        headline: "A turn happened",
         shimmer: false,
         icon: (
-          <svg viewBox="0 0 16 16" fill="none" aria-hidden className="w-3 h-3">
-            <circle cx="8" cy="8" r="4" stroke="currentColor" strokeWidth="1.3" />
+          <svg viewBox="0 0 40 40" fill="none" aria-hidden className="w-full h-full">
+            <circle cx="20" cy="20" r="10" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.08"/>
           </svg>
         ),
       };
   }
 }
 
-/** Format a goal event as "account_opened · start". */
+/** Per-card contextual explainer built from the raw turn data, in
+ *  confident marketing voice. Returns a single sentence or null if
+ *  there's nothing meaningful to say beyond the headline. */
+function actionContextSentence(
+  actionType: string | null | undefined,
+  userQuestion: string | null,
+  isWelcome: boolean,
+): string | null {
+  const quoted = userQuestion
+    ? `"${userQuestion.slice(0, 80)}${userQuestion.length > 80 ? "…" : ""}"`
+    : null;
+  if (isWelcome) {
+    return "Opened the conversation with a welcome script.";
+  }
+  switch (actionType) {
+    case "generative":
+    case "llm":
+      return quoted
+        ? `The customer asked ${quoted}. No scripted answer fit, so the language model composed one in context.`
+        : "The language model composed a reply in context, on the fly.";
+    case "content":
+      return quoted
+        ? `Matched ${quoted} to a curated answer from the knowledge base.`
+        : "Served a curated answer from the knowledge base.";
+    case "api_connector":
+    case "legacy_api":
+      return "Called out to a connected system and returned live data.";
+    case "entity_extraction":
+      return quoted
+        ? `Captured a detail from ${quoted} into the conversation state.`
+        : "Captured a detail into the conversation state.";
+    case "orchestrator":
+      return "Routed to the right specialist agent across the VA network.";
+    default:
+      return null;
+  }
+}
+
+/** Format a goal event in marketing voice: "Started: account_opened",
+ *  "Completed: account_opened", "Cancelled: …", "Continued: …". Falls
+ *  back to plain name when the event type is absent. */
 function formatGoalEvent(
   name: string | null,
   eventType: string | null,
 ): string {
   const n = (name || "").trim() || "goal";
   if (!eventType) return n;
-  return `${n} · ${eventType}`;
+  switch (eventType) {
+    case "start":
+      return `Started: ${n}`;
+    case "end":
+      return `Completed: ${n}`;
+    case "cancel":
+      return `Cancelled: ${n}`;
+    case "continue":
+      return `Continued: ${n}`;
+    default:
+      return `${n} (${eventType})`;
+  }
 }
 
 /** Translate the session category underscore-enum into a brand-coloured
