@@ -479,105 +479,68 @@ function AnalyzeOrRouting({
       />
     );
   }
-  // State A / B — invitation card
+  // State A/B — pre-Analyze. The analysis auto-kicks off 15 s after
+  // the first posted message (Export indexing window), so this is
+  // either (a) waiting silently, (b) in-flight, or (c) errored.
+  // No manual CTA — just a soft status line. Manual override is
+  // the "Refresh" button inside RoutingBlock once cards render.
   const loading = analyzePhase.kind === "loading";
   const error = analyzePhase.kind === "error" ? analyzePhase.message : null;
+
+  if (!canAnalyze && !loading && !error) {
+    // Haven't even seen a user turn yet — say nothing at all.
+    return null;
+  }
+
   return (
     <section
-      aria-labelledby="funnel-analyze"
+      aria-live="polite"
       data-testid="data-funnel-analyze-card"
-      className="relative overflow-hidden rounded-xl border border-boost-border bg-white p-3.5"
+      className="flex items-center gap-2 px-1 py-1 text-[10.5px] text-boost-muted"
     >
-      {loading && (
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 opacity-60 pointer-events-none"
-          style={{
-            background:
-              "linear-gradient(90deg, transparent, rgba(89, 25, 93, 0.08), transparent)",
-            backgroundSize: "200% 100%",
-            animation: "funnel-shimmer 1.4s linear infinite",
-          }}
-        />
-      )}
-      <div className="relative flex items-start gap-3">
-        <div
-          aria-hidden="true"
-          className="flex-shrink-0 w-8 h-8 rounded-lg bg-boost-purple/10 text-boost-purple flex items-center justify-center"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <circle cx="11" cy="11" r="6" stroke="currentColor" strokeWidth="2" />
-            <path
-              d="m17 17 4 4"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </div>
-        <div className="min-w-0 flex-1">
-          <p
-            id="funnel-analyze"
-            className="text-[11px] font-bold text-boost-dark leading-tight"
+      {loading ? (
+        <>
+          <span
+            aria-hidden
+            className="inline-flex gap-0.5"
           >
-            Analyze with Export API
-          </p>
-          <p className="text-[10px] text-boost-muted leading-relaxed mt-0.5">
-            Reveal routing, predicted intents, handover signals, and session
-            metadata for this conversation.
-          </p>
-          {error && (
-            <p className="text-[10px] text-boost-orange mt-1.5 leading-relaxed">
-              {error}
-            </p>
-          )}
-        </div>
-      </div>
-      <div className="relative mt-2.5 flex items-center justify-end">
-        <button
-          type="button"
-          onClick={onAnalyze}
-          disabled={!canAnalyze || loading}
-          data-testid="data-funnel-analyze-btn"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-boost-purple text-white text-[11px] font-semibold hover:bg-boost-purple/90 disabled:bg-boost-muted/30 disabled:cursor-not-allowed transition-colors"
-        >
-          {loading ? (
-            <>
-              <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
-              Analyzing…
-            </>
-          ) : (
-            <>
-              Analyze
-              <svg
-                width="10"
-                height="10"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M5 12h14m0 0-5-5m5 5-5 5"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </>
-          )}
-        </button>
-      </div>
-      {/* Keyframes lived in a <style jsx> previously; Turbopack
-          doesn't support styled-jsx, so we inline them via a
-          <style> tag local to this component. Single definition is
-          fine since the panel is typically mounted once. */}
-      <style>{`
-        @keyframes funnel-shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-      `}</style>
+            <span className="w-1 h-1 rounded-full bg-boost-purple animate-pulse" />
+            <span
+              className="w-1 h-1 rounded-full bg-boost-purple animate-pulse"
+              style={{ animationDelay: "150ms" }}
+            />
+            <span
+              className="w-1 h-1 rounded-full bg-boost-purple animate-pulse"
+              style={{ animationDelay: "300ms" }}
+            />
+          </span>
+          <span className="text-boost-purple font-semibold">Analysing</span>
+          <span>the conversation…</span>
+        </>
+      ) : error ? (
+        <>
+          <span
+            aria-hidden
+            className="w-1.5 h-1.5 rounded-full bg-boost-orange"
+          />
+          <span className="text-boost-orange">{error}</span>
+          <button
+            type="button"
+            onClick={onAnalyze}
+            className="ml-1 underline decoration-dotted hover:text-boost-purple"
+          >
+            Retry
+          </button>
+        </>
+      ) : (
+        <>
+          <span
+            aria-hidden
+            className="w-1.5 h-1.5 rounded-full bg-boost-muted/60"
+          />
+          <span>Waiting for Export to index the conversation…</span>
+        </>
+      )}
     </section>
   );
 }

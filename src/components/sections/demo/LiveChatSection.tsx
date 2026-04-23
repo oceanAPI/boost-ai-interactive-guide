@@ -363,13 +363,15 @@ export default function LiveChatSection({
     };
   }, []);
 
-  /** Auto-refresh after new turns. Once the user has analysed at
-   *  least once, subsequent turns trigger a silent re-analysis
-   *  15s later (Export indexing delay). Additional turns during
-   *  the wait reset the timer so we only fire one fetch per burst. */
+  /** Auto-kick-off + auto-refresh. As soon as there's at least one
+   *  posted message, fire an Analyze in the background 15 s later
+   *  (Export indexing delay). That handles both the first analysis
+   *  AND subsequent refreshes on the same timer: any new posted turn
+   *  resets the timer so we only fire once per burst of activity.
+   *  The user can still click Refresh manually for an immediate fetch. */
   useEffect(() => {
-    if (analyzedPostedCount === 0) return; // never manually analysed
-    if (postedIds.length <= analyzedPostedCount) return; // nothing new
+    if (postedIds.length === 0) return; // nothing to analyse yet
+    if (postedIds.length <= analyzedPostedCount) return; // already up-to-date
     if (analyzePhase.kind === "loading") return; // already fetching
     const timer = window.setTimeout(() => {
       handleAnalyze();
