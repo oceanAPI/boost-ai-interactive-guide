@@ -639,6 +639,99 @@ function groupExchanges(turns: ExportTurnTrace[]): Exchange[] {
   return out;
 }
 
+/** Convert a Chat API v2 `ChatMessage` into an `ExportTurnTrace`-shaped
+ *  turn by deriving what we can from the response elements. Unknown
+ *  Export-only fields (intent, filter, goals, skill, human_agent,
+ *  feedback, translations, system_action_trigger, flow id) are set to
+ *  null. Used when Export hasn't been fetched yet so the panel can
+ *  still render showroom cards from Chat API v2 alone. */
+function chatMessageToSyntheticTurn(m: ChatMessage): ExportTurnTrace {
+  const role: "user" | "bot" | "agent" =
+    m.source === "client" ? "user" : m.source === "agent" ? "agent" : "bot";
+
+  // Derive an action_type surrogate from html.style.
+  let actionType: string | null = null;
+  for (const el of m.elements) {
+    if (el.type === "html") {
+      const style = (el.payload as HtmlPayload).style;
+      if (style === "generated") {
+        actionType = "generative";
+        break;
+      }
+      if (style === "curated") {
+        actionType = "content";
+        break;
+      }
+    }
+  }
+
+  // Grab text content: first text element, else strip the first html.
+  let textContent: string | null = null;
+  for (const el of m.elements) {
+    if (el.type === "text") {
+      const t = (el.payload as { text?: string }).text;
+      if (typeof t === "string" && t.length > 0) {
+        textContent = t;
+        break;
+      }
+    }
+    if (el.type === "html") {
+      const html = ((el.payload as HtmlPayload).html ?? "") as string;
+      const plain = html
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (plain.length > 0) {
+        textContent = plain;
+        break;
+      }
+    }
+  }
+
+  const idNum = Number(m.id);
+
+  return {
+    id: Number.isFinite(idNum) ? idNum : -1,
+    role,
+    created: m.date_created,
+    language: m.language ?? null,
+    action_type: actionType,
+    intent_action_meta_id: null,
+    transfer_to_human: false,
+    came_from: null,
+    content_snippet:
+      role === "bot" && textContent
+        ? textContent.length > 160
+          ? `${textContent.slice(0, 157)}…`
+          : textContent
+        : null,
+    system_action_trigger: null,
+    predicted_intent: null,
+    prediction_types: null,
+    matched_filter: null,
+    skill: null,
+    human_agent: null,
+    goals: [],
+    sent_filters: null,
+    feedback: null,
+    link_text: null,
+    translations: null,
+    original_question: role === "user" ? textContent : null,
+    is_human_chat: role === "agent",
+    is_human_chat_queue: false,
+    is_unknown: false,
+    clicked_button_id: null,
+  };
+}
+
+/** Build showroom exchanges from Chat API v2 messages alone. Used
+ *  pre-Analyze so cards render immediately as the conversation unfolds
+ *  — Export data enriches them later. */
+function buildSyntheticExchanges(messages: ChatMessage[]): Exchange[] {
+  const turns = messages.map(chatMessageToSyntheticTurn);
+  return groupExchanges(turns);
+}
+
 function RoutingBlock({
   trace,
   analyzePhase,
@@ -654,36 +747,22 @@ function RoutingBlock({
   const error = analyzePhase.kind === "error" ? analyzePhase.message : null;
 
   const exchanges = useMemo(() => groupExchanges(trace.turns), [trace.turns]);
-  const category = trace.session.category?.automatic ?? null;
 
   return (
     <section
-      aria-labelledby="funnel-routing"
+      aria-label="Conversation timeline"
       data-testid="data-funnel-routing"
-      className="rounded-xl border border-boost-border bg-white p-3 space-y-2.5"
+      className="space-y-2"
     >
-      {/* Header row */}
-      <header className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <p
-            id="funnel-routing"
-            className="text-[10px] font-bold text-boost-muted uppercase tracking-wider"
-          >
-            What the agent did
-          </p>
-          <p className="text-[10px] text-boost-muted mt-0.5 truncate">
-            {exchanges.length} moment{exchanges.length === 1 ? "" : "s"} in the ride
-            {trace.session.reviewed && (
-              <span className="ml-1.5 text-boost-green">· reviewed</span>
-            )}
-          </p>
-        </div>
+      {/* Subtle refresh control — floats top-right of the card stack,
+          no section title or restating the stats the Hero already owns. */}
+      <div className="flex items-center justify-end gap-2">
         <button
           type="button"
           onClick={onAnalyze}
           disabled={loading}
           data-testid="data-funnel-refresh-btn"
-          className="relative flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md border border-boost-border text-[10px] font-semibold text-boost-purple hover:bg-boost-purple hover:text-white transition-colors disabled:cursor-not-allowed disabled:text-boost-muted"
+          className="relative inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold text-boost-muted hover:text-boost-purple transition-colors disabled:cursor-not-allowed"
           title={
             newTurnsSinceAnalysis > 0
               ? `${newTurnsSinceAnalysis} new turn${newTurnsSinceAnalysis === 1 ? "" : "s"} since last analysis`
@@ -703,7 +782,7 @@ function RoutingBlock({
             </>
           )}
         </button>
-      </header>
+      </div>
 
       {error && (
         <p className="text-[10px] text-boost-orange leading-relaxed">{error}</p>
@@ -721,9 +800,6 @@ function RoutingBlock({
           </li>
         ))}
       </ol>
-
-      {/* Classification moved to SessionChromeStrip so all session-
-          wide signals share one surface above this block. */}
     </section>
   );
 }
@@ -1367,19 +1443,18 @@ function DrawerExportExtras({
 
 /* ─── Phase B — hero + session chrome components ──────────────── */
 
-/** Auto-compose a single-sentence headline for the CE audience.
- *  Reads the in-flight Export trace and builds e.g.
- *  "6 exchanges · 5 generative · 1 curated · avg 2.4s think time · EN / NO".
- *  Silent when there's not enough data yet (nothing to say is better
- *  than a half-formed sentence). */
-function HeroSummary({
-  trace,
-  exchangeCount,
-}: {
-  trace: ExportTraceSuccess | null;
-  exchangeCount: number;
-}) {
-  if (!trace || exchangeCount === 0) return null;
+/** Compose a verdict + narrative sentence for the session, in
+ *  marketing voice. Replaces the old stats-ladder ("N exchanges · N
+ *  scripted · N handovers · avg Xs") with something that actually
+ *  reads as a story. */
+function composeVerdict(trace: ExportTraceSuccess): {
+  label: string;
+  sublabel: string;
+  narrative: string;
+  tone: "automated" | "escalated" | "mixed" | "api" | "neutral";
+} | null {
+  const exchanges = groupExchanges(trace.turns);
+  if (exchanges.length === 0) return null;
 
   const actionCounts: Record<string, number> = {};
   const languages = new Set<string>();
@@ -1388,17 +1463,15 @@ function HeroSummary({
   let apiCalls = 0;
   let goalEvents = 0;
 
-  // Walk turns once, bucketing everything the hero might mention.
   for (let i = 0; i < trace.turns.length; i++) {
     const t = trace.turns[i];
     if (t.language) languages.add(t.language);
     if (t.is_human_chat_queue || t.is_human_chat) handovers += 1;
-    if (t.action_type === "api_connector") apiCalls += 1;
+    if (t.action_type === "api_connector" || t.action_type === "legacy_api") apiCalls += 1;
     if (t.action_type && t.role !== "user") {
       actionCounts[t.action_type] = (actionCounts[t.action_type] ?? 0) + 1;
     }
     if (Array.isArray(t.goals)) goalEvents += t.goals.length;
-    // Pair user→bot for latency.
     if (t.role === "user") {
       const next = trace.turns[i + 1];
       if (next && next.role !== "user") {
@@ -1408,49 +1481,202 @@ function HeroSummary({
     }
   }
 
-  const bits: string[] = [];
-  bits.push(
-    `${exchangeCount} exchange${exchangeCount === 1 ? "" : "s"}`,
-  );
+  const generated = actionCounts["generative"] ?? 0;
+  const scripted = actionCounts["content"] ?? 0;
+  const orchestrated = actionCounts["orchestrator"] ?? 0;
+  const avgMs =
+    latencies.length > 0
+      ? latencies.reduce((a, b) => a + b, 0) / latencies.length
+      : null;
 
-  // Only show action counts that are actually > 0, prioritising
-  // "generative" and "content" as the headline buckets for CE.
-  const ordered: Array<[string, string]> = [
-    ["generative", "generative"],
-    ["content", "scripted"],
-    ["api_connector", "API"],
-    ["entity_extraction", "entity"],
-    ["orchestrator", "orchestrator"],
-  ];
-  for (const [key, label] of ordered) {
-    const c = actionCounts[key] ?? 0;
-    if (c > 0) bits.push(`${c} ${label}`);
+  // Verdict label — the 2-word story headline.
+  let label: string;
+  let tone: "automated" | "escalated" | "mixed" | "api" | "neutral";
+  if (handovers > 0) {
+    label = "Escalated";
+    tone = "escalated";
+  } else if (apiCalls > 0) {
+    label = "Live data";
+    tone = "api";
+  } else if (generated > 0 && scripted === 0 && orchestrated === 0) {
+    label = "Generated live";
+    tone = "automated";
+  } else if (scripted > 0 && generated === 0) {
+    label = "Fully scripted";
+    tone = "automated";
+  } else if (generated > 0 && scripted > 0) {
+    label = "Mixed answers";
+    tone = "mixed";
+  } else if (orchestrated > 0) {
+    label = "Orchestrated";
+    tone = "neutral";
+  } else {
+    label = "Handled";
+    tone = "neutral";
   }
 
-  if (handovers > 0) bits.push(`${handovers} handover${handovers === 1 ? "" : "s"}`);
-  else if (exchangeCount >= 2) bits.push("0 handovers");
+  // Sublabel — a subtle stat line ("Fully automated", "3 turns", etc.)
+  const exchangeWord = exchanges.length === 1 ? "moment" : "moments";
+  const parts: string[] = [];
+  parts.push(`${exchanges.length} ${exchangeWord}`);
+  if (handovers === 0 && exchanges.length > 1) parts.push("no handovers");
+  if (avgMs != null) parts.push(`avg ${formatLatency(Math.round(avgMs))}`);
+  const sublabel = parts.join(" · ");
 
-  if (latencies.length > 0) {
-    const avg = latencies.reduce((a, b) => a + b, 0) / latencies.length;
-    bits.push(`avg ${formatLatency(Math.round(avg))}`);
+  // Narrative — read as a sentence, not a data list.
+  const narrativeBits: string[] = [];
+  if (generated > 0) {
+    narrativeBits.push(
+      generated === 1
+        ? "composed one answer on the fly"
+        : `composed ${generated} answers on the fly`,
+    );
   }
-
-  if (apiCalls > 0) bits.push(`${apiCalls} API call${apiCalls === 1 ? "" : "s"}`);
-  if (goalEvents > 0) bits.push(`${goalEvents} goal event${goalEvents === 1 ? "" : "s"}`);
-
+  if (scripted > 0) {
+    narrativeBits.push(
+      scripted === 1
+        ? "served a scripted reply"
+        : `served ${scripted} scripted replies`,
+    );
+  }
+  if (apiCalls > 0) {
+    narrativeBits.push(
+      apiCalls === 1
+        ? "pulled live data from a connected system"
+        : `pulled live data ${apiCalls} times`,
+    );
+  }
+  if (orchestrated > 0) {
+    narrativeBits.push(
+      orchestrated === 1
+        ? "routed to a specialist"
+        : `routed to specialists ${orchestrated} times`,
+    );
+  }
+  if (handovers > 0) {
+    narrativeBits.push(
+      handovers === 1
+        ? "handed off to a human"
+        : `handed off ${handovers} times`,
+    );
+  }
+  if (goalEvents > 0) {
+    narrativeBits.push(
+      goalEvents === 1
+        ? "reached one goal event"
+        : `reached ${goalEvents} goal events`,
+    );
+  }
   if (languages.size > 1) {
-    bits.push(Array.from(languages).sort().join(" + "));
+    narrativeBits.push(
+      `handled ${languages.size} languages (${Array.from(languages).sort().join(", ")})`,
+    );
   }
+
+  let narrative: string;
+  if (narrativeBits.length === 0) {
+    narrative = "The agent handled the conversation end-to-end.";
+  } else if (narrativeBits.length === 1) {
+    narrative = `The agent ${narrativeBits[0]}.`;
+  } else {
+    const last = narrativeBits.pop()!;
+    narrative = `The agent ${narrativeBits.join(", ")} and ${last}.`;
+  }
+
+  return { label, sublabel, narrative, tone };
+}
+
+/** Session verdict card — the panel's hero. Mirrors the structure of
+ *  the educational tiles below (icon + bold title + explainer) so the
+ *  whole panel reads as a consistent stack of story cards, not a
+ *  dashboard. */
+function HeroSummary({
+  trace,
+}: {
+  trace: ExportTraceSuccess | null;
+  exchangeCount: number;
+}) {
+  if (!trace) return null;
+  const verdict = composeVerdict(trace);
+  if (!verdict) return null;
+
+  // Icon + accent per verdict tone. Keeps it legible on the deep-
+  // purple gradient by sticking to brand greens / golds / light hues.
+  const toneMeta = {
+    automated: {
+      accent: "text-boost-green-light",
+      icon: (
+        <path
+          d="M4 10l3 3 7-7M14 4l2 2-2 2"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ),
+    },
+    escalated: {
+      accent: "text-boost-orange",
+      icon: (
+        <path
+          d="M4 13h14l-7-11z M11 8v3m0 2v.5"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="currentColor"
+          fillOpacity="0.12"
+        />
+      ),
+    },
+    api: {
+      accent: "text-boost-orange",
+      icon: (
+        <path
+          d="M3 10h4m2 0h4m2 0h2M7 5v4m0 2v4m6-10v4m0 2v4M5 5h4v10H5zm6 0h4v10h-4z"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ),
+    },
+    mixed: {
+      accent: "text-boost-green-light",
+      icon: (
+        <path
+          d="M11 3l2.5 5L19 9l-4 3.5L16 18l-5-3-5 3 1-5.5L3 9l5.5-1z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+          fill="currentColor"
+          fillOpacity="0.12"
+        />
+      ),
+    },
+    neutral: {
+      accent: "text-white",
+      icon: (
+        <circle
+          cx="11"
+          cy="11"
+          r="6"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          fill="currentColor"
+          fillOpacity="0.12"
+        />
+      ),
+    },
+  }[verdict.tone];
 
   return (
     <section
-      aria-label="Session summary"
+      aria-label="Session verdict"
       data-testid="data-funnel-hero"
       className="relative overflow-hidden rounded-xl"
     >
-      {/* Deep layered purple — the Overview-section brand treatment.
-          Radial purple glow top + green accent bottom-right + green
-          hint bottom-left over a deep purple-black base. */}
+      {/* Deep layered purple — the Overview-section brand treatment. */}
       <div
         aria-hidden
         className="absolute inset-0"
@@ -1463,7 +1689,6 @@ function HeroSummary({
           `,
         }}
       />
-      {/* Subtle grid overlay for depth */}
       <div
         aria-hidden
         className="absolute inset-0 opacity-[0.04]"
@@ -1476,38 +1701,29 @@ function HeroSummary({
         }}
       />
 
-      <div className="relative z-10 px-4 py-3.5 flex items-start gap-2.5">
-        <span aria-hidden className="mt-0.5 flex-shrink-0">
-          <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 text-boost-green-light">
-            <path
-              d="M8 1.5a6.5 6.5 0 1 0 6.5 6.5M8 1.5V8l4 2.5"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+      <div className="relative z-10 p-4 flex items-start gap-3">
+        <span
+          aria-hidden
+          className={`flex-shrink-0 w-8 h-8 rounded-lg bg-white/[0.08] flex items-center justify-center ${toneMeta.accent}`}
+        >
+          <svg viewBox="0 0 22 22" fill="none" className="w-4.5 h-4.5">
+            {toneMeta.icon}
           </svg>
         </span>
-        <p className="text-[11px] leading-relaxed text-white/85 flex-1 min-w-0">
-          {bits.map((b, i) => (
-            <Fragment key={`${b}-${i}`}>
-              {i > 0 && (
-                <span aria-hidden className="text-white/40 mx-1.5">
-                  ·
-                </span>
-              )}
-              <span
-                className={
-                  i === 0
-                    ? "font-semibold text-boost-green-light"
-                    : "text-white/90"
-                }
-              >
-                {b}
-              </span>
-            </Fragment>
-          ))}
-        </p>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/55">
+            {verdict.sublabel}
+          </p>
+          <h3
+            className={`text-[16px] font-semibold leading-tight mt-0.5 ${toneMeta.accent}`}
+          >
+            {verdict.label}
+          </h3>
+          <p className="text-[11.5px] leading-relaxed text-white/80 mt-1.5">
+            {verdict.narrative}
+          </p>
+        </div>
       </div>
     </section>
   );
