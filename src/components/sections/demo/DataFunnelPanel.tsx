@@ -241,19 +241,9 @@ export default function DataFunnelPanel({
       className="flex flex-col rounded-2xl border border-boost-border bg-white overflow-hidden shadow-sm"
       style={{ height: "600px", maxHeight: "80vh" }}
     >
-      {/* Header */}
-      <div className="bg-boost-surface px-4 py-3 border-b border-boost-border flex items-center justify-between flex-shrink-0">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-boost-dark">Data funnel</p>
-          <p className="text-[10px] text-boost-muted truncate">
-            Live · Chat API v2 ·{" "}
-            <span className="font-mono text-boost-dark/70">{tenant}</span>
-          </p>
-        </div>
-        <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-green flex-shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light animate-pulse" />
-          Live
-        </span>
+      {/* Header — just the title, minimal chrome */}
+      <div className="px-4 py-3 border-b border-boost-border flex-shrink-0">
+        <p className="text-xs font-semibold text-boost-dark">Data funnel</p>
       </div>
 
       {/* Body */}

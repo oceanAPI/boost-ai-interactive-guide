@@ -430,20 +430,19 @@ export default function LiveChatSection({
         </div>
 
         {/* Chat + Data funnel — side-by-side once revealed.
-            Pre-reveal: chat fills the column (no width constraint)
-            so the initial layout matches pre-panel behaviour. Post-
-            reveal: widen to max-w-6xl + center so the split feels
-            balanced. */}
+            The chat frame keeps its width both pre- and post-reveal;
+            only its horizontal position changes. Pre-reveal: single
+            flex child in a max-w-6xl wrapper, centered via
+            justify-center. Post-reveal: the panel slides in on the
+            right, chat stays anchored at its size and drifts left. */}
         <div
-          className={`flex flex-col md:flex-row gap-4 transition-all duration-700 ease-out ${
-            revealPanel ? "max-w-6xl mx-auto" : ""
+          className={`flex flex-col md:flex-row gap-4 transition-all duration-700 ease-out max-w-6xl mx-auto ${
+            revealPanel ? "" : "md:justify-center"
           }`}
         >
-        {/* Chat frame */}
+        {/* Chat frame — same width always; only its neighbours change. */}
         <div
-          className={`flex-1 min-w-0 rounded-2xl border border-boost-border bg-white overflow-hidden flex flex-col transition-all duration-700 ease-out ${
-            revealPanel ? "md:basis-[58%]" : "w-full"
-          }`}
+          className="flex-1 min-w-0 md:flex-none md:basis-[58%] rounded-2xl border border-boost-border bg-white overflow-hidden flex flex-col transition-all duration-700 ease-out"
           style={{ height: "600px", maxHeight: "80vh" }}
         >
           {/* Messages area */}
