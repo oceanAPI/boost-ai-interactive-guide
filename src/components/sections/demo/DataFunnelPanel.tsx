@@ -1408,36 +1408,19 @@ function routedToLabel(
 
   const action = primary?.action_type ?? null;
   if (action === "generative" || action === "llm") {
-    return (
-      <span className="inline-flex items-center gap-1 text-boost-purple font-semibold">
-        <span aria-hidden className="w-1 h-1 rounded-full bg-boost-purple" />
-        Generative fallback
-      </span>
-    );
+    return <span className="text-boost-purple">Generative fallback</span>;
   }
   if (action === "content") {
-    return (
-      <span className="inline-flex items-center gap-1 text-boost-green font-semibold">
-        <span aria-hidden className="w-1 h-1 rounded-full bg-boost-green" />
-        Scripted content
-      </span>
-    );
+    return <span className="text-boost-green">Scripted content</span>;
   }
   if (action === "api_connector") {
-    return (
-      <span className="inline-flex items-center gap-1 text-boost-orange font-semibold">
-        <span aria-hidden className="w-1 h-1 rounded-full bg-boost-orange" />
-        API connector
-      </span>
-    );
+    return <span className="text-boost-orange">API connector</span>;
   }
   if (action === "entity_extraction") {
-    return (
-      <span className="text-boost-gold font-semibold">Entity extraction</span>
-    );
+    return <span className="text-boost-gold">Entity extraction</span>;
   }
   if (action) {
-    return <span className="font-mono text-boost-dark/80">{action}</span>;
+    return <span className="font-mono text-boost-dark">{action}</span>;
   }
   if (userTurn?.is_unknown) {
     return <span className="text-boost-muted italic">Unknown (fallback)</span>;
