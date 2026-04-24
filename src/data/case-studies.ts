@@ -362,4 +362,33 @@ export const CASE_STUDIES: CaseStudy[] = [
       role: "Head of Customer Support EMEA, TourRadar",
     },
   },
+  {
+    id: "ageas",
+    companyType: "Insurance",
+    headline: "Ageas resolves 77% of FAQ chats in the first conversation",
+    companyDescription: "UK car and home insurance provider serving millions of policyholders across the United Kingdom.",
+    relevantIndustries: ["insurance"],
+    channel: "chat",
+    image: "/photos/case-studies/ageas.png",
+    logoUrl: "https://cdn.brandfetch.io/ageas.co.uk",
+    context: { industry: "Insurance" },
+    challenge:
+      "Ageas needed to adapt its customer service to meet diverse customer preferences while reducing the time agents spent on repetitive, straightforward questions — without compromising the quality of more complex policy-specific support.",
+    solution:
+      "Boost.ai deployed a conversational AI virtual agent with over 1,500 pre-built service, support and claims intents, integrated directly with Ageas's contact-centre platform for seamless human handover. The agent answers FAQs 24/7 and routes policy-specific or complex queries straight to live agents.",
+    results: [
+      { metric: "FAQ chat inquiries resolved in first conversation", value: "77%" },
+      { metric: "Monthly customer interactions handled", value: "~10,000" },
+      { metric: "Pre-built service, support & claims intents", value: "1,500+" },
+      { metric: "Availability", value: "24 / 7" },
+      { metric: "Time to production", value: "< 4 months" },
+    ],
+    timeline: "Developed and deployed in under 4 months",
+    sourceUrl: "https://boost.ai/case-studies/ageas-conversational-ai-insurance/",
+    quote: {
+      text: "We are delighted with the results so far. We have been able to support our customers 24/7, which opens up a new world of opportunity.",
+      author: "Tracey Sheldon",
+      role: "Head of Continuous Improvement, Ageas",
+    },
+  },
 ];
