@@ -220,3 +220,131 @@
 **What this changes for the demo narrative**: instead of "boost.ai returned a reply", the panel shows "boost.ai recognized this was out-of-scope for scripted flows, routed to Generative (LLM) in 840 ms, which composed the following reply". The "puzzle pieces" (action type, triggers, API connectors, intents, filters, meta action IDs) are exactly the signals a CE audience wants to see — they prove the platform's routing, not just its front-end.
 
 **Next**: push + fly deploy + prod verify. Still paused: PS section-quality redesign.
+
+## Compaction checkpoint — 2026-04-24T13:24:11+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- 6. pick currency in admin.a
+- Stop hook feedback:
+- [Verification Required] Code was edited while a preview server is running. Follow <verification_workflow> to verify the changes.
+- whats left fixing from that log?
+- continue with all up to D
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/.claude/plans/cheerful-waddling-treasure.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/.claude/hooks/pre-compact.sh
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/.claude/hooks/session-start.sh
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/.claude/hooks/stop.sh
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/.claude/hooks/user-prompt-submit.sh
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/.claude/settings.json
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/.github/workflows/deploy.yml
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/.gitignore
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/CLAUDE.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/boost-export-proxy/.dockerignore
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/boost-export-proxy/Dockerfile
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/boost-export-proxy/README.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/boost-export-proxy/fly.toml
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/boost-export-proxy/package.json
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/boost-export-proxy/src/index.js
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/cloudflare-worker/src/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/cloudflare-worker/wrangler.toml
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/ARCHITECTURE.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/GOTCHAS.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/JOURNAL.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/REFERENCE.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/STATE.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/package.json
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/admin/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/globals.css
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/slides/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/FeedbackBacklog.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/HandoffChecklistChip.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/SlideshowClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/AgendaSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/AgentSwotSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/AgenticBeforeAfterSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/BenchmarkingSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/BuildScopeSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/CommercialOfferSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/DemoPreviewSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/GovernanceSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ImpactSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/OutOfScopeSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/PerformanceSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ProjectFramingSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ROISection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/RolesAndResponsibilitiesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ScopeOfWorkSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SecurityComplianceSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SolutionArchitectureSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SuccessPlanSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/UatStatusSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/agent-swot/AgentSwotDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/agentic-before-after/AgenticOutcomeDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/benchmarking/BenchmarkDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/demo/DataFunnelPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/demo/LiveChatSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/governance/StakeholderModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/performance/PerformanceTileDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/success-plan/InitiativeDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/top-recommendations/RecommendationDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/ui/StatCounter.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/credit_union/general-inquiries.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/credit_union/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/credit_union/member-relationship.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/fintech/close-account.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/fintech/customer-relationship.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/fintech/general-inquiries.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/fintech/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/insurance/billing-and-payments.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/insurance/cancel-or-change-policy.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/insurance/customer-relationship.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/insurance/general-inquiries.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/insurance/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/pension/customer-relationship.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/pension/general-inquiries.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/pension/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/pension/join-pension.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/pension/leave-or-transfer.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/wealth_management/become-a-client.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/wealth_management/client-relationship.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/wealth_management/general-inquiries.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/wealth_management/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/agents/wealth_management/offboarding.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/case-studies.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/company-patterns.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/customer-fixtures.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/topics/_reference.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/boost-chat.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/boost-export.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/company-detect/curated.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/company-detect/types.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/generate-sow-pdf.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/roi-calculator.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/slide-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/slideshow-bridge.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+1e51d56 feat(impact): 3-bar monthly breakdown under Commercial headline (F5)
+```
+
+## 2026-04-24 — Sprints B/C/D shipped
+
+**What**: Closed F3, F5, F7, F8-adjacent (pricing + resources). Three commits:
+- `67ad039` F7 — per-phase complexity stretch bars on the 12-week roadmap. Weights: Discovery 0.35, Build 1.0, Pilot 0.6, Scale 0.75. Score from markets (50%) + integrations (35%) + resource FTEs (15%).
+- `12f4b10` Sprint C — 2026 pricing re-plumbing. New `src/data/pricing-2026.ts` mirrors the CSV (chat 5 tiers $0.55→$0.30, voice Enterprise + Express, $2,500/VA platform fees, 10% committed-volume discount, Success Packages $2,715/$4,542/$7,276, environments $1,000-$4,500, Human Chat seat pricing, VAN, integration tiers $350–$750). New `src/lib/pricing-calculator.ts` does floating-tier math. Admin Section 3 gets the full builder. `CommercialOfferSection` renders a line-item invoice above the legacy cards.
+- Sprint D (pending commit) — `calculateResourcePlan()` + `<ResourcePlanBlock />`. Per-role breakdown (Solution Architect / AI Trainer / Integration Engineer / PM / CSM) with hours scaled by complexity (same signal as F7), per-phase hour split, implementation one-time total + ongoing monthly summary. CSM cost folds into Success Package when one is selected.
+
+**Why**: Reviewer asked for "CSV pricing full re-plumbing, this needs to be accurate." Done end-to-end — revenue now updates one file and the entire Commercial view reflects.
+
+**Next**: Push, smoke-check a prod fixture with `pricing_config` populated. F8 onboarding still blocked on user-supplied document. Parked P1–P3, S1–S11 not addressed this pass.

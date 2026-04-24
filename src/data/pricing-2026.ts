@@ -107,3 +107,78 @@ export const INTEGRATION_TIERS: IntegrationTierOption[] = [
   { key: "third_party_human_chat",  label: "3rd party Human Chat",        monthlyPrice: 500 },
   { key: "advanced_custom",         label: "Advanced / Custom",           monthlyPrice: 750 },
 ];
+
+/* ─── Resource plan ────────────────────────────────────────────────
+ *  Illustrative implementation resourcing. Base hours assume a
+ *  single-market delivery with three integrations; the resource
+ *  calculator scales this up based on the complexity score (markets +
+ *  integrations + resources). Rates are 2026 consulting-standard for
+ *  senior AI/platform work.                                          */
+
+export type RoleKey = "solution_architect" | "ai_trainer" | "integration_engineer" | "project_manager" | "csm";
+
+export interface RoleRate {
+  key: RoleKey;
+  label: string;
+  /** Hourly rate in USD. Revenue should confirm before a signed SoW. */
+  hourlyRateUSD: number;
+  /** Base hours for a single-market, three-integration delivery. */
+  baseHours: number;
+  /** How much the role scales with complexity (0 = flat, 1 = full scaling). */
+  complexitySensitivity: number;
+  /** Short blurb for the guide. */
+  blurb: string;
+}
+
+export const ROLE_RATES: RoleRate[] = [
+  {
+    key: "solution_architect",
+    label: "Solution Architect",
+    hourlyRateUSD: 200,
+    baseHours: 120,
+    complexitySensitivity: 0.8,
+    blurb: "Owns the design — conversation model, flow architecture, orchestrator wiring.",
+  },
+  {
+    key: "ai_trainer",
+    label: "AI Trainer",
+    hourlyRateUSD: 150,
+    baseHours: 200,
+    complexitySensitivity: 0.9,
+    blurb: "Tunes intents, reviews transcripts, iterates on content quality post go-live.",
+  },
+  {
+    key: "integration_engineer",
+    label: "Integration Engineer",
+    hourlyRateUSD: 175,
+    baseHours: 160,
+    complexitySensitivity: 1.0,
+    blurb: "Builds and certifies API connectors, auth handshakes, and data pipelines.",
+  },
+  {
+    key: "project_manager",
+    label: "Project Manager",
+    hourlyRateUSD: 165,
+    baseHours: 100,
+    complexitySensitivity: 0.6,
+    blurb: "Runs the delivery — stakeholders, dependencies, risk, release cadence.",
+  },
+  {
+    key: "csm",
+    label: "Customer Success Manager",
+    hourlyRateUSD: 140,
+    baseHours: 60,
+    complexitySensitivity: 0.3,
+    blurb: "Bridges Sales → Delivery → Success. Owns the relationship during ramp.",
+  },
+];
+
+/** Phase weights across the 12-week roadmap — determines how many of
+ *  each role's hours land in each phase. Matches the visual stretch
+ *  bars in RoadmapSection. */
+export const ROLE_PHASE_WEIGHTS: Record<"Discovery" | "Build" | "Pilot" | "Scale", number> = {
+  Discovery: 0.15,
+  Build: 0.55,
+  Pilot: 0.20,
+  Scale: 0.10,
+};

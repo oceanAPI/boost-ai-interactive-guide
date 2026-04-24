@@ -5,7 +5,7 @@ import type { GuideData } from "@/lib/types";
 import type { PricingModel } from "@/lib/types";
 import { getAgentsForGuide } from "@/data/agents";
 import { calculateROI, resolveCurrency, formatWithCurrency } from "@/lib/roi-calculator";
-import { calculatePricing, formatUSD, type PricingConfig } from "@/lib/pricing-calculator";
+import { calculatePricing, calculateResourcePlan, formatUSD, type PricingConfig } from "@/lib/pricing-calculator";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
@@ -180,6 +180,130 @@ function InvoiceBlock({ guide }: { guide: GuideData }) {
   );
 }
 
+/* ─── Resource plan block ──────────────────────────────────────────
+ *  Per-role hours + implementation cost, plus a summary of the
+ *  ongoing monthly (platform + usage + success package). Scales
+ *  with the same complexity inputs that stretch the roadmap phases,
+ *  so the two views tell one story. */
+function ResourcePlanBlock({ guide }: { guide: GuideData }) {
+  const cfg = guide.pricing_config;
+  const ig = guide.integrations ?? {};
+  const integrationCount =
+    (ig.channel?.length || 0) +
+    (ig.human_handover?.length || 0) +
+    (ig.openid?.length || 0) +
+    (ig.utility?.length || 0) +
+    (ig.voice?.length || 0);
+  const teamSize =
+    (guide.resources?.stakeholder_owners || 0) +
+    (guide.resources?.ai_trainers || 0) +
+    (guide.resources?.technical_resources || 0);
+  const bundledSuccess = !!(cfg?.success_package && cfg.success_package !== "none");
+
+  const plan = calculateResourcePlan({
+    deployment_markets: guide.deployment_markets,
+    integration_count: integrationCount,
+    customer_team_size: teamSize,
+    bundled_success_package: bundledSuccess,
+  });
+
+  // Ongoing monthly from the pricing invoice (platform + usage + add-ons).
+  const ongoingMonthly = cfg ? calculatePricing(cfg).monthlyTotal : 0;
+
+  return (
+    <div className="rounded-xl border border-boost-border bg-white mb-10 overflow-hidden">
+      <div className="px-6 py-4 bg-boost-surface/60 border-b border-boost-border flex items-baseline justify-between flex-wrap gap-2">
+        <div>
+          <p className="text-[10px] font-bold text-boost-green uppercase tracking-[0.15em]">
+            Implementation resource plan
+          </p>
+          <h3 className="text-lg font-bold text-boost-dark mt-0.5">
+            Who does the work · hours · one-time cost
+          </h3>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.15em]">
+            Complexity factor
+          </p>
+          <p className="text-[14px] font-bold text-boost-dark">
+            ×{plan.complexityMultiplier.toFixed(2)}
+          </p>
+          <p className="text-[10px] text-boost-muted">markets · integrations · team</p>
+        </div>
+      </div>
+
+      {/* Role table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-[13px]">
+          <thead>
+            <tr className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.12em] border-b border-boost-border">
+              <th className="text-left px-6 py-2.5">Role</th>
+              <th className="text-right px-3 py-2.5">Rate</th>
+              <th className="text-right px-3 py-2.5">Hours</th>
+              <th className="text-right px-3 py-2.5 hidden md:table-cell">Disc.</th>
+              <th className="text-right px-3 py-2.5 hidden md:table-cell">Build</th>
+              <th className="text-right px-3 py-2.5 hidden md:table-cell">Pilot</th>
+              <th className="text-right px-3 py-2.5 hidden md:table-cell">Scale</th>
+              <th className="text-right px-6 py-2.5">Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            {plan.lines.map((l) => (
+              <tr key={l.role.key} className="border-b border-boost-border/50 last:border-0">
+                <td className="px-6 py-3">
+                  <p className="text-boost-dark font-semibold">{l.role.label}</p>
+                  <p className="text-[11px] text-boost-muted">{l.role.blurb}</p>
+                </td>
+                <td className="text-right px-3 py-3 text-boost-muted tabular-nums">
+                  ${l.role.hourlyRateUSD}/h
+                </td>
+                <td className="text-right px-3 py-3 text-boost-dark tabular-nums">
+                  {l.hours}
+                </td>
+                <td className="text-right px-3 py-3 hidden md:table-cell text-boost-muted tabular-nums">{l.phaseHours.Discovery}</td>
+                <td className="text-right px-3 py-3 hidden md:table-cell text-boost-muted tabular-nums">{l.phaseHours.Build}</td>
+                <td className="text-right px-3 py-3 hidden md:table-cell text-boost-muted tabular-nums">{l.phaseHours.Pilot}</td>
+                <td className="text-right px-3 py-3 hidden md:table-cell text-boost-muted tabular-nums">{l.phaseHours.Scale}</td>
+                <td className="text-right px-6 py-3 text-boost-dark font-semibold tabular-nums">
+                  {l.cost > 0
+                    ? formatUSD(l.cost)
+                    : <span className="text-boost-muted font-normal italic">in Success Pkg</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Totals — implementation one-time + ongoing monthly */}
+      <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-boost-border border-t border-boost-border">
+        <div className="px-6 py-4">
+          <p className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.15em]">
+            Implementation · one-time
+          </p>
+          <p className="text-2xl font-bold text-boost-purple mt-1">
+            {formatUSD(plan.implementationTotal)}
+          </p>
+          <p className="text-[11px] text-boost-muted mt-0.5">
+            Across Discovery · Build · Pilot · Scale
+          </p>
+        </div>
+        <div className="px-6 py-4">
+          <p className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.15em]">
+            Ongoing · monthly after go-live
+          </p>
+          <p className="text-2xl font-bold text-boost-green mt-1">
+            {ongoingMonthly > 0 ? formatUSD(ongoingMonthly) : "—"}
+          </p>
+          <p className="text-[11px] text-boost-muted mt-0.5">
+            Platform + usage + {bundledSuccess ? "Success Package" : "add-ons"}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main section ─── */
 export default function CommercialOfferSection({ guide, sectionNumber }: { guide: GuideData; sectionNumber?: string }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
@@ -224,6 +348,9 @@ export default function CommercialOfferSection({ guide, sectionNumber }: { guide
       <div ref={ref}>
         {/* ── Line-item invoice (2026 pricing) ── */}
         {pricingConfigHasContent(guide.pricing_config) && <InvoiceBlock guide={guide} />}
+
+        {/* ── Implementation resource plan ── */}
+        {pricingConfigHasContent(guide.pricing_config) && <ResourcePlanBlock guide={guide} />}
 
         {/* ── Selected pricing model (hero treatment) ── */}
         <div

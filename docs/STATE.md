@@ -3,72 +3,60 @@
 > Overwritten on every meaningful step. Read this first when resuming.
 
 ## Branch
-main — Phase A of the "brand-polish + data surfacing" redesign shipped (`b520f73`). Phase B = visual redesign of `DataFunnelPanel`, not yet started.
+main — Sprint B + C + D shipped. Feedback batch (F1–F11) resolved except F8 onboarding (blocked on user doc).
 
 ## Current goal
-Redesign the right-side live analyzer so it looks brand-polished, surfaces
-the Export API v4 data we've been dropping, and supports interactive
-drill-downs — not a spreadsheet. User locked these three calls:
+Feedback-batch cleanup complete up through Sprint D. Next open items:
+- F8 Onboarding section copy — still blocked on user-supplied doc (CSM playbook / Success Package deliverables / AI Trainer curriculum).
+- Parked P1–P3 and S1–S11 items from the original feedback log — not worked this pass.
 
-- **Direction**: all three at once — brand polish + density + interactive drill-down.
-- **Null fields**: hide rows entirely when null (financewizard has no intents/filters/skill — don't clutter with em-dashes).
-- **Motion**: medium — pulse on live dot, hover-lift on cards, count-up on numbers, mount animation on new cards, chip shimmer on generative.
+## Last commits (Sprints B / C / D)
+- `444bf61` F3 currency mixing · `1e51d56` F5 3-bar breakeven · `67ad039` F7 per-phase complexity bars.
+- `12f4b10` Sprint C · full 2026 pricing invoice re-plumbing (CSV → data → calculator → admin UI → Commercial).
+- Pending commit: Sprint D · resource plan per-role (Solution Architect / AI Trainer / Integration Engineer / PM / CSM) with hours, phase breakdown, implementation one-time + ongoing monthly totals. Build green.
 
 ## Step
-- [x] Phase A — proxy + client types. `boost-export-proxy/src/index.js` now dereferences `goals` + `persons`, and `shapeTurn` emits `goals[]`, `human_agent`, `sent_filters`, `feedback`, `link_text`, `translations[]` per turn. Session response gains `matched_filters[]`, `sent_filter_values[]`, `session_tags[]`, `feedback`. Client types in `src/lib/boost-export.ts` mirror. `npm run build` green.
-- [ ] **User: `cd boost-export-proxy && fly deploy`** to ship proxy (additive — safe to deploy anytime, current panel ignores new fields).
-- [ ] Phase B — `DataFunnelPanel.tsx` redesign:
-  - [ ] Hero row at top — one-sentence auto-composed session summary ("6 exchanges · 5 generative · 1 curated · avg 2.4s · Norwegian+English").
-  - [ ] Session chrome strip — chips for matched filters, sent filter values, goals triggered, session category (when present).
-  - [ ] Routing-lane card redesign — visual pipeline per exchange, action-type color coding, left-border by action type, icon per type, generative chip shimmer.
-  - [ ] New rows in the card when populated: Goal / Handover (skill + agent) / Feedback / Translated / Sent filters.
-  - [ ] Action-type sparkbar — replaces the "Turn timeline" list. One colored segment per turn, click-to-highlight-card.
-  - [ ] Inspector drawer — click any card → drawer with raw turn JSON + "Open in boost.ai admin" deep link.
-  - [ ] Motion — pulse on live status dot, hover-lift on cards, count-up on numbers, `animate-modal-in` mount on new cards, CSS shimmer on generative chip.
-- [ ] `npm run build` green.
-- [ ] Push + prod verify.
+- [x] Sprint A — earlier fixes (breakeven F1, guardrails F2, admin chips F10/F11, Ageas F9, Impact tiles F4, PAYG copy F6).
+- [x] Sprint B — currency picker in admin, F3 consistency, F5 3-bar breakdown on Impact, F7 phase-bar complexity.
+- [x] Sprint C — 2026 pricing: `src/data/pricing-2026.ts` (CSV-mirrored tiers + add-ons), `src/lib/pricing-calculator.ts` (floating-tier math), admin Section 3 pricing builder, CommercialOfferSection `<InvoiceBlock />` with line-item monthly + annual totals.
+- [x] Sprint D — resource plan: `ROLE_RATES` + `ROLE_PHASE_WEIGHTS` in pricing-2026.ts, `calculateResourcePlan()` with complexity multiplier from markets + integrations + team size, `<ResourcePlanBlock />` in Commercial with per-role hours, per-phase split, implementation one-time total + ongoing monthly.
+- [ ] Commit Sprint D, push to prod, smoke-check `/guide` invoice + resource plan with H&M fixture.
+- [ ] F8 — on hold pending user doc.
 
 ## Last-green SHA
-`b520f73` (Phase A — proxy + client types).
+`12f4b10` (Sprint C · full 2026 pricing invoice).
 
 ## Blockers
-None. Proxy deploy is additive + optional (no UI regression if user doesn't deploy immediately — panel just won't see new fields until Phase B reads them AND proxy ships).
+- F8 Onboarding section — need CSM playbook / Success Package deliverables / AI Trainer curriculum from the user to author the section body.
 
 ## Next action
-1. User: `cd boost-export-proxy && fly deploy` (Phase A is safe on its own).
-2. Next session: execute Phase B as a single PR. Touches `src/components/sections/demo/DataFunnelPanel.tsx` (~1400 LOC, surgical edits — not a full rewrite) and `src/app/globals.css` (one new keyframe for chip shimmer).
+1. Commit Sprint D.
+2. User pushes to prod; smoke-check `/guide?...#data=...` with a fixture that populates `pricing_config` — verify invoice + resource plan render below the legacy commercial cards.
+3. Circle back on F8 when user supplies the onboarding document.
 
 ## Key context for next session
-- **Phase B scope is locked.** The three design calls above drive every detail — don't re-litigate.
-- **New data flowing from proxy** (once deployed):
-  - Per-turn: `goals[]`, `human_agent`, `sent_filters`, `feedback`, `link_text`, `translations[]` — card rows, only render when populated.
-  - Per-session: `matched_filters[]`, `sent_filter_values[]`, `session_tags[]`, `feedback` — session chrome strip chips.
-- **Graceful null handling** — financewizard is generative-only, so most new fields will be empty. Panel hides empty rows entirely.
-- **Visual language constraints** from `.impeccable.md` and `CLAUDE.md`:
-  - No emojis in UI.
-  - No blue/cyan/neon — boost-purple + boost-green + amber (handover) + gold (orchestrator).
-  - Existing tokens in `globals.css` only — don't introduce new ones.
-  - Existing animations: `animate-modal-in`, `animate-pulse`, `sparkle`. New needed: `@keyframes shimmer` for generative chip.
-- **XSS fix on Chat API v2 `dangerouslySetInnerHTML`** — tracked in the prior security plan. Paused during this redesign, pick up after Phase B ships.
+- **Pricing source of truth**: `src/data/pricing-2026.ts`. When revenue bumps prices, edit that file — everything downstream (admin UI labels + commercial invoice) auto-reflects.
+- **Floating-tier rule**: whole monthly volume prices at the landed-tier rate. Commit volume gets 10% off its share; overage pays landed-tier rate with no discount.
+- **Complexity signal is shared**: `RoadmapSection` stretch bars and `ResourcePlanBlock` multiplier derive from the same markets + integrations inputs. Kept intentionally — stretch bars + rising cost should tell one story.
+- **Legacy pricing cards remain**: Commercial still shows the 3-model cards below the invoice. Not removed because shared URLs without a `pricing_config` still render them. When revenue is ready, those cards can be deleted.
+- **Admin Section 3** is now large. If it gets unwieldy, split into a dedicated "Pricing Builder" section (but for now same-section is easier to navigate than two).
 
 ## Auto-snapshot
-Last updated: 2026-04-22T20:05:00+02:00
+Last updated: 2026-04-24T13:45:00+02:00
 Branch: main
-Last commit: b520f73 feat(live-demo): surface Export API v4 goals / filters / handover / feedback (Phase A)
-Working tree:
-```
- M docs/STATE.md
-?? .claude/launch.json
-?? customer_excellence_raw_data_pdfs/
-```
+Working tree pending Sprint D commit.
 
 <!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
 ## Auto-snapshot
-Last updated: 2026-04-24T12:58:39+02:00
+Last updated: 2026-04-24T13:42:34+02:00
 Branch: main
-Last commit: b509141 feat(admin): global currency picker in the audience banner (Sprint B · 1/4)
+Last commit: 12f4b10 feat(pricing): full 2026 line-item invoice (Sprint C)
 Working tree:
 ```
+ M docs/JOURNAL.md
  M docs/STATE.md
+ M src/components/sections/CommercialOfferSection.tsx
+ M src/data/pricing-2026.ts
+ M src/lib/pricing-calculator.ts
 ```
 <!-- AUTO-HOOK-END -->

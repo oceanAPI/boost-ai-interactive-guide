@@ -248,3 +248,77 @@ export function calculatePricing(config: PricingConfig): PricingInvoice {
 export function formatUSD(amount: number): string {
   return `$${Math.round(amount).toLocaleString("en-US")}`;
 }
+
+/* ─── Resource plan ────────────────────────────────────────────────
+ *  Produces a one-time implementation cost broken down per-role and
+ *  per-phase, scaled by the same complexity score that stretches the
+ *  roadmap phase bars. Keeps the two views consistent — "the phases
+ *  stretch *and* the resource cost scales" tell the same story.      */
+
+import { ROLE_RATES, ROLE_PHASE_WEIGHTS, type RoleRate } from "@/data/pricing-2026";
+
+export interface ResourcePlanInputs {
+  deployment_markets?: number;
+  integration_count?: number;
+  /** Size of the customer's project team — more hands = more coordination. */
+  customer_team_size?: number;
+  /** If a Success Package is selected, CSM hours are bundled into it; we
+   *  still surface the role line but zero out its one-time cost. */
+  bundled_success_package?: boolean;
+}
+
+export interface ResourceLine {
+  role: RoleRate;
+  hours: number;
+  cost: number;
+  phaseHours: Record<"Discovery" | "Build" | "Pilot" | "Scale", number>;
+}
+
+export interface ResourcePlan {
+  lines: ResourceLine[];
+  implementationTotal: number;
+  complexityMultiplier: number;
+}
+
+function resolveComplexityMultiplier(inputs: ResourcePlanInputs): number {
+  const markets = Math.max(1, inputs.deployment_markets ?? 1);
+  const integrations = Math.max(0, inputs.integration_count ?? 0);
+  const team = Math.max(0, inputs.customer_team_size ?? 0);
+  // 1.0 baseline. +0.25 per additional market (capped at +1.0).
+  const marketFactor = Math.min(1.0, (markets - 1) * 0.25);
+  // +0.08 per integration beyond 3, capped at +0.6.
+  const integrationFactor = Math.min(0.6, Math.max(0, integrations - 3) * 0.08);
+  // +0.03 per FTE on the customer side, capped at +0.3.
+  const teamFactor = Math.min(0.3, team * 0.03);
+  return 1.0 + marketFactor + integrationFactor + teamFactor;
+}
+
+export function calculateResourcePlan(inputs: ResourcePlanInputs): ResourcePlan {
+  const multiplier = resolveComplexityMultiplier(inputs);
+  const lines: ResourceLine[] = ROLE_RATES.map((role) => {
+    // Complexity scales each role proportional to its sensitivity — a
+    // CSM (0.3) barely changes, an Integration Engineer (1.0) takes the
+    // full hit.
+    const effectiveMultiplier = 1 + (multiplier - 1) * role.complexitySensitivity;
+    const hours = Math.round(role.baseHours * effectiveMultiplier);
+
+    let cost = hours * role.hourlyRateUSD;
+    // CSM is bundled into the Success Package when one is selected — keep
+    // the hours visible (transparency) but the one-time cost is zero.
+    if (role.key === "csm" && inputs.bundled_success_package) {
+      cost = 0;
+    }
+
+    const phaseHours = {
+      Discovery: Math.round(hours * ROLE_PHASE_WEIGHTS.Discovery),
+      Build:     Math.round(hours * ROLE_PHASE_WEIGHTS.Build),
+      Pilot:     Math.round(hours * ROLE_PHASE_WEIGHTS.Pilot),
+      Scale:     Math.round(hours * ROLE_PHASE_WEIGHTS.Scale),
+    };
+
+    return { role, hours, cost, phaseHours };
+  });
+
+  const implementationTotal = lines.reduce((acc, l) => acc + l.cost, 0);
+  return { lines, implementationTotal, complexityMultiplier: multiplier };
+}
