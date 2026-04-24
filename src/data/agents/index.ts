@@ -36,6 +36,12 @@ import { FINTECH_AGENTS, FINTECH_STANDALONE, FINTECH_TOPIC_GROUPS } from "./fint
 import { CREDIT_UNION_AGENTS, CREDIT_UNION_STANDALONE, CREDIT_UNION_TOPIC_GROUPS } from "./credit_union";
 import { SECURITY_AGENTS, SECURITY_TOPIC_GROUPS } from "./security";
 
+// ─── Extension industry agent barrels (authored under src/data/extensions/agents/) ───
+import { PUBLIC_SECTOR_AGENTS, PUBLIC_SECTOR_STANDALONE, PUBLIC_SECTOR_TOPIC_GROUPS } from "../extensions/agents/public_sector";
+import { TELCO_AGENTS,         TELCO_STANDALONE,         TELCO_TOPIC_GROUPS }         from "../extensions/agents/telco";
+import { LOGISTICS_AGENTS,     LOGISTICS_STANDALONE,     LOGISTICS_TOPIC_GROUPS }     from "../extensions/agents/logistics";
+import { AIRLINE_AGENTS,       AIRLINE_STANDALONE,       AIRLINE_TOPIC_GROUPS }       from "../extensions/agents/airline";
+
 import type { AgentTier, OrchestratorConfig, SpecialistAgent, TopicGroup } from "./_types";
 import { filterAgentsByVariants } from "./_types";
 
@@ -152,6 +158,22 @@ export const ORCHESTRATOR_BY_INDUSTRY: Record<string, OrchestratorConfig> = {
     standaloneAgents: [],
     topicGroups: SECURITY_TOPIC_GROUPS,
   },
+  public_sector: {
+    standaloneAgents: PUBLIC_SECTOR_STANDALONE,
+    topicGroups: PUBLIC_SECTOR_TOPIC_GROUPS,
+  },
+  telco: {
+    standaloneAgents: TELCO_STANDALONE,
+    topicGroups: TELCO_TOPIC_GROUPS,
+  },
+  logistics: {
+    standaloneAgents: LOGISTICS_STANDALONE,
+    topicGroups: LOGISTICS_TOPIC_GROUPS,
+  },
+  airline: {
+    standaloneAgents: AIRLINE_STANDALONE,
+    topicGroups: AIRLINE_TOPIC_GROUPS,
+  },
 };
 
 /**
@@ -220,4 +242,16 @@ export function getAgentsForGuide(
   });
 }
 
-export const SPECIALIST_AGENTS = [...INSURANCE_AGENTS, ...BANKING_AGENTS, ...PENSION_AGENTS, ...WEALTH_MANAGEMENT_AGENTS, ...FINTECH_AGENTS, ...CREDIT_UNION_AGENTS, ...SECURITY_AGENTS];
+export const SPECIALIST_AGENTS = [
+  ...INSURANCE_AGENTS,
+  ...BANKING_AGENTS,
+  ...PENSION_AGENTS,
+  ...WEALTH_MANAGEMENT_AGENTS,
+  ...FINTECH_AGENTS,
+  ...CREDIT_UNION_AGENTS,
+  ...SECURITY_AGENTS,
+  ...PUBLIC_SECTOR_AGENTS,
+  ...TELCO_AGENTS,
+  ...LOGISTICS_AGENTS,
+  ...AIRLINE_AGENTS,
+];

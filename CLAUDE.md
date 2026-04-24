@@ -22,6 +22,10 @@ Do this before editing anything:
 - **No CI gates.** Deploy has no lint/test step. Before committing, run `npm run build` locally and smoke-check the dev server. Catch runtime breaks before push.
 - **URL payload ceiling.** The encoded `?data=` param is dev-capped at 65 KB via `NODE_OPTIONS`. Any fixture enrichment that breaks that ceiling is a blocker — flag it, don't ship it.
 - **Security industry stays HIDDEN.** Do not surface `security` in admin chips or public-facing UI without an explicit request to unhide.
+- **Extensions staging tree.** New industries / variants / patterns / fixtures / agents are authored under `src/data/extensions/` FIRST, not in prod files. The user authors in `extensions/`, and wiring them into prod follows the splice recipe in `src/data/extensions/integration-guide.md`. If the user mentions "I added X" for any of these data types:
+  1. Check `src/data/extensions/<kind>/` for new files.
+  2. Follow `integration-guide.md` to wire them into their prod barrels (`COMPANY_PATTERNS`, `CUSTOMER_FIXTURES`, `INDUSTRIES`, `INDUSTRY_VARIANTS`, `ORCHESTRATOR_BY_INDUSTRY`, `SPECIALIST_AGENTS`).
+  3. Do NOT duplicate data into prod files by hand — inline from EXTENSION_* exports via spread-append (patterns, fixtures, variants) or by copying the records verbatim (INDUSTRIES, to preserve `as const`).
 
 ## Checkpoint discipline
 

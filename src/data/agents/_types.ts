@@ -2,6 +2,8 @@
  *  Shared types and constants for agent data
  * ───────────────────────────────────────────── */
 
+import { EXTENSION_INDUSTRY_VARIANTS } from "../extensions/variants";
+
 // ─── Flow Architecture Types ───
 
 export interface CustomCardJson {
@@ -109,23 +111,26 @@ export const INDUSTRY_CATEGORIES = [
 
 export type IndustryCategoryKey = (typeof INDUSTRY_CATEGORIES)[number]["key"];
 
+/* The 4 non-finance industries below (public_sector, telco, logistics,
+ * airline) are authored in `src/data/extensions/industries/index.ts`
+ * as `EXTENSION_INDUSTRIES`. Inlined here verbatim (labels + keys) so
+ * the `as const` literal-union stays intact — merging the array via
+ * spread would widen IndustryKey back to `string`. When the user
+ * updates EXTENSION_INDUSTRIES, re-copy the records here. */
 export const INDUSTRIES = [
   // ─── Finance ────────────────────────────────────────────────
-  { key: "insurance",         category: "finance",   label: "Insurance",           description: "Claims, underwriting, policy servicing, and customer retention" },
-  { key: "banking",           category: "finance",   label: "Banking",             description: "Retail banking, commercial banking, digital banking services" },
-  { key: "wealth_management", category: "finance",   label: "Wealth Management",   description: "Investment advisory, portfolio management, financial planning" },
-  { key: "credit_union",      category: "finance",   label: "Credit Union",        description: "Member services, lending, account management" },
-  { key: "fintech",           category: "finance",   label: "Fintech",             description: "Digital payments, lending platforms, neobanking" },
+  { key: "insurance",         category: "finance",   label: "Insurance",            description: "Claims, underwriting, policy servicing, and customer retention" },
+  { key: "banking",           category: "finance",   label: "Banking",              description: "Retail banking, commercial banking, digital banking services" },
+  { key: "wealth_management", category: "finance",   label: "Wealth Management",    description: "Investment advisory, portfolio management, financial planning" },
+  { key: "credit_union",      category: "finance",   label: "Credit Union",         description: "Member services, lending, account management" },
+  { key: "fintech",           category: "finance",   label: "Fintech",              description: "Digital payments, lending platforms, neobanking" },
   { key: "pension",           category: "finance",   label: "Pension & Retirement", description: "Pension administration, retirement planning, fund management" },
-  { key: "security",          category: "finance",   label: "Security",            description: "Alarm monitoring, subscription security, service dispatch, emergency response" },
-  // ─── Travel ─────────────────────────────────────────────────
-  { key: "airline",           category: "travel",    label: "Airline",             description: "Flag carriers, LCCs, disruption-driven volume, loyalty tier service" },
-  // ─── Logistics ──────────────────────────────────────────────
-  { key: "logistics",         category: "logistics", label: "Logistics & Postal",  description: "Parcel, freight, cross-border, postal services, track-and-trace" },
-  // ─── Telecom ────────────────────────────────────────────────
-  { key: "telco",             category: "telecom",   label: "Telecom",             description: "Mobile, broadband, TV, enterprise B2B connectivity" },
-  // ─── Public Sector ──────────────────────────────────────────
-  { key: "public_sector",     category: "public",    label: "Public Sector",       description: "Appeals, benefits, government services, citizen-facing case handling" },
+  { key: "security",          category: "finance",   label: "Security",             description: "Alarm monitoring, subscription security, service dispatch, emergency response" },
+  // ─── Extension industries (mirrors src/data/extensions/industries/index.ts) ────
+  { key: "public_sector",     category: "public",    label: "Public Sector",        description: "Government services, case handling, benefits, appeals" },
+  { key: "telco",             category: "telecom",   label: "Telecommunications",   description: "Mobile, broadband, TV, billing, device support" },
+  { key: "logistics",         category: "logistics", label: "Logistics",            description: "Parcel tracking, delivery, claims, freight" },
+  { key: "airline",           category: "travel",    label: "Airlines",             description: "Flight status, booking, baggage, loyalty" },
 ] as const;
 
 export type IndustryKey = (typeof INDUSTRIES)[number]["key"];
@@ -292,89 +297,8 @@ export const INDUSTRY_VARIANTS: Record<string, IndustryVariant[]> = {
       description: "Operators running both consumer and business subscriptions on one platform (e.g. Sector Alarm)",
     },
   ],
-  airline: [
-    {
-      key: "airline:scheduled",
-      label: "Scheduled network",
-      description: "Flag carriers, alliance members — schedule reliability, rebooking, loyalty tiers",
-    },
-    {
-      key: "airline:lcc",
-      label: "Low-cost / Budget",
-      description: "Point-to-point, unbundled fares, ancillary-heavy (Ryanair, Norwegian, easyJet)",
-    },
-    {
-      key: "airline:charter",
-      label: "Charter / Leisure",
-      description: "Tour-operator flights, seasonal routes, packaged travel partners",
-    },
-  ],
-  logistics: [
-    {
-      key: "logistics:parcel",
-      label: "Parcel / Last-mile",
-      description: "B2C parcel delivery — track-and-trace, delivery preferences, returns",
-    },
-    {
-      key: "logistics:cross_border",
-      label: "Cross-border",
-      description: "Customs, duties, international routing, multi-currency invoicing",
-    },
-    {
-      key: "logistics:freight",
-      label: "Freight / B2B",
-      description: "Pallet, LTL, FTL, supply-chain customers, contract shipping",
-    },
-    {
-      key: "logistics:postal",
-      label: "Postal / Universal service",
-      description: "National operator obligations, mail redirection, P.O. boxes",
-    },
-  ],
-  telco: [
-    {
-      key: "telco:mobile",
-      label: "Mobile",
-      description: "Consumer mobile subscriptions, SIM, roaming, handset upgrades",
-    },
-    {
-      key: "telco:broadband",
-      label: "Broadband / Fibre",
-      description: "Fixed-line, FTTH, router provisioning, installation bookings",
-    },
-    {
-      key: "telco:tv",
-      label: "TV / Streaming bundles",
-      description: "Cable, IPTV, streaming add-ons, content subscriptions",
-    },
-    {
-      key: "telco:b2b",
-      label: "Enterprise / B2B",
-      description: "Business connectivity, SD-WAN, hosted voice, contract accounts",
-    },
-  ],
-  public_sector: [
-    {
-      key: "public_sector:benefits",
-      label: "Benefits / Social services",
-      description: "Unemployment, parental, disability, sickness benefit applications",
-    },
-    {
-      key: "public_sector:appeals",
-      label: "Appeals / Tribunals",
-      description: "Appeals handling, case status, decision explanations, legal guidance",
-    },
-    {
-      key: "public_sector:tax",
-      label: "Tax & revenue",
-      description: "Tax-return support, refund status, payment arrangements",
-    },
-    {
-      key: "public_sector:licensing",
-      label: "Licensing & permits",
-      description: "Driver's licences, business permits, civil registrations",
-    },
-  ],
+  // ─── Extension industry variants (authored in src/data/extensions/variants/index.ts) ───
+  ...EXTENSION_INDUSTRY_VARIANTS,
 };
 
 /**
