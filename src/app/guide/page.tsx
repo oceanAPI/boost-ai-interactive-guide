@@ -97,6 +97,7 @@ function GuideContent() {
     deployment_markets: formData.deployment_markets || 1,
     resources: formData.resources || {},
     integrations: formData.integrations || {},
+    pricing_config: formData.pricing_config,
     custom_notes: formData.custom_notes || "",
   };
 

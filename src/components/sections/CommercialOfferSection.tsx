@@ -5,6 +5,7 @@ import type { GuideData } from "@/lib/types";
 import type { PricingModel } from "@/lib/types";
 import { getAgentsForGuide } from "@/data/agents";
 import { calculateROI, resolveCurrency, formatWithCurrency } from "@/lib/roi-calculator";
+import { calculatePricing, formatUSD, type PricingConfig } from "@/lib/pricing-calculator";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
@@ -97,6 +98,88 @@ const INVESTMENT_LINES = [
   },
 ];
 
+/* ─── 2026 Invoice view ─────────────────────────────────────────────
+ *  Rendered when `guide.pricing_config` is present. Line-item invoice
+ *  pulled from the same CSV the revenue team uses internally. This
+ *  isn't a marketing cards view — it's the deal as scoped. Monthly +
+ *  annual totals at the bottom. Groups: Platform / Usage / Add-ons. */
+function pricingConfigHasContent(cfg?: PricingConfig): boolean {
+  if (!cfg) return false;
+  return Boolean(
+    cfg.chat_va_external || cfg.chat_va_internal || cfg.voice_va ||
+    cfg.chat_expected_monthly || cfg.voice_expected_monthly ||
+    cfg.success_package && cfg.success_package !== "none" ||
+    (cfg.environments?.length ?? 0) > 0 ||
+    cfg.human_chat_enabled || cfg.van_enabled ||
+    Object.values(cfg.integrations_by_tier ?? {}).some((n) => (n ?? 0) > 0),
+  );
+}
+
+function InvoiceBlock({ guide }: { guide: GuideData }) {
+  const cfg = guide.pricing_config;
+  if (!cfg) return null;
+  const invoice = calculatePricing(cfg);
+  const groups: Array<{ title: string; lines: typeof invoice.platform }> = [
+    { title: "Platform subscriptions",       lines: invoice.platform },
+    { title: "Usage (chat + voice)",         lines: invoice.usage },
+    { title: "Add-ons & services",           lines: invoice.addons },
+  ];
+  const totalAnnual = invoice.annualTotal;
+
+  return (
+    <div className="rounded-xl border border-boost-border bg-white mb-10 overflow-hidden">
+      <div className="px-6 py-4 bg-boost-surface/60 border-b border-boost-border flex items-baseline justify-between flex-wrap gap-2">
+        <div>
+          <p className="text-[10px] font-bold text-boost-purple uppercase tracking-[0.15em]">
+            Your invoice — per 2026 pricing
+          </p>
+          <h3 className="text-lg font-bold text-boost-dark mt-0.5">
+            Line-item breakdown in USD
+          </h3>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.15em]">
+            Annual
+          </p>
+          <p className="text-2xl font-bold text-boost-dark">{formatUSD(totalAnnual)}</p>
+          <p className="text-[11px] text-boost-muted">{formatUSD(invoice.monthlyTotal)} / month</p>
+        </div>
+      </div>
+      <div className="divide-y divide-boost-border">
+        {groups.map((g) => g.lines.length === 0 ? null : (
+          <div key={g.title} className="px-6 py-4">
+            <p className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.15em] mb-2">
+              {g.title}
+            </p>
+            <div className="space-y-1.5">
+              {g.lines.map((l, i) => (
+                <div key={i} className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] text-boost-dark">{l.label}</p>
+                    {l.detail && <p className="text-[11px] text-boost-muted">{l.detail}</p>}
+                  </div>
+                  <p className="text-[13px] font-semibold text-boost-dark whitespace-nowrap">
+                    {formatUSD(l.monthly)}<span className="text-[10px] text-boost-muted font-normal"> / mo</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="px-6 py-3 bg-boost-surface/60 border-t border-boost-border flex items-baseline justify-between">
+        <p className="text-[11px] text-boost-muted">
+          {invoice.chatTier && <>Chat lands in <span className="text-boost-dark font-semibold">{invoice.chatTier.name}</span> · ${invoice.chatTier.pricePerConversation.toFixed(2)}/conv. </>}
+          {invoice.voiceTier && <>Voice lands in <span className="text-boost-dark font-semibold">{invoice.voiceTier.name}</span>.</>}
+        </p>
+        <p className="text-[13px] font-bold text-boost-dark">
+          Monthly total: {formatUSD(invoice.monthlyTotal)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main section ─── */
 export default function CommercialOfferSection({ guide, sectionNumber }: { guide: GuideData; sectionNumber?: string }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
@@ -139,6 +222,9 @@ export default function CommercialOfferSection({ guide, sectionNumber }: { guide
       />
 
       <div ref={ref}>
+        {/* ── Line-item invoice (2026 pricing) ── */}
+        {pricingConfigHasContent(guide.pricing_config) && <InvoiceBlock guide={guide} />}
+
         {/* ── Selected pricing model (hero treatment) ── */}
         <div
           className="rounded-xl border border-boost-border bg-white p-6 sm:p-8 mb-6 transition-all"

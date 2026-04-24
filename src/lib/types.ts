@@ -26,6 +26,29 @@ export interface IntegrationSelections {
 
 export type PricingModel = "fixed" | "usage" | "outcome";
 
+/** Full pricing configuration — mirrors the 2026 price-calculator CSV.
+ *  All fields optional; absence means "not configured, don't render".
+ *  Carried through the URL payload so shared links render the exact
+ *  invoice the AE saw in admin. */
+export interface PricingConfig {
+  chat_va_external?: number;
+  chat_va_internal?: number;
+  voice_va?: number;
+  chat_expected_monthly?: number;
+  chat_committed_monthly?: number;
+  voice_service?: "enterprise" | "express";
+  voice_expected_monthly?: number;
+  voice_committed_monthly?: number;
+  success_package?: "none" | "essential" | "core" | "pro";
+  environments?: Array<"sandbox" | "staging" | "custom_cloud">;
+  human_chat_enabled?: boolean;
+  human_chat_users?: number;
+  van_enabled?: boolean;
+  integrations_by_tier?: Partial<
+    Record<"authentication" | "channel" | "third_party_human_chat" | "advanced_custom", number>
+  >;
+}
+
 export interface ResourceAllocation {
   stakeholder_owners?: number;
   ai_trainers?: number;
@@ -55,6 +78,10 @@ export interface GuideData {
   deployment_markets: number;
   resources: ResourceAllocation;
   integrations: IntegrationSelections;
+  /** 2026 pricing config — if present, Commercial renders the
+   *  line-item invoice from pricing-calculator.ts instead of the
+   *  legacy 3-model tier cards. Absent = legacy render. */
+  pricing_config?: PricingConfig;
   custom_notes: string;
   /** Selected case study IDs — empty means show all (industry-sorted) */
   selected_case_studies?: string[];
@@ -101,6 +128,10 @@ export interface GuideFormData {
   deployment_markets: number;
   resources: ResourceAllocation;
   integrations: IntegrationSelections;
+  /** 2026 pricing config — if present, Commercial renders the
+   *  line-item invoice from pricing-calculator.ts instead of the
+   *  legacy 3-model tier cards. Absent = legacy render. */
+  pricing_config?: PricingConfig;
   custom_notes: string;
   /** Selected case study IDs — empty means show all (industry-sorted) */
   selected_case_studies?: string[];
