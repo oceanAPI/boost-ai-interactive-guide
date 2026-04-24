@@ -53,6 +53,54 @@ const PHASE_COLORS = {
   "green-light": "bg-boost-green-light text-white",
 } as const;
 
+/* F7 — Per-phase complexity weighting.
+ * Build absorbs the most complexity (integrations + market localisation),
+ * Scale absorbs market-driven stretch, Pilot is moderate, Discovery is
+ * nearly flat. Weight × global complexityScore gives the phase's stretch
+ * bar fill (0–1). */
+const PHASE_COMPLEXITY_WEIGHT: Record<string, number> = {
+  Discovery: 0.35,
+  Build: 1.0,
+  Pilot: 0.6,
+  Scale: 0.75,
+};
+
+/** Compute 0–1 complexity score from guide signals. Markets dominate
+ *  because multi-market localisation is the single biggest delivery
+ *  stretch; integrations + resources fill the rest. */
+function computeComplexity(guide?: import("@/lib/types").GuideData): number {
+  if (!guide) return 0.25;
+  const markets = Math.max(1, guide.deployment_markets || 1);
+  // Markets: 1→0, 2→0.35, 3→0.65, 4+→1
+  const marketScore = Math.min(1, (markets - 1) / 3);
+
+  const ig = guide.integrations || {};
+  const integrationCount =
+    (ig.channel?.length || 0) +
+    (ig.human_handover?.length || 0) +
+    (ig.openid?.length || 0) +
+    (ig.utility?.length || 0) +
+    (ig.voice?.length || 0);
+  // Integrations: 0→0, 3→0.5, 6+→1
+  const integrationScore = Math.min(1, integrationCount / 6);
+
+  const r = guide.resources || {};
+  const resourceCount =
+    (r.stakeholder_owners || 0) +
+    (r.ai_trainers || 0) +
+    (r.technical_resources || 0);
+  // Resources: smaller contributor — 0→0, 4→0.5, 8+→1
+  const resourceScore = Math.min(1, resourceCount / 8);
+
+  return 0.5 * marketScore + 0.35 * integrationScore + 0.15 * resourceScore;
+}
+
+function complexityLabel(score: number): string {
+  if (score < 0.3) return "Low complexity";
+  if (score < 0.65) return "Medium complexity";
+  return "High complexity";
+}
+
 const ITEM_COLORS = {
   default: "bg-boost-green/90 text-white hover:bg-boost-green",
   highlight: "bg-boost-purple text-white shadow-lg shadow-boost-purple/20 hover:bg-boost-purple-dark",
@@ -315,6 +363,14 @@ export default function RoadmapSection({
     year: "numeric",
   });
 
+  /* F7 — complexity stretch signal. The 12-week template is indicative;
+   * real delivery scales with markets + integrations + resources. We
+   * surface that as a thin fill bar inside each phase header so the
+   * prospect can see which phases stretch for their footprint. */
+  const complexityScore = computeComplexity(guide);
+  const complexityPct = Math.round(complexityScore * 100);
+  const complexityTone = complexityLabel(complexityScore);
+
   /* Build resource context from guide data */
   const resourceHints: string[] = [];
   if (guide?.resources?.supporting_departments?.length) {
@@ -354,23 +410,40 @@ export default function RoadmapSection({
             style={{ gridTemplateColumns: `140px repeat(${TOTAL_WEEKS}, 1fr)` }}
           >
             <div className="bg-boost-surface border-r border-boost-border" />
-            {ROADMAP_PHASES.map((phase) => (
-              <div
-                key={phase.name}
-                className={`
-                  ${PHASE_COLORS[phase.color]} py-2.5 px-3 text-center text-sm font-semibold
-                  border-r border-white/20 last:border-r-0
-                  transition-all duration-700 ease-out
-                  ${visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"}
-                `}
-                style={{
-                  gridColumn: `${phase.startWeek + 1} / ${phase.endWeek + 2}`,
-                  transitionDelay: visible ? "100ms" : "0ms",
-                }}
-              >
-                {phase.name}
-              </div>
-            ))}
+            {ROADMAP_PHASES.map((phase) => {
+              const weight = PHASE_COMPLEXITY_WEIGHT[phase.name] ?? 0.5;
+              const stretchPct = Math.round(complexityScore * weight * 100);
+              return (
+                <div
+                  key={phase.name}
+                  className={`
+                    ${PHASE_COLORS[phase.color]} pt-2.5 pb-1.5 px-3 text-center text-sm font-semibold
+                    border-r border-white/20 last:border-r-0
+                    transition-all duration-700 ease-out
+                    ${visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"}
+                  `}
+                  style={{
+                    gridColumn: `${phase.startWeek + 1} / ${phase.endWeek + 2}`,
+                    transitionDelay: visible ? "100ms" : "0ms",
+                  }}
+                  title={`${phase.name} — scales with your complexity (${stretchPct}%)`}
+                >
+                  <div>{phase.name}</div>
+                  <div
+                    className="mt-1.5 mx-auto h-1 w-[70%] rounded-full bg-white/20 overflow-hidden"
+                    aria-hidden="true"
+                  >
+                    <div
+                      className="h-full rounded-full bg-white/80 transition-all duration-1000 ease-out"
+                      style={{
+                        width: visible ? `${Math.max(6, stretchPct)}%` : "0%",
+                        transitionDelay: visible ? "600ms" : "0ms",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Month labels */}
@@ -511,13 +584,27 @@ export default function RoadmapSection({
         <div className="flex rounded-xl overflow-hidden">
           {ROADMAP_PHASES.map((phase) => {
             const span = phase.endWeek - phase.startWeek + 1;
+            const weight = PHASE_COMPLEXITY_WEIGHT[phase.name] ?? 0.5;
+            const stretchPct = Math.round(complexityScore * weight * 100);
             return (
               <div
                 key={phase.name}
-                className={`${PHASE_COLORS[phase.color]} py-2 px-2 text-center text-[11px] font-semibold`}
+                className={`${PHASE_COLORS[phase.color]} pt-2 pb-1.5 px-2 text-center text-[11px] font-semibold`}
                 style={{ flex: span }}
               >
-                {phase.name}
+                <div>{phase.name}</div>
+                <div
+                  className="mt-1 mx-auto h-0.5 w-[70%] rounded-full bg-white/20 overflow-hidden"
+                  aria-hidden="true"
+                >
+                  <div
+                    className="h-full rounded-full bg-white/80 transition-all duration-1000 ease-out"
+                    style={{
+                      width: visible ? `${Math.max(6, stretchPct)}%` : "0%",
+                      transitionDelay: visible ? "500ms" : "0ms",
+                    }}
+                  />
+                </div>
               </div>
             );
           })}
@@ -553,6 +640,19 @@ export default function RoadmapSection({
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded bg-boost-green/90" />
           Workstream
+        </div>
+        <span className="text-boost-border">|</span>
+        <div className="flex items-center gap-1.5">
+          <span className="inline-flex items-center gap-1 rounded-full bg-boost-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-dark">
+            <span className="relative inline-block h-1 w-6 rounded-full bg-boost-border/50 overflow-hidden">
+              <span
+                className="absolute inset-y-0 left-0 rounded-full bg-boost-purple transition-all duration-1000 ease-out"
+                style={{ width: visible ? `${Math.max(8, complexityPct)}%` : "0%" }}
+              />
+            </span>
+            {complexityTone}
+          </span>
+          <span>— phase bars stretch with markets + integrations</span>
         </div>
         <span className="text-boost-border">|</span>
         <span>Click any item for details · Timeline adapts to your projected start date</span>
