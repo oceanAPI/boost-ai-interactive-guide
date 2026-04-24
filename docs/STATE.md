@@ -64,9 +64,9 @@ Working tree:
 
 <!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
 ## Auto-snapshot
-Last updated: 2026-04-24T11:33:01+02:00
+Last updated: 2026-04-24T12:58:39+02:00
 Branch: main
-Last commit: 8b587a4 fix(security): input guardrails are AI too; rewrite flow copy (F2)
+Last commit: b509141 feat(admin): global currency picker in the audience banner (Sprint B · 1/4)
 Working tree:
 ```
  M docs/STATE.md

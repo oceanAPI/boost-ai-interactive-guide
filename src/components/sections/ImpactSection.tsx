@@ -431,7 +431,7 @@ export default function ImpactSection({ guide, sectionNumber }: { guide: GuideDa
     },
     commercial: {
       headline: `Path to ${fmt(roi.annualSavings)} in annual savings`,
-      sub: `Based on ${vol.toLocaleString()} monthly conversations at ${guide.conversation_cost || "$8"} per conversation.`,
+      sub: `Based on ${vol.toLocaleString()} monthly conversations at ${fmt(costNum || 8)} per conversation.`,
     },
   };
 

@@ -310,7 +310,7 @@ export default function CommercialOfferSection({ guide, sectionNumber }: { guide
             </div>
             <p className="text-[11px] text-boost-muted mt-4">
               Based on {(totalVolume || 10000).toLocaleString()} monthly conversations at{" "}
-              {guide.conversation_cost || "$8"} per conversation. See the full interactive calculator for detailed modelling.
+              {formatCurrency(costNum || 8)} per conversation. See the full interactive calculator for detailed modelling.
             </p>
           </div>
         )}
