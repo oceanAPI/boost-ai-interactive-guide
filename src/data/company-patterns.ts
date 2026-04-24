@@ -10,6 +10,7 @@
  * ───────────────────────────────────────────── */
 
 import type { GuideFormData } from "@/lib/types";
+import { EXTENSION_COMPANY_PATTERNS } from "./extensions/patterns";
 
 export interface CompanyPattern {
   /** Unique stable key */
@@ -1259,6 +1260,14 @@ export const COMPANY_PATTERNS: CompanyPattern[] = [
       specific_requirements: "Nordic media + learning group. Subscription support, publication access, and learning-platform customer service.",
     },
   },
+  // ─── Extensions ──────────────────────────────────
+  //
+  //  Net-new patterns authored under `src/data/extensions/patterns/`.
+  //  Spread-appended here so searchCompanies() + detectFromCurated()
+  //  find them alongside the in-file curated entries above. Keeping
+  //  the extension list in its own directory makes cherry-picking
+  //  new additions (from unmatched search-log queries) trivial.
+  ...EXTENSION_COMPANY_PATTERNS,
 ];
 
 // ─── Helpers ─────────────────────────────────────
