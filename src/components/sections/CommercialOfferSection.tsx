@@ -44,11 +44,11 @@ const MODELS: ModelDetail[] = [
   {
     key: "usage",
     name: "Pay by Usage",
-    tagline: "Scale up, scale down — pay for what you use",
+    tagline: "Scale up, scale down — commit for a discount",
     description:
-      "Per-conversation pricing with no minimum commitment. Costs track actual usage month-to-month. Ideal for organisations with seasonal volume swings or those starting with a focused pilot before scaling.",
-    priceLabel: "Per conversation",
-    bestFor: "Variable volumes or pilot deployments",
+      "Per-conversation pricing that tracks actual month-to-month usage. Commit to a monthly baseline and unlock up to 10%+ off your per-conversation rate; anything above the baseline is charged at the standard rate. Best for organisations that want flexibility and reward for planning ahead.",
+    priceLabel: "Per conversation · commit for discount",
+    bestFor: "Variable volumes that can commit to a baseline",
   },
   {
     key: "outcome",
