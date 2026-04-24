@@ -709,6 +709,297 @@ function buildSyntheticExchanges(messages: ChatMessage[]): Exchange[] {
   return groupExchanges(turns);
 }
 
+/** One insight to render in the journey-reveal list. Tight data,
+ *  colour-tagged, rendered as a puzzle-piece tile. */
+type PieceColor =
+  | "neutral"
+  | "green"
+  | "purple"
+  | "orange"
+  | "gold"
+  | "dark";
+
+interface InsightPiece {
+  id: string;
+  text: string;
+  subtitle?: string;
+  color: PieceColor;
+}
+
+function pieceTone(color: PieceColor): {
+  container: string;
+  icon: string;
+  text: string;
+  subtitle: string;
+} {
+  switch (color) {
+    case "green":
+      return {
+        container: "bg-boost-green/8 border-boost-green/25",
+        icon: "text-boost-green",
+        text: "text-boost-dark",
+        subtitle: "text-boost-muted",
+      };
+    case "purple":
+      return {
+        container: "bg-boost-purple/8 border-boost-purple/25",
+        icon: "text-boost-purple",
+        text: "text-boost-dark",
+        subtitle: "text-boost-muted",
+      };
+    case "orange":
+      return {
+        container: "bg-boost-orange/8 border-boost-orange/25",
+        icon: "text-boost-orange",
+        text: "text-boost-dark",
+        subtitle: "text-boost-muted",
+      };
+    case "gold":
+      return {
+        container: "bg-boost-gold/10 border-boost-gold/30",
+        icon: "text-boost-gold",
+        text: "text-boost-dark",
+        subtitle: "text-boost-muted",
+      };
+    case "dark":
+      return {
+        container: "bg-boost-dark border-boost-dark/40",
+        icon: "text-boost-green-light",
+        text: "text-white",
+        subtitle: "text-white/60",
+      };
+    default:
+      return {
+        container: "bg-boost-surface border-boost-border",
+        icon: "text-boost-muted",
+        text: "text-boost-dark",
+        subtitle: "text-boost-muted",
+      };
+  }
+}
+
+/** Compose the ordered list of puzzle pieces for the journey reveal.
+ *  Order: aggregate stats first (hero-adjacent), then per-turn
+ *  events in chronological order (welcome / per-exchange), then the
+ *  session verdict if the auto-review has run. */
+function buildInsightPieces(trace: ExportTraceSuccess): InsightPiece[] {
+  const exchanges = groupExchanges(trace.turns);
+  const pieces: InsightPiece[] = [];
+
+  // ── AGGREGATES ───────────────────────────────────────────
+  let handovers = 0;
+  let goalEventCount = 0;
+  const latencies: number[] = [];
+  const languages = new Set<string>();
+
+  for (let i = 0; i < trace.turns.length; i++) {
+    const t = trace.turns[i];
+    if (t.is_human_chat_queue || t.is_human_chat) handovers += 1;
+    if (Array.isArray(t.goals)) goalEventCount += t.goals.length;
+    if (t.language) languages.add(t.language);
+    if (t.role === "user") {
+      const next = trace.turns[i + 1];
+      if (next && next.role !== "user") {
+        const ms = thinkTimeMs(t.created, next.created);
+        if (ms != null) latencies.push(ms);
+      }
+    }
+  }
+
+  pieces.push({
+    id: "agg-moments",
+    text: `${exchanges.length} moment${exchanges.length === 1 ? "" : "s"} in the conversation`,
+    color: "neutral",
+  });
+
+  if (latencies.length > 0) {
+    const avg = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+    pieces.push({
+      id: "agg-latency",
+      text: `Avg response ${formatLatency(Math.round(avg))}`,
+      color: "neutral",
+    });
+  }
+
+  pieces.push({
+    id: "agg-handover",
+    text:
+      handovers === 0
+        ? "No human handover"
+        : `${handovers} human handover${handovers === 1 ? "" : "s"}`,
+    color: handovers === 0 ? "green" : "dark",
+  });
+
+  if (languages.size > 1) {
+    pieces.push({
+      id: "agg-languages",
+      text: `${languages.size} languages detected`,
+      subtitle: Array.from(languages).sort().join(" · "),
+      color: "neutral",
+    });
+  }
+
+  if (goalEventCount > 0) {
+    pieces.push({
+      id: "agg-goals",
+      text: `${goalEventCount} goal event${goalEventCount === 1 ? "" : "s"}`,
+      color: "green",
+    });
+  }
+
+  // ── PER-EXCHANGE EVENTS ──────────────────────────────────
+  for (const exchange of exchanges) {
+    const primary = exchange.botTurns[0] ?? null;
+    if (exchange.kind === "welcome") {
+      pieces.push({
+        id: `ex-${exchange.index}-welcome`,
+        text: "Welcome greeting pre-fixed",
+        color: "gold",
+      });
+      continue;
+    }
+    if (!primary) continue;
+
+    const templateId = primary.intent_action_meta_id ?? null;
+    const filter = primary.matched_filter?.title ?? null;
+    const intent = exchange.userTurn?.predicted_intent?.title ?? null;
+
+    if (
+      primary.is_human_chat ||
+      primary.is_human_chat_queue ||
+      primary.transfer_to_human
+    ) {
+      const team = primary.skill?.title ?? null;
+      const agent = primary.human_agent?.title ?? null;
+      pieces.push({
+        id: `ex-${exchange.index}-human`,
+        text: team ? `Passed to ${team} team` : "Passed to human agent",
+        subtitle: agent ?? undefined,
+        color: "dark",
+      });
+      continue;
+    }
+
+    switch (primary.action_type) {
+      case "generative":
+      case "llm":
+        pieces.push({
+          id: `ex-${exchange.index}-gen`,
+          text: intent
+            ? `Generative response · ${intent}`
+            : "Generative response composed",
+          subtitle: [
+            templateId ? `Template ${templateId}` : null,
+            filter ? `Filter ${filter}` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || undefined,
+          color: "purple",
+        });
+        break;
+      case "content":
+        pieces.push({
+          id: `ex-${exchange.index}-content`,
+          text: intent
+            ? `Pre-defined response · ${intent}`
+            : templateId
+              ? `Pre-defined response · id ${templateId}`
+              : "Pre-defined response served",
+          subtitle: filter ? `Filter ${filter}` : undefined,
+          color: "green",
+        });
+        break;
+      case "api_connector":
+      case "legacy_api":
+        pieces.push({
+          id: `ex-${exchange.index}-api`,
+          text: "Triggered integration",
+          subtitle: "Live data pulled from a connected system",
+          color: "orange",
+        });
+        break;
+      case "orchestrator":
+        pieces.push({
+          id: `ex-${exchange.index}-orch`,
+          text: primary.skill?.title
+            ? `Orchestrator · routed to ${primary.skill.title}`
+            : "Orchestrator · routed to a specialist",
+          subtitle:
+            "Routed the conversation to the right specialist agent across the VA network",
+          color: "purple",
+        });
+        break;
+      case "entity_extraction":
+        pieces.push({
+          id: `ex-${exchange.index}-entity`,
+          text: "Captured a detail",
+          subtitle: "Saved context for the next turn",
+          color: "gold",
+        });
+        break;
+      default:
+        if (primary.action_type) {
+          pieces.push({
+            id: `ex-${exchange.index}-other`,
+            text: `Action · ${primary.action_type}`,
+            color: "neutral",
+          });
+        }
+    }
+  }
+
+  // ── VERDICT ──────────────────────────────────────────────
+  const category = trace.session.category?.automatic ?? null;
+  if (category) {
+    pieces.push({
+      id: "verdict",
+      text: `Verdict · ${formatCategory(category)}`,
+      subtitle: "Auto-classified by the platform",
+      color: "green",
+    });
+  }
+
+  return pieces;
+}
+
+/** Small jigsaw-piece icon — the puzzle metaphor user asked for. */
+function PuzzlePieceIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+      <path
+        d="M5 2.5h2.2c.5 0 .8.4.8.8v.5c0 .7.6 1.2 1.2 1.2s1.2-.5 1.2-1.2V3.3c0-.4.4-.8.8-.8h2c.5 0 .8.4.8.8V5c0 .4.4.7.8.7s.7-.3.7-.7v-.3c.5 0 .8.3.8.8v0c0 .4-.3.7-.8.7v-.3c-.4 0-.7.3-.7.7s.3.8.7.8h.3c.5 0 .8.3.8.8V11c0 .4-.3.8-.8.8h-1.8c-.4 0-.8.3-.8.8v2c0 .4-.3.8-.8.8H9.5c-.5 0-.8-.4-.8-.8v-.5c0-.7-.6-1.2-1.2-1.2s-1.2.5-1.2 1.2v.5c0 .4-.4.8-.8.8H3.3c-.5 0-.8-.4-.8-.8V11c0-.4-.4-.8-.8-.8H1.3c-.5 0-.8-.3-.8-.8V7.3c0-.5.3-.8.8-.8h.5c.5 0 .8-.4.8-.8V3.3c0-.5.3-.8.8-.8H5z"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+        fill="currentColor"
+        fillOpacity="0.12"
+      />
+    </svg>
+  );
+}
+
+/** Single puzzle-piece tile — one insight, colour-tagged. */
+function PuzzleTile({ piece }: { piece: InsightPiece }) {
+  const t = pieceTone(piece.color);
+  return (
+    <div
+      className={`flex items-center gap-3 rounded-lg border ${t.container} px-3 py-2.5`}
+    >
+      <PuzzlePieceIcon className={`w-4 h-4 flex-shrink-0 ${t.icon}`} />
+      <div className="min-w-0 flex-1">
+        <p className={`text-[12px] font-semibold leading-tight ${t.text}`}>
+          {piece.text}
+        </p>
+        {piece.subtitle && (
+          <p className={`text-[10.5px] leading-snug mt-0.5 ${t.subtitle}`}>
+            {piece.subtitle}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function RoutingBlock({
   trace,
   analyzePhase,
@@ -723,23 +1014,22 @@ function RoutingBlock({
   const loading = analyzePhase.kind === "loading";
   const error = analyzePhase.kind === "error" ? analyzePhase.message : null;
 
-  const exchanges = useMemo(() => groupExchanges(trace.turns), [trace.turns]);
+  const pieces = useMemo(() => buildInsightPieces(trace), [trace]);
 
   return (
     <section
-      aria-label="Conversation timeline"
+      aria-label="Analyze journey"
       data-testid="data-funnel-routing"
       className="space-y-2"
     >
-      {/* Subtle refresh control — floats top-right of the card stack,
-          no section title or restating the stats the Hero already owns. */}
+      {/* Subtle refresh control */}
       <div className="flex items-center justify-end gap-2">
         <button
           type="button"
           onClick={onAnalyze}
           disabled={loading}
           data-testid="data-funnel-refresh-btn"
-          className="relative inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold text-boost-muted hover:text-boost-purple transition-colors disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold text-boost-muted hover:text-boost-purple transition-colors disabled:cursor-not-allowed"
           title={
             newTurnsSinceAnalysis > 0
               ? `${newTurnsSinceAnalysis} new turn${newTurnsSinceAnalysis === 1 ? "" : "s"} since last analysis`
@@ -765,15 +1055,18 @@ function RoutingBlock({
         <p className="text-[10px] text-boost-orange leading-relaxed">{error}</p>
       )}
 
-      {/* Exchange cards */}
-      <ol className="space-y-2">
-        {exchanges.map((ex) => (
-          <li key={`${ex.kind}-${ex.index}-${ex.userTurn?.id ?? ex.botTurns[0]?.id ?? ex.index}`}>
-            <ExchangeCard
-              exchange={ex}
-              tenant={trace.tenant}
-              conversationId={trace.conversation.id ?? null}
-            />
+      {/* Journey reveal — puzzle pieces fade in one at a time */}
+      <ol className="space-y-1.5">
+        {pieces.map((piece, i) => (
+          <li
+            key={piece.id}
+            className="animate-modal-in"
+            style={{
+              animationDelay: `${Math.min(i * 140, 1800)}ms`,
+              animationFillMode: "both",
+            }}
+          >
+            <PuzzleTile piece={piece} />
           </li>
         ))}
       </ol>
