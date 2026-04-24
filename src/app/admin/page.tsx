@@ -1117,7 +1117,7 @@ export default function AdminPage() {
         >
           <AdminPrompt
             question="How much do they handle each month?"
-            helper="Monthly conversation volume per channel. Anchors the ROI calculator."
+            helper="Total monthly conversation volume per channel — all markets combined. Anchors the ROI calculator."
           />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {([
