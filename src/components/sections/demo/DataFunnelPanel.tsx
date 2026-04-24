@@ -248,15 +248,9 @@ export default function DataFunnelPanel({
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
-        {/* Hero — one-sentence session summary. Silent until the
-            Export trace lands; otherwise draws the CE audience to
-            the headline signals the rest of the panel unpacks. */}
-        {exportTrace && (
-          <HeroSummary
-            trace={exportTrace}
-            exchangeCount={groupExchanges(exportTrace.turns).length}
-          />
-        )}
+        {/* Hero verdict card removed — the journey-reveal list below
+            tells the story piece by piece without needing a headline
+            summary on top. */}
 
         {/* Session context — personalisation signals (filters, sent
             profile, goals, verdict). Silent when nothing to say. */}
@@ -709,84 +703,63 @@ function buildSyntheticExchanges(messages: ChatMessage[]): Exchange[] {
   return groupExchanges(turns);
 }
 
-/** One insight to render in the journey-reveal list. Tight data,
- *  colour-tagged, rendered as a puzzle-piece tile. */
-type PieceColor =
-  | "neutral"
-  | "green"
-  | "purple"
-  | "orange"
-  | "gold"
-  | "dark";
+/** One insight to render in the journey-reveal list. */
+type PieceIconKind =
+  | "moments"      // conversation count
+  | "clock"        // latency
+  | "check"        // affirmative (no handover)
+  | "arrow-branch" // handover / branching
+  | "globe"        // languages
+  | "flag"         // goal
+  | "welcome"      // welcome trigger — sun/greeting
+  | "brain"        // generative / LLM
+  | "document"     // pre-defined / curated
+  | "plug"         // api integration
+  | "network"      // orchestrator
+  | "target"       // entity extraction
+  | "shield";      // verdict / classification
+
+type PieceColor = "neutral" | "green" | "purple" | "orange" | "gold" | "dark";
 
 interface InsightPiece {
   id: string;
+  icon: PieceIconKind;
   text: string;
   subtitle?: string;
   color: PieceColor;
+  /** Raw underlying data — revealed when the user clicks the piece. */
+  raw: unknown;
 }
 
-function pieceTone(color: PieceColor): {
-  container: string;
-  icon: string;
-  text: string;
-  subtitle: string;
-} {
+/** Just the icon colour class per bucket. Container has no fill / no
+ *  border in the new design — the brand-purple divider between
+ *  pieces is what connects them visually. */
+function iconColorClass(color: PieceColor): string {
   switch (color) {
     case "green":
-      return {
-        container: "bg-boost-green/8 border-boost-green/25",
-        icon: "text-boost-green",
-        text: "text-boost-dark",
-        subtitle: "text-boost-muted",
-      };
+      return "text-boost-green";
     case "purple":
-      return {
-        container: "bg-boost-purple/8 border-boost-purple/25",
-        icon: "text-boost-purple",
-        text: "text-boost-dark",
-        subtitle: "text-boost-muted",
-      };
+      return "text-boost-purple";
     case "orange":
-      return {
-        container: "bg-boost-orange/8 border-boost-orange/25",
-        icon: "text-boost-orange",
-        text: "text-boost-dark",
-        subtitle: "text-boost-muted",
-      };
+      return "text-boost-orange";
     case "gold":
-      return {
-        container: "bg-boost-gold/10 border-boost-gold/30",
-        icon: "text-boost-gold",
-        text: "text-boost-dark",
-        subtitle: "text-boost-muted",
-      };
+      return "text-boost-gold";
     case "dark":
-      return {
-        container: "bg-boost-dark border-boost-dark/40",
-        icon: "text-boost-green-light",
-        text: "text-white",
-        subtitle: "text-white/60",
-      };
+      return "text-boost-dark";
     default:
-      return {
-        container: "bg-boost-surface border-boost-border",
-        icon: "text-boost-muted",
-        text: "text-boost-dark",
-        subtitle: "text-boost-muted",
-      };
+      return "text-boost-muted";
   }
 }
 
 /** Compose the ordered list of puzzle pieces for the journey reveal.
- *  Order: aggregate stats first (hero-adjacent), then per-turn
- *  events in chronological order (welcome / per-exchange), then the
- *  session verdict if the auto-review has run. */
+ *  Order: aggregate stats first, then per-turn events in chronological
+ *  order (welcome / per-exchange), then the session verdict. Each
+ *  piece carries a `raw` payload so the click-to-reveal drawer has
+ *  something underlying to show. */
 function buildInsightPieces(trace: ExportTraceSuccess): InsightPiece[] {
   const exchanges = groupExchanges(trace.turns);
   const pieces: InsightPiece[] = [];
 
-  // ── AGGREGATES ───────────────────────────────────────────
   let handovers = 0;
   let goalEventCount = 0;
   const latencies: number[] = [];
@@ -808,53 +781,84 @@ function buildInsightPieces(trace: ExportTraceSuccess): InsightPiece[] {
 
   pieces.push({
     id: "agg-moments",
+    icon: "moments",
     text: `${exchanges.length} moment${exchanges.length === 1 ? "" : "s"} in the conversation`,
     color: "neutral",
+    raw: {
+      exchange_count: exchanges.length,
+      session_id: trace.session.id,
+      duration: trace.session.duration,
+    },
   });
 
   if (latencies.length > 0) {
     const avg = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+    const min = Math.min(...latencies);
+    const max = Math.max(...latencies);
     pieces.push({
       id: "agg-latency",
+      icon: "clock",
       text: `Avg response ${formatLatency(Math.round(avg))}`,
       color: "neutral",
+      raw: {
+        avg_ms: Math.round(avg),
+        min_ms: min,
+        max_ms: max,
+        samples: latencies,
+      },
     });
   }
 
   pieces.push({
     id: "agg-handover",
+    icon: handovers === 0 ? "check" : "arrow-branch",
     text:
       handovers === 0
         ? "No human handover"
         : `${handovers} human handover${handovers === 1 ? "" : "s"}`,
     color: handovers === 0 ? "green" : "dark",
+    raw: {
+      handover_count: handovers,
+      handover_turns: trace.turns.filter(
+        (t) => t.is_human_chat || t.is_human_chat_queue || t.transfer_to_human,
+      ),
+    },
   });
 
   if (languages.size > 1) {
     pieces.push({
       id: "agg-languages",
+      icon: "globe",
       text: `${languages.size} languages detected`,
       subtitle: Array.from(languages).sort().join(" · "),
       color: "neutral",
+      raw: { languages: Array.from(languages).sort() },
     });
   }
 
   if (goalEventCount > 0) {
+    const goals = trace.turns.flatMap((t) => t.goals ?? []);
     pieces.push({
       id: "agg-goals",
+      icon: "flag",
       text: `${goalEventCount} goal event${goalEventCount === 1 ? "" : "s"}`,
       color: "green",
+      raw: { goals },
     });
   }
 
-  // ── PER-EXCHANGE EVENTS ──────────────────────────────────
   for (const exchange of exchanges) {
     const primary = exchange.botTurns[0] ?? null;
     if (exchange.kind === "welcome") {
       pieces.push({
         id: `ex-${exchange.index}-welcome`,
+        icon: "welcome",
         text: "Welcome greeting pre-fixed",
         color: "gold",
+        raw: {
+          bot_turns: exchange.botTurns,
+          system_action_trigger: primary?.system_action_trigger ?? null,
+        },
       });
       continue;
     }
@@ -863,6 +867,10 @@ function buildInsightPieces(trace: ExportTraceSuccess): InsightPiece[] {
     const templateId = primary.intent_action_meta_id ?? null;
     const filter = primary.matched_filter?.title ?? null;
     const intent = exchange.userTurn?.predicted_intent?.title ?? null;
+    const rawForExchange = {
+      user_turn: exchange.userTurn,
+      bot_turns: exchange.botTurns,
+    };
 
     if (
       primary.is_human_chat ||
@@ -873,9 +881,11 @@ function buildInsightPieces(trace: ExportTraceSuccess): InsightPiece[] {
       const agent = primary.human_agent?.title ?? null;
       pieces.push({
         id: `ex-${exchange.index}-human`,
+        icon: "arrow-branch",
         text: team ? `Passed to ${team} team` : "Passed to human agent",
         subtitle: agent ?? undefined,
         color: "dark",
+        raw: rawForExchange,
       });
       continue;
     }
@@ -885,21 +895,25 @@ function buildInsightPieces(trace: ExportTraceSuccess): InsightPiece[] {
       case "llm":
         pieces.push({
           id: `ex-${exchange.index}-gen`,
+          icon: "brain",
           text: intent
             ? `Generative response · ${intent}`
             : "Generative response composed",
-          subtitle: [
-            templateId ? `Template ${templateId}` : null,
-            filter ? `Filter ${filter}` : null,
-          ]
-            .filter(Boolean)
-            .join(" · ") || undefined,
+          subtitle:
+            [
+              templateId ? `Template ${templateId}` : null,
+              filter ? `Filter ${filter}` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ") || undefined,
           color: "purple",
+          raw: rawForExchange,
         });
         break;
       case "content":
         pieces.push({
           id: `ex-${exchange.index}-content`,
+          icon: "document",
           text: intent
             ? `Pre-defined response · ${intent}`
             : templateId
@@ -907,96 +921,265 @@ function buildInsightPieces(trace: ExportTraceSuccess): InsightPiece[] {
               : "Pre-defined response served",
           subtitle: filter ? `Filter ${filter}` : undefined,
           color: "green",
+          raw: rawForExchange,
         });
         break;
       case "api_connector":
       case "legacy_api":
         pieces.push({
           id: `ex-${exchange.index}-api`,
+          icon: "plug",
           text: "Triggered integration",
           subtitle: "Live data pulled from a connected system",
           color: "orange",
+          raw: rawForExchange,
         });
         break;
       case "orchestrator":
         pieces.push({
           id: `ex-${exchange.index}-orch`,
+          icon: "network",
           text: primary.skill?.title
             ? `Orchestrator · routed to ${primary.skill.title}`
             : "Orchestrator · routed to a specialist",
           subtitle:
             "Routed the conversation to the right specialist agent across the VA network",
           color: "purple",
+          raw: rawForExchange,
         });
         break;
       case "entity_extraction":
         pieces.push({
           id: `ex-${exchange.index}-entity`,
+          icon: "target",
           text: "Captured a detail",
           subtitle: "Saved context for the next turn",
           color: "gold",
+          raw: rawForExchange,
         });
         break;
       default:
         if (primary.action_type) {
           pieces.push({
             id: `ex-${exchange.index}-other`,
+            icon: "document",
             text: `Action · ${primary.action_type}`,
             color: "neutral",
+            raw: rawForExchange,
           });
         }
     }
   }
 
-  // ── VERDICT ──────────────────────────────────────────────
   const category = trace.session.category?.automatic ?? null;
   if (category) {
     pieces.push({
       id: "verdict",
+      icon: "shield",
       text: `Verdict · ${formatCategory(category)}`,
       subtitle: "Auto-classified by the platform",
       color: "green",
+      raw: { category: trace.session.category, reviewed: trace.session.reviewed },
     });
   }
 
   return pieces;
 }
 
-/** Small jigsaw-piece icon — the puzzle metaphor user asked for. */
-function PuzzlePieceIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
-      <path
-        d="M5 2.5h2.2c.5 0 .8.4.8.8v.5c0 .7.6 1.2 1.2 1.2s1.2-.5 1.2-1.2V3.3c0-.4.4-.8.8-.8h2c.5 0 .8.4.8.8V5c0 .4.4.7.8.7s.7-.3.7-.7v-.3c.5 0 .8.3.8.8v0c0 .4-.3.7-.8.7v-.3c-.4 0-.7.3-.7.7s.3.8.7.8h.3c.5 0 .8.3.8.8V11c0 .4-.3.8-.8.8h-1.8c-.4 0-.8.3-.8.8v2c0 .4-.3.8-.8.8H9.5c-.5 0-.8-.4-.8-.8v-.5c0-.7-.6-1.2-1.2-1.2s-1.2.5-1.2 1.2v.5c0 .4-.4.8-.8.8H3.3c-.5 0-.8-.4-.8-.8V11c0-.4-.4-.8-.8-.8H1.3c-.5 0-.8-.3-.8-.8V7.3c0-.5.3-.8.8-.8h.5c.5 0 .8-.4.8-.8V3.3c0-.5.3-.8.8-.8H5z"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-        fill="currentColor"
-        fillOpacity="0.12"
-      />
-    </svg>
-  );
+/** Icon registry — one SVG per piece kind. Keeps the per-piece
+ *  visual distinct without any box/chrome around the tile. */
+function PieceIcon({
+  kind,
+  className,
+}: {
+  kind: PieceIconKind;
+  className?: string;
+}) {
+  const commonStroke = {
+    stroke: "currentColor",
+    strokeWidth: 1.4,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    fill: "none",
+  };
+  switch (kind) {
+    case "moments":
+      return (
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+          <circle cx="4" cy="8" r="1.3" fill="currentColor" />
+          <circle cx="8" cy="8" r="1.3" fill="currentColor" />
+          <circle cx="12" cy="8" r="1.3" fill="currentColor" />
+        </svg>
+      );
+    case "clock":
+      return (
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+          <circle cx="8" cy="8" r="6" {...commonStroke} />
+          <path d="M8 4.5V8l2.5 1.5" {...commonStroke} />
+        </svg>
+      );
+    case "check":
+      return (
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+          <path d="M3 8.5l3 3 7-7" {...commonStroke} />
+        </svg>
+      );
+    case "arrow-branch":
+      return (
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+          <path
+            d="M4 3v10M4 3l-2 2M4 3l2 2M4 8c0 2 2 3 4 3h3m0 0-2-2m2 2-2 2"
+            {...commonStroke}
+          />
+        </svg>
+      );
+    case "globe":
+      return (
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+          <circle cx="8" cy="8" r="6" {...commonStroke} />
+          <path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12" {...commonStroke} />
+        </svg>
+      );
+    case "flag":
+      return (
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+          <path d="M3 14V3l8 1.5v6L3 9" {...commonStroke} />
+        </svg>
+      );
+    case "welcome":
+      return (
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+          <circle cx="8" cy="8" r="2.5" {...commonStroke} />
+          <path
+            d="M8 1v2M8 13v2M1 8h2M13 8h2M3.2 3.2l1.4 1.4M11.4 11.4l1.4 1.4M3.2 12.8l1.4-1.4M11.4 4.6l1.4-1.4"
+            {...commonStroke}
+          />
+        </svg>
+      );
+    case "brain":
+      return (
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+          <path
+            d="M6 2.5A2 2 0 0 0 4 4.5 2 2 0 0 0 3 7c0 1 .5 2 1.5 2.5V11a2 2 0 0 0 2 2h1v-9A1.5 1.5 0 0 0 6 2.5zM10 2.5A1.5 1.5 0 0 1 11.5 4v9h1a2 2 0 0 0 2-2V9.5C13.5 9 13 8 13 7a2 2 0 0 0-1-2.5 2 2 0 0 0-2-2z"
+            {...commonStroke}
+            fill="currentColor"
+            fillOpacity="0.12"
+          />
+        </svg>
+      );
+    case "document":
+      return (
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+          <path
+            d="M4 2h5l3 3v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"
+            {...commonStroke}
+            fill="currentColor"
+            fillOpacity="0.08"
+          />
+          <path d="M5 7h6M5 9.5h6M5 12h4" {...commonStroke} />
+        </svg>
+      );
+    case "plug":
+      return (
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+          <path
+            d="M6 2v2m4-2v2M5 4h6v3a3 3 0 0 1-6 0V4zM8 10v4"
+            {...commonStroke}
+          />
+        </svg>
+      );
+    case "network":
+      return (
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+          <circle cx="8" cy="8" r="2" {...commonStroke} />
+          <circle cx="8" cy="2" r="1.2" {...commonStroke} />
+          <circle cx="8" cy="14" r="1.2" {...commonStroke} />
+          <circle cx="2" cy="8" r="1.2" {...commonStroke} />
+          <circle cx="14" cy="8" r="1.2" {...commonStroke} />
+          <path
+            d="M8 3.2v2.8m0 4v2.8m-5.8-5H6m4 0h3.8"
+            {...commonStroke}
+            opacity="0.6"
+          />
+        </svg>
+      );
+    case "target":
+      return (
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+          <circle cx="8" cy="8" r="6" {...commonStroke} />
+          <circle cx="8" cy="8" r="3" {...commonStroke} />
+          <circle cx="8" cy="8" r="1" fill="currentColor" />
+        </svg>
+      );
+    case "shield":
+      return (
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+          <path
+            d="M8 1.5 2.5 3.5V8c0 3 2.5 5.5 5.5 6.5 3-1 5.5-3.5 5.5-6.5V3.5L8 1.5z"
+            {...commonStroke}
+            fill="currentColor"
+            fillOpacity="0.1"
+          />
+          <path d="m5.5 8 2 2 3.5-3.5" {...commonStroke} />
+        </svg>
+      );
+  }
 }
 
-/** Single puzzle-piece tile — one insight, colour-tagged. */
+/** Clickable journey-piece — icon + text + optional subtitle, no
+ *  box chrome. Rows are separated by the divide-y brand-purple line
+ *  on the parent <ol>. Click toggles a drawer with the piece's raw
+ *  underlying data. */
 function PuzzleTile({ piece }: { piece: InsightPiece }) {
-  const t = pieceTone(piece.color);
+  const [open, setOpen] = useState(false);
+  const iconClass = iconColorClass(piece.color);
   return (
-    <div
-      className={`flex items-center gap-3 rounded-lg border ${t.container} px-3 py-2.5`}
-    >
-      <PuzzlePieceIcon className={`w-4 h-4 flex-shrink-0 ${t.icon}`} />
-      <div className="min-w-0 flex-1">
-        <p className={`text-[12px] font-semibold leading-tight ${t.text}`}>
-          {piece.text}
-        </p>
-        {piece.subtitle && (
-          <p className={`text-[10.5px] leading-snug mt-0.5 ${t.subtitle}`}>
-            {piece.subtitle}
-          </p>
-        )}
-      </div>
-    </div>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full flex items-start gap-3 py-3 text-left hover:bg-boost-purple/[0.02] transition-colors"
+      >
+        <span
+          className={`flex-shrink-0 w-5 h-5 flex items-center justify-center mt-0.5 ${iconClass}`}
+        >
+          <PieceIcon kind={piece.icon} className="w-4 h-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[12.5px] font-semibold leading-snug text-boost-dark">
+            {piece.text}
+          </span>
+          {piece.subtitle && (
+            <span className="block text-[11px] text-boost-muted leading-snug mt-0.5">
+              {piece.subtitle}
+            </span>
+          )}
+        </span>
+        <span
+          aria-hidden
+          className={`flex-shrink-0 text-boost-muted/60 mt-1 transition-transform duration-200 ${open ? "rotate-90" : ""}`}
+        >
+          <svg viewBox="0 0 16 16" fill="none" className="w-3 h-3">
+            <path
+              d="m6 4 4 4-4 4"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+      </button>
+      {open && (
+        <pre
+          tabIndex={0}
+          className="mb-2 p-3 rounded-lg bg-boost-surface font-mono text-[10px] text-boost-dark overflow-x-auto leading-snug max-h-64 whitespace-pre-wrap focus:outline-none focus:ring-2 focus:ring-boost-purple/30"
+        >
+          {JSON.stringify(piece.raw, null, 2)}
+        </pre>
+      )}
+    </>
   );
 }
 
@@ -1055,14 +1238,15 @@ function RoutingBlock({
         <p className="text-[10px] text-boost-orange leading-relaxed">{error}</p>
       )}
 
-      {/* Journey reveal — puzzle pieces fade in one at a time */}
-      <ol className="space-y-1.5">
+      {/* Journey reveal — pieces fade in top-to-bottom with a slow
+          stagger, separated by a thin brand-purple divider. */}
+      <ol className="divide-y divide-boost-purple/15 rounded-xl border border-boost-border bg-white px-3">
         {pieces.map((piece, i) => (
           <li
             key={piece.id}
             className="animate-modal-in"
             style={{
-              animationDelay: `${Math.min(i * 140, 1800)}ms`,
+              animationDelay: `${Math.min(i * 350, 4500)}ms`,
               animationFillMode: "both",
             }}
           >
