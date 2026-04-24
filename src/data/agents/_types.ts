@@ -96,14 +96,36 @@ export interface OrchestratorConfig {
 
 // ─── Industries ───
 
+/** Category groupings for the admin Section 2 picker.
+ *  Keeps the industries grouped like the Backend Systems & Integrations
+ *  section groups integration items. Order here drives render order. */
+export const INDUSTRY_CATEGORIES = [
+  { key: "finance",   label: "Finance",       defaultOpen: true },
+  { key: "travel",    label: "Travel",        defaultOpen: false },
+  { key: "logistics", label: "Logistics",     defaultOpen: false },
+  { key: "telecom",   label: "Telecom",       defaultOpen: false },
+  { key: "public",    label: "Public Sector", defaultOpen: false },
+] as const;
+
+export type IndustryCategoryKey = (typeof INDUSTRY_CATEGORIES)[number]["key"];
+
 export const INDUSTRIES = [
-  { key: "insurance", label: "Insurance", description: "Claims, underwriting, policy servicing, and customer retention" },
-  { key: "banking", label: "Banking", description: "Retail banking, commercial banking, digital banking services" },
-  { key: "wealth_management", label: "Wealth Management", description: "Investment advisory, portfolio management, financial planning" },
-  { key: "credit_union", label: "Credit Union", description: "Member services, lending, account management" },
-  { key: "fintech", label: "Fintech", description: "Digital payments, lending platforms, neobanking" },
-  { key: "pension", label: "Pension & Retirement", description: "Pension administration, retirement planning, fund management" },
-  { key: "security", label: "Security", description: "Alarm monitoring, subscription security, service dispatch, emergency response" },
+  // ─── Finance ────────────────────────────────────────────────
+  { key: "insurance",         category: "finance",   label: "Insurance",           description: "Claims, underwriting, policy servicing, and customer retention" },
+  { key: "banking",           category: "finance",   label: "Banking",             description: "Retail banking, commercial banking, digital banking services" },
+  { key: "wealth_management", category: "finance",   label: "Wealth Management",   description: "Investment advisory, portfolio management, financial planning" },
+  { key: "credit_union",      category: "finance",   label: "Credit Union",        description: "Member services, lending, account management" },
+  { key: "fintech",           category: "finance",   label: "Fintech",             description: "Digital payments, lending platforms, neobanking" },
+  { key: "pension",           category: "finance",   label: "Pension & Retirement", description: "Pension administration, retirement planning, fund management" },
+  { key: "security",          category: "finance",   label: "Security",            description: "Alarm monitoring, subscription security, service dispatch, emergency response" },
+  // ─── Travel ─────────────────────────────────────────────────
+  { key: "airline",           category: "travel",    label: "Airline",             description: "Flag carriers, LCCs, disruption-driven volume, loyalty tier service" },
+  // ─── Logistics ──────────────────────────────────────────────
+  { key: "logistics",         category: "logistics", label: "Logistics & Postal",  description: "Parcel, freight, cross-border, postal services, track-and-trace" },
+  // ─── Telecom ────────────────────────────────────────────────
+  { key: "telco",             category: "telecom",   label: "Telecom",             description: "Mobile, broadband, TV, enterprise B2B connectivity" },
+  // ─── Public Sector ──────────────────────────────────────────
+  { key: "public_sector",     category: "public",    label: "Public Sector",       description: "Appeals, benefits, government services, citizen-facing case handling" },
 ] as const;
 
 export type IndustryKey = (typeof INDUSTRIES)[number]["key"];
@@ -268,6 +290,89 @@ export const INDUSTRY_VARIANTS: Record<string, IndustryVariant[]> = {
       key: "security:hybrid",
       label: "Hybrid (B2C + SMB)",
       description: "Operators running both consumer and business subscriptions on one platform (e.g. Sector Alarm)",
+    },
+  ],
+  airline: [
+    {
+      key: "airline:scheduled",
+      label: "Scheduled network",
+      description: "Flag carriers, alliance members — schedule reliability, rebooking, loyalty tiers",
+    },
+    {
+      key: "airline:lcc",
+      label: "Low-cost / Budget",
+      description: "Point-to-point, unbundled fares, ancillary-heavy (Ryanair, Norwegian, easyJet)",
+    },
+    {
+      key: "airline:charter",
+      label: "Charter / Leisure",
+      description: "Tour-operator flights, seasonal routes, packaged travel partners",
+    },
+  ],
+  logistics: [
+    {
+      key: "logistics:parcel",
+      label: "Parcel / Last-mile",
+      description: "B2C parcel delivery — track-and-trace, delivery preferences, returns",
+    },
+    {
+      key: "logistics:cross_border",
+      label: "Cross-border",
+      description: "Customs, duties, international routing, multi-currency invoicing",
+    },
+    {
+      key: "logistics:freight",
+      label: "Freight / B2B",
+      description: "Pallet, LTL, FTL, supply-chain customers, contract shipping",
+    },
+    {
+      key: "logistics:postal",
+      label: "Postal / Universal service",
+      description: "National operator obligations, mail redirection, P.O. boxes",
+    },
+  ],
+  telco: [
+    {
+      key: "telco:mobile",
+      label: "Mobile",
+      description: "Consumer mobile subscriptions, SIM, roaming, handset upgrades",
+    },
+    {
+      key: "telco:broadband",
+      label: "Broadband / Fibre",
+      description: "Fixed-line, FTTH, router provisioning, installation bookings",
+    },
+    {
+      key: "telco:tv",
+      label: "TV / Streaming bundles",
+      description: "Cable, IPTV, streaming add-ons, content subscriptions",
+    },
+    {
+      key: "telco:b2b",
+      label: "Enterprise / B2B",
+      description: "Business connectivity, SD-WAN, hosted voice, contract accounts",
+    },
+  ],
+  public_sector: [
+    {
+      key: "public_sector:benefits",
+      label: "Benefits / Social services",
+      description: "Unemployment, parental, disability, sickness benefit applications",
+    },
+    {
+      key: "public_sector:appeals",
+      label: "Appeals / Tribunals",
+      description: "Appeals handling, case status, decision explanations, legal guidance",
+    },
+    {
+      key: "public_sector:tax",
+      label: "Tax & revenue",
+      description: "Tax-return support, refund status, payment arrangements",
+    },
+    {
+      key: "public_sector:licensing",
+      label: "Licensing & permits",
+      description: "Driver's licences, business permits, civil registrations",
     },
   ],
 };

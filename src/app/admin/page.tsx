@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { assetPath } from "@/lib/asset-path";
 import { INTEGRATION_CATEGORIES } from "@/data/integrations";
-import { INDUSTRIES, HIDDEN_INDUSTRIES, SUPPORTING_DEPARTMENTS, INDUSTRY_VARIANTS } from "@/data/agents";
+import { INDUSTRIES, INDUSTRY_CATEGORIES, HIDDEN_INDUSTRIES, SUPPORTING_DEPARTMENTS, INDUSTRY_VARIANTS } from "@/data/agents";
 import { encodeGuideData, decodeGuideData } from "@/lib/url-encoding";
 import { CURRENCY_OPTIONS } from "@/lib/roi-calculator";
 import { generateSOWPdf } from "@/lib/generate-sow-pdf";
@@ -945,21 +945,70 @@ export default function AdminPage() {
         >
           <AdminPrompt
             question="Which industries does this customer operate in?"
-            helper="Leave empty for a general financial-services guide."
+            helper="Grouped by vertical. Leave empty for a general financial-services guide."
           />
 
-          <AdminChipRow>
-            {INDUSTRIES.filter((ind) => !HIDDEN_INDUSTRIES.has(ind.key)).map((ind) => (
-              <AdminChip
-                key={ind.key}
-                active={form.areas_of_interest.includes(ind.key)}
-                onClick={() => toggleArea(ind.key)}
-                title={ind.description}
-              >
-                {ind.label}
-              </AdminChip>
-            ))}
-          </AdminChipRow>
+          <div className="space-y-1.5">
+            {INDUSTRY_CATEGORIES.map((cat) => {
+              const industriesInCat = INDUSTRIES.filter(
+                (ind) => ind.category === cat.key && !HIDDEN_INDUSTRIES.has(ind.key),
+              );
+              if (industriesInCat.length === 0) return null;
+              const selectedInCat = industriesInCat.filter((ind) =>
+                form.areas_of_interest.includes(ind.key),
+              );
+              const shouldOpen = cat.defaultOpen || selectedInCat.length > 0;
+              return (
+                <details
+                  key={cat.key}
+                  open={shouldOpen}
+                  className="group rounded-lg border border-boost-border/60 bg-boost-surface/20"
+                >
+                  <summary className="flex items-center justify-between gap-2 px-3 py-2.5 cursor-pointer hover:bg-boost-surface/40 rounded-lg transition-colors select-none list-none">
+                    <span className="inline-flex items-center gap-2 min-w-0">
+                      <svg
+                        className="w-3 h-3 text-boost-muted transition-transform group-open:rotate-90 flex-shrink-0"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                      <span className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em] truncate">
+                        {cat.label}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-2 shrink-0">
+                      {selectedInCat.length > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-boost-green uppercase tracking-[0.14em]">
+                          <span className="w-1 h-1 rounded-full bg-boost-green-light" />
+                          {selectedInCat.length} picked
+                        </span>
+                      )}
+                      <span className="text-[10px] text-boost-muted/70 tabular-nums">
+                        {selectedInCat.length}/{industriesInCat.length}
+                      </span>
+                    </span>
+                  </summary>
+                  <div className="px-3 pb-3 pt-1">
+                    <AdminChipRow>
+                      {industriesInCat.map((ind) => (
+                        <AdminChip
+                          key={ind.key}
+                          active={form.areas_of_interest.includes(ind.key)}
+                          onClick={() => toggleArea(ind.key)}
+                          title={ind.description}
+                        >
+                          {ind.label}
+                        </AdminChip>
+                      ))}
+                    </AdminChipRow>
+                  </div>
+                </details>
+              );
+            })}
+          </div>
 
           {/* Variant chips per active industry — secondary tone (purple). */}
           {form.areas_of_interest

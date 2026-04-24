@@ -24,6 +24,12 @@ export interface CompanyPattern {
   country: "SE" | "NO" | "DK" | "FI" | "US" | "UK" | "EU" | "Global";
   /** One-line category for display in search results */
   category: string;
+  /** Optional curated logo URL. When set, takes precedence over
+   *  the Brandfetch domain fallback in <CustomerDossierCard />.
+   *  Leave unset to let Brandfetch resolve from `domain` — that
+   *  works for most Nordic FS brands, so only add this when the
+   *  Brandfetch miss is visually obvious. */
+  logoUrl?: string;
   /** Partial form data — merged on top of the current form when applied */
   prefill: Partial<GuideFormData>;
 }

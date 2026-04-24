@@ -13,12 +13,14 @@ export type {
   TopicGroup,
   OrchestratorConfig,
   IndustryKey,
+  IndustryCategoryKey,
   IndustryVariant,
   AgentTier,
 } from "./_types";
 
 export {
   INDUSTRIES,
+  INDUSTRY_CATEGORIES,
   HIDDEN_INDUSTRIES,
   SUPPORTING_DEPARTMENTS,
   INDUSTRY_VARIANTS,

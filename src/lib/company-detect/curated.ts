@@ -27,6 +27,7 @@ export function patternToResult(pattern: CompanyPattern): DetectionResult {
       domain: pattern.domain,
       country: pattern.country,
       category: pattern.category,
+      logoUrl: pattern.logoUrl,
     },
     prefill,
     debug: {
