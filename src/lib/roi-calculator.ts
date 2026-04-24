@@ -6,6 +6,10 @@ export interface ROIInputs {
   pricingModel: PricingModel;
   automationRate: number; // 0-100
   markets: number;
+  /** Detected currency (e.g. "USD", "NOK", "EUR"). Used only to
+   *  size the cost-independent services floor so Nordic nominals
+   *  (~10× higher) don't trivialise the break-even. Default: USD. */
+  currency?: string;
 }
 
 export interface ROIResults {
@@ -66,9 +70,35 @@ export function calculateROI(inputs: ROIInputs): ROIResults {
   const monthlySavings = currentMonthlyCost - newMonthlyCost;
   const annualSavings = monthlySavings * 12;
 
-  // Implementation cost: platform overhead × setup months × markets
-  const implCost = platformMonthly * IMPL_MONTHS * markets;
-  const breakEvenMonths = monthlySavings > 0 ? Math.ceil(implCost / monthlySavings) : 99;
+  // Implementation cost = two components:
+  //   (1) services floor — cost-independent, scales with market count.
+  //       Nominally USD $20k per market; Nordic currencies (10×
+  //       nominal per-conv) use a 10× scaled floor so the ratio is
+  //       meaningful.
+  //   (2) proportional overhead — 1 month of platform fees, scaled
+  //       by markets. Preserves the intuition that bigger customers
+  //       take longer to stand up.
+  //
+  // Having a cost-INDEPENDENT component is what makes break-even
+  // actually vary when the user drags the conversation-cost slider
+  // (F1): at low conversation costs the floor dominates and
+  // break-even is longer; at high costs savings outrun the floor
+  // and break-even collapses to sub-month.
+  const isNordic = /NOK|SEK|DKK/i.test(inputs.currency ?? "");
+  const implFloor = (isNordic ? 200_000 : 20_000) * markets;
+  const implCost = implFloor + platformMonthly * markets;
+  // Raw break-even in months. Under current model (proportional
+  // savings vs proportional platform overhead) this is typically
+  // sub-1 month at low conversation costs — so we return a
+  // fractional value when < 1 instead of integer-clamping to 1
+  // (which made the figure look frozen when users dragged the
+  // cost slider below ~10).
+  const rawBreakEven =
+    monthlySavings > 0 ? implCost / monthlySavings : 99;
+  const breakEvenMonths =
+    rawBreakEven < 1
+      ? Math.max(0.1, Math.round(rawBreakEven * 10) / 10)
+      : Math.min(Math.ceil(rawBreakEven), 24);
 
   const roiPercentage = currentMonthlyCost > 0
     ? Math.round((monthlySavings / currentMonthlyCost) * 100)
@@ -87,7 +117,7 @@ export function calculateROI(inputs: ROIInputs): ROIResults {
     annualSavings,
     roiPercentage,
     fteEquivalent,
-    breakEvenMonths: Math.max(1, Math.min(breakEvenMonths, 24)),
+    breakEvenMonths,
   };
 }
 

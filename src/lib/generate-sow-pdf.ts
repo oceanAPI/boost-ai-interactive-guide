@@ -568,6 +568,7 @@ class SOWBuilder {
       pricingModel: form.pricing_model,
       automationRate: avgAutomation,
       markets: form.deployment_markets,
+      currency: form.conversation_cost,
     });
 
     this.body(

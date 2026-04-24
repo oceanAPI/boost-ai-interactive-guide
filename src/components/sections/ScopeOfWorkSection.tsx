@@ -415,6 +415,7 @@ function IntegrationsROI({
   const vol = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0) || 10000;
   const costNum = parseFloat(guide.conversation_cost?.replace(/[^0-9.]/g, "") || "0") || 8;
 
+  const currency = detectCurrency(guide.conversation_cost);
   const roi = useMemo(
     () =>
       calculateROI({
@@ -423,11 +424,11 @@ function IntegrationsROI({
         pricingModel: guide.pricing_model || "fixed",
         automationRate: avgRate,
         markets: guide.deployment_markets || 1,
+        currency,
       }),
-    [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets],
+    [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets, currency],
   );
 
-  const currency = detectCurrency(guide.conversation_cost);
   const fmt = (n: number) => formatWithCurrency(n, currency);
 
   // Group selected integrations by category
@@ -442,7 +443,7 @@ function IntegrationsROI({
   const savingsCount = useCountUp({ target: roi.annualSavings, enabled: ready, duration: 1200 });
   const reductionCount = useCountUp({ target: roi.roiPercentage, enabled: ready, duration: 1000 });
   const fteCount = useCountUp({ target: roi.fteEquivalent, enabled: ready, duration: 1000, decimals: 1 });
-  const breakEvenCount = useCountUp({ target: roi.breakEvenMonths, enabled: ready, duration: 800 });
+  const breakEvenCount = useCountUp({ target: roi.breakEvenMonths, enabled: ready, duration: 800, decimals: roi.breakEvenMonths < 1 ? 1 : 0 });
 
   return (
     <div className="py-4 space-y-6">

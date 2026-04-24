@@ -10,6 +10,10 @@ interface StatCounterProps {
   label: string;
   color?: "green" | "purple" | "white";
   size?: "sm" | "md" | "lg";
+  /** Decimal places when animating. Defaults to 0 (integer). Pass 1
+   *  for values that can legitimately be fractional (e.g. break-even
+   *  months under 1). */
+  decimals?: number;
 }
 
 const colorMap = {
@@ -37,9 +41,10 @@ export default function StatCounter({
   label,
   color = "green",
   size = "md",
+  decimals = 0,
 }: StatCounterProps) {
   const { ref, isVisible } = useScrollReveal({ once: true });
-  const count = useCountUp({ target: value, enabled: isVisible, duration: 1200 });
+  const count = useCountUp({ target: value, enabled: isVisible, duration: 1200, decimals });
 
   return (
     <div ref={ref} className="text-center">

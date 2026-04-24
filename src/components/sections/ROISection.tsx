@@ -44,8 +44,9 @@ export default function ROISection({
       pricingModel: guide.pricing_model || "fixed",
       automationRate: avgRate,
       markets: guide.deployment_markets || 1,
+      currency,
     }),
-    [volume, cost, guide.pricing_model, avgRate, guide.deployment_markets],
+    [volume, cost, guide.pricing_model, avgRate, guide.deployment_markets, currency],
   );
 
   const savingsBarWidth = roi.currentMonthlyCost > 0
@@ -111,7 +112,7 @@ export default function ROISection({
             {fmt(roi.annualSavings)}
           </div>
           <p className="text-sm text-boost-muted mt-2">
-            {roi.roiPercentage}% cost reduction · Break-even in {roi.breakEvenMonths} month{roi.breakEvenMonths > 1 ? "s" : ""}
+            {roi.roiPercentage}% cost reduction · Break-even in {roi.breakEvenMonths} month{roi.breakEvenMonths !== 1 ? "s" : ""}
           </p>
         </div>
 
@@ -191,7 +192,7 @@ export default function ROISection({
             <StatCounter value={roi.automatedConversations} suffix="" label="Automated / mo" color="green" size="sm" />
           </div>
           <div className="bg-white rounded-xl border border-boost-border p-4 text-center">
-            <StatCounter value={roi.breakEvenMonths} suffix=" mo" label="Break-even" color="purple" size="md" />
+            <StatCounter value={roi.breakEvenMonths} suffix=" mo" label="Break-even" color="purple" size="md" decimals={roi.breakEvenMonths < 1 ? 1 : 0} />
           </div>
         </div>
       </div>

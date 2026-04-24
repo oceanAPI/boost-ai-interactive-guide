@@ -114,6 +114,7 @@ export default function CommercialOfferSection({ guide, sectionNumber }: { guide
     ? Math.round(agents.reduce((s, a) => s + a.automationRate, 0) / agents.length)
     : 80;
 
+  const currency = detectCurrency(guide.conversation_cost);
   const roi = useMemo(
     () =>
       calculateROI({
@@ -122,11 +123,11 @@ export default function CommercialOfferSection({ guide, sectionNumber }: { guide
         pricingModel: selectedKey,
         automationRate: avgRate,
         markets: guide.deployment_markets || 1,
+        currency,
       }),
-    [totalVolume, costNum, selectedKey, avgRate, guide.deployment_markets],
+    [totalVolume, costNum, selectedKey, avgRate, guide.deployment_markets, currency],
   );
 
-  const currency = detectCurrency(guide.conversation_cost);
   const formatCurrency = (n: number) => formatWithCurrency(n, currency);
 
   return (

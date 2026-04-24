@@ -403,15 +403,16 @@ export default function ImpactSection({ guide, sectionNumber }: { guide: GuideDa
   const avgRate = agents.length > 0
     ? Math.round(agents.reduce((s, a) => s + a.automationRate, 0) / agents.length) : 80;
 
+  const currency = detectCurrency(guide.conversation_cost);
   const roi = useMemo(() => calculateROI({
     monthlyConversations: vol,
     costPerConversation: costNum,
     pricingModel: guide.pricing_model || "fixed",
     automationRate: avgRate,
     markets: guide.deployment_markets || 1,
-  }), [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets]);
+    currency,
+  }), [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets, currency]);
 
-  const currency = detectCurrency(guide.conversation_cost);
   const fmt = (n: number) => formatWithCurrency(n, currency);
 
   // Tab descriptions
