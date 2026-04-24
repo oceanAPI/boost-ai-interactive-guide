@@ -240,27 +240,26 @@ function AutomationFlow({ active, volume }: { active: boolean; volume: number })
  *  Each has a different visual shape (bars, line, donut, heatmap).
  * ═══════════════════════════════════════════════════════════════════ */
 
-const DASHBOARD_WIDGETS = [
+/** Three illustrative tiles that stand in for the live admin
+ *  dashboard. Replaces the earlier mini-widgets (bars / line / donut
+ *  / heatmap) — reviewer couldn't tell if those were real data or
+ *  chrome. These tiles are honestly labelled "Illustrative" and use
+ *  "typical" language so nobody mistakes them for live telemetry. */
+const DASHBOARD_METRICS = [
   {
-    title: "Top intents",
-    type: "bars" as const,
-    data: [85, 72, 58, 45, 30, 22],
-    labels: ["Balance", "Claims", "Payments", "Transfer", "Login", "Rates"],
+    value: "80%+",
+    label: "Auto-resolved",
+    context: "Typical end-state coverage of FAQ + transactional flows",
   },
   {
-    title: "Sentiment trend",
-    type: "line" as const,
-    data: [35, 42, 38, 55, 62, 58, 70, 75, 72, 80, 78, 82],
+    value: "~1.4 s",
+    label: "Avg response time",
+    context: "Customer-facing, measured end-to-end",
   },
   {
-    title: "Resolution",
-    type: "donut" as const,
-    data: [80, 15, 5], // resolved, escalated, unsolved
-  },
-  {
-    title: "Volume by hour",
-    type: "heatmap" as const,
-    data: [2, 3, 1, 1, 2, 5, 8, 9, 7, 6, 5, 4, 5, 6, 7, 8, 6, 4, 3, 2, 1, 1, 1, 1],
+    value: "2,500+",
+    label: "Topics from day one",
+    context: "Pre-built service, support, and claims intents",
   },
 ];
 
@@ -268,103 +267,34 @@ function MiniDashboard({ active }: { active: boolean }) {
   const ready = useTabActivation(active);
 
   return (
-    <div className="grid grid-cols-2 gap-3 py-4">
-      {DASHBOARD_WIDGETS.map((widget, wi) => (
-        <div
-          key={widget.title}
-          className="rounded-lg bg-boost-dark p-3 transition-all"
-          style={{
-            opacity: ready ? 1 : 0,
-            transform: ready ? "translateY(0)" : "translateY(10px)",
-            transitionDuration: "500ms",
-            transitionDelay: `${200 + wi * 120}ms`,
-          }}
-        >
-          <p className="text-[9px] text-white/40 uppercase tracking-wider mb-2">{widget.title}</p>
-
-          {/* Bars widget */}
-          {widget.type === "bars" && (
-            <div className="flex items-end gap-1 h-12">
-              {widget.data.map((v, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                  <div
-                    className="w-full rounded-sm bg-boost-green-light/60 transition-all"
-                    style={{
-                      height: ready ? `${(v / 100) * 40}px` : "2px",
-                      transitionDuration: "600ms",
-                      transitionDelay: `${400 + wi * 120 + i * 50}ms`,
-                    }}
-                  />
-                  <span className="text-[7px] text-white/25">{widget.labels?.[i]?.[0]}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Line widget */}
-          {widget.type === "line" && (
-            <svg viewBox="0 0 120 40" className="w-full h-12" preserveAspectRatio="none">
-              <polyline
-                points={widget.data.map((v, i) => `${(i / (widget.data.length - 1)) * 120},${40 - (v / 100) * 38}`).join(" ")}
-                fill="none"
-                stroke="rgba(54,181,149,0.6)"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{
-                  strokeDasharray: 300,
-                  strokeDashoffset: ready ? 0 : 300,
-                  transition: `stroke-dashoffset 1500ms cubic-bezier(0.16,1,0.3,1) ${400 + wi * 120}ms`,
-                }}
-              />
-            </svg>
-          )}
-
-          {/* Donut widget */}
-          {widget.type === "donut" && (
-            <div className="flex items-center gap-3 h-12">
-              <svg width="40" height="40" viewBox="0 0 40 40" className="shrink-0">
-                <circle cx="20" cy="20" r="15" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5" />
-                <circle
-                  cx="20" cy="20" r="15" fill="none" stroke="rgba(54,181,149,0.7)" strokeWidth="5"
-                  strokeDasharray={`${ready ? (widget.data[0] / 100) * 94 : 0} 94`}
-                  transform="rotate(-90 20 20)"
-                  style={{ transition: `stroke-dasharray 1200ms cubic-bezier(0.16,1,0.3,1) ${400 + wi * 120}ms` }}
-                />
-              </svg>
-              <div className="space-y-0.5">
-                <p className="text-[10px] text-white/70 font-semibold">{widget.data[0]}% resolved</p>
-                <p className="text-[8px] text-white/30">{widget.data[1]}% escalated</p>
-                <p className="text-[8px] text-white/20">{widget.data[2]}% unsolved</p>
-              </div>
-            </div>
-          )}
-
-          {/* Heatmap widget */}
-          {widget.type === "heatmap" && (
-            <div className="grid grid-cols-12 gap-[2px] h-12 content-center">
-              {widget.data.map((v, i) => (
-                <div
-                  key={i}
-                  className="rounded-[2px] transition-all"
-                  style={{
-                    height: "8px",
-                    backgroundColor: ready
-                      ? `rgba(54,181,149,${Math.max(0.1, v / 10)})`
-                      : "rgba(255,255,255,0.03)",
-                    transitionDuration: "400ms",
-                    transitionDelay: `${400 + wi * 120 + i * 20}ms`,
-                  }}
-                />
-              ))}
-              <div className="col-span-12 flex justify-between mt-1">
-                <span className="text-[6px] text-white/20">00:00</span>
-                <span className="text-[6px] text-white/20">23:00</span>
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
+    <div className="py-4">
+      <p className="text-[9px] uppercase tracking-[0.18em] text-boost-muted mb-3">
+        Illustrative · the live admin dashboard shows your real numbers
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {DASHBOARD_METRICS.map((m, mi) => (
+          <div
+            key={m.label}
+            className="rounded-lg bg-boost-dark p-4 text-white transition-all"
+            style={{
+              opacity: ready ? 1 : 0,
+              transform: ready ? "translateY(0)" : "translateY(10px)",
+              transitionDuration: "500ms",
+              transitionDelay: `${200 + mi * 150}ms`,
+            }}
+          >
+            <p className="text-2xl font-bold text-boost-green-light tabular-nums">
+              {m.value}
+            </p>
+            <p className="text-[11px] font-semibold text-white/90 mt-1">
+              {m.label}
+            </p>
+            <p className="text-[10px] text-white/50 mt-1 leading-snug">
+              {m.context}
+            </p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
