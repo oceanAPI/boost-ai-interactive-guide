@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import type { GuideData } from "@/lib/types";
 import { getAgentsForGuide } from "@/data/agents";
-import { calculateROI, detectCurrency, formatWithCurrency } from "@/lib/roi-calculator";
+import { calculateROI, resolveCurrency, formatWithCurrency } from "@/lib/roi-calculator";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
@@ -403,7 +403,7 @@ export default function ImpactSection({ guide, sectionNumber }: { guide: GuideDa
   const avgRate = agents.length > 0
     ? Math.round(agents.reduce((s, a) => s + a.automationRate, 0) / agents.length) : 80;
 
-  const currency = detectCurrency(guide.conversation_cost);
+  const currency = resolveCurrency(guide.currency, guide.conversation_cost);
   const roi = useMemo(() => calculateROI({
     monthlyConversations: vol,
     costPerConversation: costNum,

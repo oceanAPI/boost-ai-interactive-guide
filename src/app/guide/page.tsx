@@ -92,6 +92,7 @@ function GuideContent() {
     specific_requirements: formData.specific_requirements || "",
     channel_volumes: formData.channel_volumes || {},
     conversation_cost: formData.conversation_cost || "",
+    currency: formData.currency,
     pricing_model: formData.pricing_model || "fixed",
     deployment_markets: formData.deployment_markets || 1,
     resources: formData.resources || {},

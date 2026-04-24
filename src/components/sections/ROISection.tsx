@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import type { GuideData } from "@/lib/types";
 import { getAgentsForGuide } from "@/data/agents";
-import { calculateROI, detectCurrency, formatWithCurrency } from "@/lib/roi-calculator";
+import { calculateROI, resolveCurrency, formatWithCurrency } from "@/lib/roi-calculator";
 import { SectionHeader, StatCounter } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
@@ -27,7 +27,7 @@ export default function ROISection({
 
   // Interactive slider state
   const [volume, setVolume] = useState(totalVolumeFromGuide || 10000);
-  const currency = detectCurrency(guide.conversation_cost);
+  const currency = resolveCurrency(guide.currency, guide.conversation_cost);
   // Nordic currencies (NOK/SEK/DKK) have ~10x higher nominal cost per conversation
   // than USD/EUR/GBP, so slider bounds need to adapt.
   const isNordic = /NOK|SEK|DKK|kr/i.test(currency);

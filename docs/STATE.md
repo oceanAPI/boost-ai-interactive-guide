@@ -64,15 +64,11 @@ Working tree:
 
 <!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
 ## Auto-snapshot
-Last updated: 2026-04-24T11:00:47+02:00
+Last updated: 2026-04-24T11:33:01+02:00
 Branch: main
-Last commit: 99ab4ba style(impact): replace decorative mini-dashboard with 3 honest illustrative metrics (F4)
+Last commit: 8b587a4 fix(security): input guardrails are AI too; rewrite flow copy (F2)
 Working tree:
 ```
  M docs/STATE.md
- M src/lib/roi-calculator.ts
-?? .claude/launch.json
-?? customer_excellence_raw_data_pdfs/
-?? src/data/extensions/
 ```
 <!-- AUTO-HOOK-END -->

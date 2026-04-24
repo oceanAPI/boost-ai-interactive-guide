@@ -47,6 +47,10 @@ export interface GuideData {
   specific_requirements: string;
   channel_volumes: ChannelVolumes;
   conversation_cost: string;
+  /** Explicit currency override set by the admin picker. When
+   *  present, takes precedence over inferring from
+   *  `conversation_cost`. See CurrencyCode below. */
+  currency?: CurrencyCode;
   pricing_model: PricingModel;
   deployment_markets: number;
   resources: ResourceAllocation;
@@ -65,6 +69,20 @@ export interface GuideData {
   };
 }
 
+/** Explicit currency code override. When set, takes precedence over
+ *  inferring the currency from the `conversation_cost` string. Keeps
+ *  the ROI / Impact / Commercial surfaces consistent — the F3
+ *  reviewer found "$4.4" displayed alongside NOK figures because
+ *  the inference varied per component. */
+export type CurrencyCode =
+  | "USD"
+  | "EUR"
+  | "GBP"
+  | "NOK"
+  | "SEK"
+  | "DKK"
+  | "CHF";
+
 export interface GuideFormData {
   company_name: string;
   company_url: string;
@@ -75,6 +93,10 @@ export interface GuideFormData {
   specific_requirements: string;
   channel_volumes: ChannelVolumes;
   conversation_cost: string;
+  /** Customer-facing currency. Optional — when omitted, components
+   *  fall back to `detectCurrency(conversation_cost)` for back-compat
+   *  with existing shared-URL bookmarks. */
+  currency?: CurrencyCode;
   pricing_model: PricingModel;
   deployment_markets: number;
   resources: ResourceAllocation;

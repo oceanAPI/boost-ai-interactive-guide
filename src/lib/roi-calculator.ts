@@ -1,4 +1,4 @@
-import type { PricingModel } from "./types";
+import type { CurrencyCode, PricingModel } from "./types";
 
 export interface ROIInputs {
   monthlyConversations: number;
@@ -137,6 +137,45 @@ export function detectCurrency(costStr: string | undefined): string {
   if (str.includes("$")) return "$";
   return "$";
 }
+
+/** Map a CurrencyCode (USD / NOK / …) to the formatter's symbol/prefix.
+ *  Kept in sync with `detectCurrency` so picker + auto-detect produce
+ *  the same output. */
+const CODE_TO_SYMBOL: Record<CurrencyCode, string> = {
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  NOK: "NOK ",
+  SEK: "SEK ",
+  DKK: "DKK ",
+  CHF: "CHF ",
+};
+
+/** Prefer the explicit `currency` field (set via admin picker) over
+ *  auto-detecting from the `conversation_cost` string. This is the
+ *  single entry point every money-rendering component should use —
+ *  fixes F3 ("$4.4 shown alongside NOK figures") by centralising
+ *  the decision. */
+export function resolveCurrency(
+  currencyCode: CurrencyCode | undefined,
+  costStr: string | undefined,
+): string {
+  if (currencyCode && CODE_TO_SYMBOL[currencyCode]) {
+    return CODE_TO_SYMBOL[currencyCode];
+  }
+  return detectCurrency(costStr);
+}
+
+/** The user-visible options for the admin picker. */
+export const CURRENCY_OPTIONS: Array<{ code: CurrencyCode; label: string }> = [
+  { code: "USD", label: "USD · $" },
+  { code: "EUR", label: "EUR · €" },
+  { code: "GBP", label: "GBP · £" },
+  { code: "NOK", label: "NOK · kr" },
+  { code: "SEK", label: "SEK · kr" },
+  { code: "DKK", label: "DKK · kr" },
+  { code: "CHF", label: "CHF" },
+];
 
 /**
  * Format a number with the detected currency.

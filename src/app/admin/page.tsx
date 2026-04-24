@@ -7,6 +7,7 @@ import { assetPath } from "@/lib/asset-path";
 import { INTEGRATION_CATEGORIES } from "@/data/integrations";
 import { INDUSTRIES, HIDDEN_INDUSTRIES, SUPPORTING_DEPARTMENTS, INDUSTRY_VARIANTS } from "@/data/agents";
 import { encodeGuideData, decodeGuideData } from "@/lib/url-encoding";
+import { CURRENCY_OPTIONS } from "@/lib/roi-calculator";
 import { generateSOWPdf } from "@/lib/generate-sow-pdf";
 import SalesforceImportModal from "@/components/SalesforceImportModal";
 import HubSpotImportModal from "@/components/HubSpotImportModal";
@@ -681,12 +682,39 @@ export default function AdminPage() {
                 </span>
               </p>
             </div>
-            <Link
-              href="/"
-              className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 focus-visible:ring-offset-boost-purple rounded-sm px-2 py-0.5 whitespace-nowrap"
-            >
-              ← Change mode
-            </Link>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {/* Global currency picker — drives every money display
+                  across ROI / Impact / Commercial / SoW. Separate
+                  from per-conversation cost so Nordic tenants get
+                  "kr" where they expect it. */}
+              <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80">
+                <span>Currency</span>
+                <select
+                  aria-label="Currency"
+                  value={form.currency ?? ""}
+                  onChange={(e) =>
+                    updateField(
+                      "currency",
+                      (e.target.value || undefined) as GuideFormData["currency"],
+                    )
+                  }
+                  className="bg-white/10 text-white text-[11px] font-semibold uppercase tracking-[0.14em] rounded-sm px-2 py-0.5 border border-white/20 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 focus-visible:ring-offset-boost-purple"
+                >
+                  <option value="" className="text-boost-dark">Auto</option>
+                  {CURRENCY_OPTIONS.map((opt) => (
+                    <option key={opt.code} value={opt.code} className="text-boost-dark">
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Link
+                href="/"
+                className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 focus-visible:ring-offset-boost-purple rounded-sm px-2 py-0.5 whitespace-nowrap"
+              >
+                ← Change mode
+              </Link>
+            </div>
           </div>
         </div>
       ) : null}
