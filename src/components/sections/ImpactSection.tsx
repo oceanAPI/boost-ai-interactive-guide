@@ -306,11 +306,20 @@ function MiniDashboard({ active }: { active: boolean }) {
  *  cumulative savings. Break-even marker pops in at the right month.
  * ═══════════════════════════════════════════════════════════════════ */
 
-function SavingsTimeline({ active, annualSavings, breakEvenMonths, currencySymbol }: {
+function SavingsTimeline({
+  active,
+  annualSavings,
+  breakEvenMonths,
+  currencySymbol,
+  currentMonthlyCost,
+  newMonthlyCost,
+}: {
   active: boolean;
   annualSavings: number;
   breakEvenMonths: number;
   currencySymbol: string;
+  currentMonthlyCost: number;
+  newMonthlyCost: number;
 }) {
   const ready = useTabActivation(active);
   const months = 12;
@@ -320,6 +329,15 @@ function SavingsTimeline({ active, annualSavings, breakEvenMonths, currencySymbo
 
   const fmt = (n: number) => formatWithCurrency(n, currencySymbol);
 
+  // F5 — 3-bar breakdown: current cost vs boost.ai cost vs savings.
+  // Same axis (current monthly cost = 100%). Makes the $23.6M
+  // figure stop being a mystery: the bars show exactly how much
+  // of today's spend survives, how much is boost.ai's share, and
+  // how much becomes savings.
+  const scaleMax = Math.max(currentMonthlyCost, 1);
+  const newCostPct = (newMonthlyCost / scaleMax) * 100;
+  const savingsPct = Math.max(0, (monthlySavings / scaleMax) * 100);
+
   return (
     <div className="py-4">
       {/* Big number */}
@@ -328,6 +346,88 @@ function SavingsTimeline({ active, annualSavings, breakEvenMonths, currencySymbo
           {fmt(savingsCount)}
         </p>
         <p className="text-[11px] text-boost-muted mt-1">Estimated annual savings</p>
+      </div>
+
+      {/* 3-bar breakdown — the math behind the big number */}
+      <div className="mb-6 space-y-2.5 rounded-lg border border-boost-border bg-white p-4">
+        <p className="text-[9px] font-bold text-boost-muted uppercase tracking-[0.16em] mb-1">
+          Monthly cost breakdown
+        </p>
+
+        {/* Current cost — the 100% baseline */}
+        <div className="space-y-1">
+          <div className="flex items-baseline justify-between gap-3 text-[11px]">
+            <span className="text-boost-dark font-medium">
+              Current cost
+            </span>
+            <span className="tabular-nums text-boost-dark font-semibold">
+              {fmt(currentMonthlyCost)} / mo
+            </span>
+          </div>
+          <div className="h-3 bg-boost-surface rounded-full overflow-hidden">
+            <div
+              className="h-full bg-boost-dark rounded-full transition-all"
+              style={{
+                width: ready ? "100%" : "0%",
+                transitionDuration: "900ms",
+                transitionTimingFunction: "cubic-bezier(0.16,1,0.3,1)",
+                transitionDelay: "200ms",
+              }}
+            />
+          </div>
+        </div>
+
+        {/* boost.ai cost — what the customer pays post-implementation */}
+        <div className="space-y-1">
+          <div className="flex items-baseline justify-between gap-3 text-[11px]">
+            <span className="text-boost-purple font-medium">
+              boost.ai cost
+            </span>
+            <span className="tabular-nums text-boost-purple font-semibold">
+              {fmt(newMonthlyCost)} / mo
+            </span>
+          </div>
+          <div className="h-3 bg-boost-surface rounded-full overflow-hidden">
+            <div
+              className="h-full bg-boost-purple rounded-full transition-all"
+              style={{
+                width: ready ? `${newCostPct}%` : "0%",
+                transitionDuration: "900ms",
+                transitionTimingFunction: "cubic-bezier(0.16,1,0.3,1)",
+                transitionDelay: "450ms",
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Savings — what's left = your return */}
+        <div className="space-y-1">
+          <div className="flex items-baseline justify-between gap-3 text-[11px]">
+            <span className="text-boost-green font-medium">
+              Monthly savings
+            </span>
+            <span className="tabular-nums text-boost-green font-semibold">
+              {fmt(monthlySavings)} / mo
+            </span>
+          </div>
+          <div className="h-3 bg-boost-surface rounded-full overflow-hidden">
+            <div
+              className="h-full bg-boost-green rounded-full transition-all"
+              style={{
+                width: ready ? `${savingsPct}%` : "0%",
+                transitionDuration: "900ms",
+                transitionTimingFunction: "cubic-bezier(0.16,1,0.3,1)",
+                transitionDelay: "700ms",
+              }}
+            />
+          </div>
+        </div>
+
+        <p className="text-[10px] text-boost-muted leading-snug pt-1">
+          All three bars share the same axis (current monthly cost =
+          100%). Boost.ai&apos;s share shrinks as automation rate rises;
+          the green bar is what you keep as savings.
+        </p>
       </div>
 
       {/* Timeline bar */}
@@ -489,6 +589,8 @@ export default function ImpactSection({ guide, sectionNumber }: { guide: GuideDa
               annualSavings={roi.annualSavings}
               breakEvenMonths={roi.breakEvenMonths}
               currencySymbol={currency}
+              currentMonthlyCost={roi.currentMonthlyCost}
+              newMonthlyCost={roi.newMonthlyCost}
             />
           )}
         </div>
