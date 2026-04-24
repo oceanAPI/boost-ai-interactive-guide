@@ -5,12 +5,23 @@ export interface ChannelVolumes {
   social?: number;
 }
 
+export type IntegrationCategoryKey =
+  | "channel"
+  | "human_handover"
+  | "openid"
+  | "utility"
+  | "voice";
+
 export interface IntegrationSelections {
   channel?: string[];
   human_handover?: string[];
   openid?: string[];
   utility?: string[];
   voice?: string[];
+  /** Free-text "Other" per category — captures tools that aren't in
+   *  the curated chip list. Keyed by category; empty/missing when
+   *  the AE hasn't added anything. */
+  other?: Partial<Record<IntegrationCategoryKey, string>>;
 }
 
 export type PricingModel = "fixed" | "usage" | "outcome";

@@ -409,6 +409,44 @@ export default function AdminPage() {
     });
   };
 
+  /** Toggle the "Other" free-text slot for a category. Active when the
+   *  field has any content; clicking the chip clears it. First click
+   *  initialises to empty string so the revealed input is focusable
+   *  and typing immediately lands in state. */
+  const toggleIntegrationOther = (category: string) => {
+    setForm((prev) => {
+      const current = prev.integrations.other?.[category as keyof IntegrationSelections extends string ? never : never];
+      void current;
+      const existing = prev.integrations.other ?? {};
+      const key = category as "channel" | "human_handover" | "openid" | "utility" | "voice";
+      const isActive = existing[key] !== undefined;
+      const nextOther = { ...existing };
+      if (isActive) {
+        delete nextOther[key];
+      } else {
+        nextOther[key] = "";
+      }
+      return {
+        ...prev,
+        integrations: { ...prev.integrations, other: nextOther },
+      };
+    });
+  };
+
+  const setIntegrationOther = (category: string, value: string) => {
+    setForm((prev) => {
+      const existing = prev.integrations.other ?? {};
+      const key = category as "channel" | "human_handover" | "openid" | "utility" | "voice";
+      return {
+        ...prev,
+        integrations: {
+          ...prev.integrations,
+          other: { ...existing, [key]: value },
+        },
+      };
+    });
+  };
+
   /** Actual generate — called after any pre-checks (e.g. preset nudge) pass.
    *  Threads the current `audience` through to the guide route so the
    *  guide renderer can filter sections by audience defaults. Sales
@@ -1224,7 +1262,7 @@ export default function AdminPage() {
                       </span>
                     </span>
                   </summary>
-                  <div className="px-3 pb-3 pt-1">
+                  <div className="px-3 pb-3 pt-1 space-y-2">
                     <AdminChipRow>
                       {cat.items.map((item) => {
                         const active = selected.includes(item.name);
@@ -1244,7 +1282,47 @@ export default function AdminPage() {
                           </AdminChip>
                         );
                       })}
+                      {(() => {
+                        const otherVal =
+                          form.integrations.other?.[
+                            cat.key as "channel" | "human_handover" | "openid" | "utility" | "voice"
+                          ];
+                        const otherActive = otherVal !== undefined;
+                        return (
+                          <AdminChip
+                            active={otherActive}
+                            onClick={() => toggleIntegrationOther(cat.key)}
+                            title={
+                              otherActive
+                                ? "Remove the free-text field"
+                                : "Add a free-text field for tools not in this list"
+                            }
+                          >
+                            Other…
+                          </AdminChip>
+                        );
+                      })()}
                     </AdminChipRow>
+                    {(() => {
+                      const key = cat.key as
+                        | "channel"
+                        | "human_handover"
+                        | "openid"
+                        | "utility"
+                        | "voice";
+                      const otherVal = form.integrations.other?.[key];
+                      if (otherVal === undefined) return null;
+                      return (
+                        <input
+                          type="text"
+                          value={otherVal}
+                          onChange={(e) => setIntegrationOther(cat.key, e.target.value)}
+                          placeholder={`Other ${cat.label.toLowerCase()} — comma-separated, free text`}
+                          className={`${inputClass} text-[12px]`}
+                          autoFocus
+                        />
+                      );
+                    })()}
                   </div>
                 </details>
               );
