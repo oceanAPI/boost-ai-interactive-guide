@@ -51,25 +51,25 @@ function GenerativeActionFlow() {
         "Customer message arrives via any connected channel — chat, voice, or messaging.",
     },
     {
-      label: "Input Guardrails",
+      label: "Input Guardrails (AI)",
       color: "bg-boost-purple border-boost-purple",
       textColor: "text-white",
       detail:
-        "Real-time screening: PII detection, jailbreak prevention, topic boundary enforcement, and profanity filtering — before any LLM processing.",
+        "Purpose-built AI classifiers screen the input in real time — PII detection, jailbreak prevention, topic boundary enforcement, profanity filtering. Each is its own trained model, separate from the generative LLM downstream.",
     },
     {
-      label: "Generative AI Processing",
+      label: "Generative LLM",
       color: "bg-boost-purple-dark border-boost-purple-dark",
       textColor: "text-white",
       detail:
-        "LLM generates a response using approved knowledge sources. RAG retrieval is scoped to authorized content only. No training on customer data.",
+        "The generative model composes a response using approved knowledge sources. RAG retrieval is scoped to authorised content only. No training on customer data.",
     },
     {
-      label: "Output Guardrails",
+      label: "Output Guardrails (AI)",
       color: "bg-boost-purple border-boost-purple",
       textColor: "text-white",
       detail:
-        "Response validation: hallucination check, compliance verification, tone consistency, PII masking on output, and brand alignment.",
+        "More AI classifiers check the generated response before it reaches the customer — hallucination check against sources, compliance verification, tone consistency, PII masking, brand alignment.",
     },
     {
       label: "Safe Response",
