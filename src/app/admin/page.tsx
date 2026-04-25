@@ -1096,11 +1096,11 @@ export default function AdminPage() {
         {/* 3 — Pricing & Costs */}
         <CollapsibleSection
           number={3}
-          title="Pricing Model & Cost Baseline"
+          title="Pricing Model & ROI Inputs"
           subtitle={
             hasPricing
               ? `${PRICING_MODELS.find((p) => p.key === form.pricing_model)?.label} · ${form.conversation_cost}`
-              : "Pricing model and per-conversation cost — feeds the ROI math"
+              : "Pricing model, conversation cost, FTE capacity — feeds the ROI math"
           }
           hasContent={hasPricing}
         >
@@ -1133,6 +1133,29 @@ export default function AdminPage() {
             placeholder="e.g. $8.50, 55 NOK, €6.20"
             className={`${inputClass} max-w-xs`}
           />
+
+          <AdminPrompt
+            divider
+            question="How many conversations does one human FTE handle per month?"
+            helper="Tunes the FTE-equivalent figure in ROI to the customer's own productivity. Leave blank to use the 1,500/mo industry average."
+          />
+          <div className="flex items-baseline gap-2">
+            <input
+              type="number"
+              min={100}
+              step={100}
+              value={form.fte_capacity_per_month ?? ""}
+              onChange={(e) =>
+                updateField(
+                  "fte_capacity_per_month",
+                  e.target.value ? Number(e.target.value) : undefined,
+                )
+              }
+              placeholder="1,500"
+              className={`${inputClass} max-w-[160px]`}
+            />
+            <span className="text-[11px] text-boost-muted">conversations / FTE / month</span>
+          </div>
 
           <p className="mt-6 text-[11px] text-boost-muted leading-relaxed">
             The line-item Commercial invoice (Chat tiers, Voice, Success Package, add-ons, integrations) lives in

@@ -20,6 +20,11 @@ export interface ROIInputs {
    *  calculateResourcePlan().implementationTotal. When provided,
    *  takes precedence over the services-floor heuristic. USD. */
   invoiceImplementationUSD?: number;
+  /** Conversations one human FTE handles per month. Tunes the
+   *  fteEquivalent figure to the prospect's actual contact-centre
+   *  productivity instead of a global 1,500 average. Falls back to
+   *  1,500 when undefined or non-positive. */
+  fteCapacityPerMonth?: number;
 }
 
 export interface ROIResults {
@@ -127,8 +132,14 @@ export function calculateROI(inputs: ROIInputs): ROIResults {
     ? Math.round((monthlySavings / currentMonthlyCost) * 100)
     : 0;
 
-  // 1 FTE handles ~1500 conversations/month
-  const fteEquivalent = Math.round((automatedConversations / 1500) * 10) / 10;
+  // FTE-equivalent automation = how many human full-timers the AI
+  // displaces. Capacity defaults to 1,500 conv/FTE/mo (industry
+  // average) but the AE can override per-prospect from admin so the
+  // figure matches the customer's own contact-centre productivity.
+  const fteCapacity = inputs.fteCapacityPerMonth && inputs.fteCapacityPerMonth > 0
+    ? inputs.fteCapacityPerMonth
+    : 1500;
+  const fteEquivalent = Math.round((automatedConversations / fteCapacity) * 10) / 10;
 
   return {
     currentMonthlyCost,

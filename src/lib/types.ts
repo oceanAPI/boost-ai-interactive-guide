@@ -75,6 +75,13 @@ export interface GuideData {
    *  `conversation_cost`. See CurrencyCode below. */
   currency?: CurrencyCode;
   pricing_model: PricingModel;
+  /** Conversations one human FTE can handle per month, on average.
+   *  Replaces the hardcoded 1,500 fallback used by the ROI
+   *  calculator's `fteEquivalent` number. Optional — when omitted,
+   *  the calculator falls back to 1,500 for back-compat with
+   *  existing shared-URL bookmarks. Sales rep tunes this against
+   *  the prospect's actual contact-centre productivity. */
+  fte_capacity_per_month?: number;
   deployment_markets: number;
   resources: ResourceAllocation;
   integrations: IntegrationSelections;
@@ -125,6 +132,10 @@ export interface GuideFormData {
    *  with existing shared-URL bookmarks. */
   currency?: CurrencyCode;
   pricing_model: PricingModel;
+  /** Conversations one human FTE can handle per month. Replaces the
+   *  hardcoded 1,500 fallback in roi-calculator. Optional — falls
+   *  back to 1,500 when omitted. */
+  fte_capacity_per_month?: number;
   deployment_markets: number;
   resources: ResourceAllocation;
   integrations: IntegrationSelections;

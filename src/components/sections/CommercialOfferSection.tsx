@@ -319,8 +319,9 @@ export default function CommercialOfferSection({ guide, sectionNumber }: { guide
         automationRate: avgRate,
         markets: guide.deployment_markets || 1,
         currency,
+        fteCapacityPerMonth: guide.fte_capacity_per_month,
       }),
-    [totalVolume, costNum, selectedKey, avgRate, guide.deployment_markets, currency],
+    [totalVolume, costNum, selectedKey, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month],
   );
 
   const formatCurrency = (n: number) => formatWithCurrency(n, currency);
