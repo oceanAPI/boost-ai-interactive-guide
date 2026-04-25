@@ -6,6 +6,7 @@ import { getAgentsForGuide } from "@/data/agents";
 import { INTEGRATION_CATEGORIES } from "@/data/integrations";
 import { ROADMAP_PHASES, ROADMAP_LANES } from "@/data/roadmap";
 import { calculateROI, resolveCurrency, formatWithCurrency } from "@/lib/roi-calculator";
+import { getInvoiceContext } from "@/lib/pricing-calculator";
 import { SectionHeader, Badge } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
@@ -412,7 +413,26 @@ function IntegrationsROI({
       ? Math.round(agents.reduce((s, a) => s + a.automationRate, 0) / agents.length)
       : 80;
 
-  const vol = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0) || 10000;
+  // Invoice-first: when 2026 pricing is populated, the SoW's ROI
+  // aside reads the same monthly + implementation totals as the
+  // Commercial invoice + resource plan.
+  const _ig = guide.integrations ?? {};
+  const integrationCount =
+    (_ig.channel?.length || 0) + (_ig.human_handover?.length || 0) +
+    (_ig.openid?.length || 0) + (_ig.utility?.length || 0) + (_ig.voice?.length || 0);
+  const teamSize =
+    (guide.resources?.stakeholder_owners || 0) +
+    (guide.resources?.ai_trainers || 0) +
+    (guide.resources?.technical_resources || 0);
+  const invoice = getInvoiceContext(guide.pricing_config, {
+    deployment_markets: guide.deployment_markets,
+    integration_count: integrationCount,
+    customer_team_size: teamSize,
+  });
+
+  const vol = invoice?.expectedMonthlyChat
+    ? invoice.expectedMonthlyChat
+    : Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0) || 10000;
   const costNum = parseFloat(guide.conversation_cost?.replace(/[^0-9.]/g, "") || "0") || 8;
 
   const currency = resolveCurrency(guide.currency, guide.conversation_cost);
@@ -425,8 +445,10 @@ function IntegrationsROI({
         automationRate: avgRate,
         markets: guide.deployment_markets || 1,
         currency,
+        invoiceMonthlyCostUSD: invoice?.monthlyUSD,
+        invoiceImplementationUSD: invoice?.implementationOneTimeUSD,
       }),
-    [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets, currency],
+    [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets, currency, invoice?.monthlyUSD, invoice?.implementationOneTimeUSD],
   );
 
   const fmt = (n: number) => formatWithCurrency(n, currency);

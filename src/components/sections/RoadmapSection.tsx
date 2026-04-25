@@ -67,7 +67,10 @@ const PHASE_COMPLEXITY_WEIGHT: Record<string, number> = {
 
 /** Compute 0–1 complexity score from guide signals. Markets dominate
  *  because multi-market localisation is the single biggest delivery
- *  stretch; integrations + resources fill the rest. */
+ *  stretch; integrations + resources fill the rest. VA count signals
+ *  ambition (more VAs = more conversation design work); Success
+ *  Package *compresses* complexity (Pro package = embedded trainer
+ *  = less stretch). */
 function computeComplexity(guide?: import("@/lib/types").GuideData): number {
   if (!guide) return 0.25;
   const markets = Math.max(1, guide.deployment_markets || 1);
@@ -92,7 +95,24 @@ function computeComplexity(guide?: import("@/lib/types").GuideData): number {
   // Resources: smaller contributor — 0→0, 4→0.5, 8+→1
   const resourceScore = Math.min(1, resourceCount / 8);
 
-  return 0.5 * marketScore + 0.35 * integrationScore + 0.15 * resourceScore;
+  // VA count from 2026 pricing builder — external + internal + voice.
+  // More VAs = more agent design + testing surface. 0→0, 4→0.5, 8+→1.
+  const cfg = guide.pricing_config;
+  const vaCount =
+    (cfg?.chat_va_external ?? 0) + (cfg?.chat_va_internal ?? 0) + (cfg?.voice_va ?? 0);
+  const vaScore = Math.min(1, vaCount / 8);
+
+  // Success Package tier — compresses complexity because the bigger
+  // packages include embedded trainer hours + faster response SLAs.
+  // Essential: small relief. Core: medium. Pro: biggest.
+  const packageRelief =
+    cfg?.success_package === "pro"       ? 0.20 :
+    cfg?.success_package === "core"      ? 0.10 :
+    cfg?.success_package === "essential" ? 0.05 :
+    0;
+
+  const base = 0.45 * marketScore + 0.30 * integrationScore + 0.10 * resourceScore + 0.15 * vaScore;
+  return Math.max(0, Math.min(1, base - packageRelief));
 }
 
 function complexityLabel(score: number): string {

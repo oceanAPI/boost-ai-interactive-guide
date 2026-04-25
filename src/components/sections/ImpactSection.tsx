@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import type { GuideData } from "@/lib/types";
 import { getAgentsForGuide } from "@/data/agents";
 import { calculateROI, resolveCurrency, formatWithCurrency } from "@/lib/roi-calculator";
+import { getInvoiceContext } from "@/lib/pricing-calculator";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
@@ -496,8 +497,26 @@ export default function ImpactSection({ guide, sectionNumber }: { guide: GuideDa
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [activeTab, setActiveTab] = useState<TabId>("csat");
 
-  // Dynamic data
-  const vol = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0) || 10000;
+  // Dynamic data — prefer the 2026 pricing invoice when available so
+  // the savings math (current - boost.ai = savings) quotes the same
+  // boost.ai cost as the Commercial Offer invoice.
+  const ig = guide.integrations ?? {};
+  const integrationCount =
+    (ig.channel?.length || 0) + (ig.human_handover?.length || 0) +
+    (ig.openid?.length || 0) + (ig.utility?.length || 0) + (ig.voice?.length || 0);
+  const teamSize =
+    (guide.resources?.stakeholder_owners || 0) +
+    (guide.resources?.ai_trainers || 0) +
+    (guide.resources?.technical_resources || 0);
+  const invoice = getInvoiceContext(guide.pricing_config, {
+    deployment_markets: guide.deployment_markets,
+    integration_count: integrationCount,
+    customer_team_size: teamSize,
+  });
+
+  const vol = invoice?.expectedMonthlyChat
+    ? invoice.expectedMonthlyChat
+    : Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0) || 10000;
   const costNum = parseFloat(guide.conversation_cost?.replace(/[^0-9.]/g, "") || "0") || 8;
   const agents = getAgentsForGuide(guide.areas_of_interest, guide.selected_variants);
   const avgRate = agents.length > 0
@@ -511,7 +530,9 @@ export default function ImpactSection({ guide, sectionNumber }: { guide: GuideDa
     automationRate: avgRate,
     markets: guide.deployment_markets || 1,
     currency,
-  }), [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets, currency]);
+    invoiceMonthlyCostUSD: invoice?.monthlyUSD,
+    invoiceImplementationUSD: invoice?.implementationOneTimeUSD,
+  }), [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets, currency, invoice?.monthlyUSD, invoice?.implementationOneTimeUSD]);
 
   const fmt = (n: number) => formatWithCurrency(n, currency);
 

@@ -275,15 +275,27 @@ export default function AdminPage() {
   };
 
   /** Patch the nested `pricing_config` object. Always writes through
-   *  the existing object so partial updates don't wipe sibling keys. */
+   *  the existing object so partial updates don't wipe sibling keys.
+   *
+   *  COHERENCE: when the AE types a chat/voice expected volume into
+   *  Section 3, mirror it into `channel_volumes` so ROI / Impact /
+   *  SoW (which still read channel_volumes) agree with the invoice.
+   *  The reverse mirror is handled inline where `channel_volumes` is
+   *  edited in Section 5. */
   const updatePricingConfig = <K extends keyof NonNullable<GuideFormData["pricing_config"]>>(
     key: K,
     value: NonNullable<GuideFormData["pricing_config"]>[K],
   ) => {
-    setForm((prev) => ({
-      ...prev,
-      pricing_config: { ...(prev.pricing_config ?? {}), [key]: value },
-    }));
+    setForm((prev) => {
+      const nextPricing = { ...(prev.pricing_config ?? {}), [key]: value };
+      let nextVolumes = prev.channel_volumes;
+      if (key === "chat_expected_monthly" && typeof value === "number") {
+        nextVolumes = { ...prev.channel_volumes, chat: value };
+      } else if (key === "voice_expected_monthly" && typeof value === "number") {
+        nextVolumes = { ...prev.channel_volumes, voice: value };
+      }
+      return { ...prev, pricing_config: nextPricing, channel_volumes: nextVolumes };
+    });
   };
 
   /* ─── Audience detection (?audience=sales|customer-excellence|professional-services) ───
@@ -400,13 +412,22 @@ export default function AdminPage() {
   };
 
   const updateVolume = (channel: keyof ChannelVolumes, value: string) => {
-    setForm((prev) => ({
-      ...prev,
-      channel_volumes: {
-        ...prev.channel_volumes,
-        [channel]: value ? parseInt(value) : undefined,
-      },
-    }));
+    setForm((prev) => {
+      const parsed = value ? parseInt(value) : undefined;
+      const nextVolumes = { ...prev.channel_volumes, [channel]: parsed };
+      // COHERENCE: mirror chat/voice volumes into pricing_config's
+      // "expected monthly" so the invoice + the ROI agree even when
+      // the AE only filled Section 5 (channel volumes) and not the
+      // full 2026 pricing builder. Other channels (email / social)
+      // don't have a pricing counterpart.
+      let nextPricing = prev.pricing_config;
+      if (channel === "chat") {
+        nextPricing = { ...(prev.pricing_config ?? {}), chat_expected_monthly: parsed };
+      } else if (channel === "voice") {
+        nextPricing = { ...(prev.pricing_config ?? {}), voice_expected_monthly: parsed };
+      }
+      return { ...prev, channel_volumes: nextVolumes, pricing_config: nextPricing };
+    });
   };
 
   const toggleIntegration = (category: string, name: string) => {

@@ -10,6 +10,16 @@ export interface ROIInputs {
    *  size the cost-independent services floor so Nordic nominals
    *  (~10× higher) don't trivialise the break-even. Default: USD. */
   currency?: string;
+  /** Optional override: the real boost.ai monthly cost from the
+   *  2026 pricing invoice (calculatePricing().monthlyTotal). When
+   *  provided, takes precedence over the AI_COST_RATIO heuristic
+   *  so ROI / Impact / Commercial all quote the SAME number
+   *  instead of disagreeing. USD. */
+  invoiceMonthlyCostUSD?: number;
+  /** Optional override: the real one-time implementation cost from
+   *  calculateResourcePlan().implementationTotal. When provided,
+   *  takes precedence over the services-floor heuristic. USD. */
+  invoiceImplementationUSD?: number;
 }
 
 export interface ROIResults {
@@ -62,10 +72,19 @@ export function calculateROI(inputs: ROIInputs): ROIResults {
 
   // New cost: automated at AI rate + remaining humans at full rate + platform overhead
   const platformMonthly = currentMonthlyCost * PLATFORM_OVERHEAD_RATIO;
-  const newMonthlyCost =
+  const heuristicNewCost =
     (automatedConversations * aiCostPerConversation) +
     (humanConversations * costPerConversation) +
     platformMonthly;
+
+  // INVOICE-FIRST: when the AE has built a 2026 pricing invoice,
+  // that IS the boost.ai cost. Fall back to the heuristic only when
+  // no invoice is available. USD fields assume 1:1 with customer
+  // currency — acceptable because the invoice view itself is USD
+  // today; currency-aware conversion is a later enhancement.
+  const newMonthlyCost = inputs.invoiceMonthlyCostUSD != null
+    ? inputs.invoiceMonthlyCostUSD
+    : heuristicNewCost;
 
   const monthlySavings = currentMonthlyCost - newMonthlyCost;
   const annualSavings = monthlySavings * 12;
@@ -85,8 +104,12 @@ export function calculateROI(inputs: ROIInputs): ROIResults {
   // break-even is longer; at high costs savings outrun the floor
   // and break-even collapses to sub-month.
   const isNordic = /NOK|SEK|DKK/i.test(inputs.currency ?? "");
-  const implFloor = (isNordic ? 200_000 : 20_000) * markets;
-  const implCost = implFloor + platformMonthly * markets;
+  const heuristicImplFloor = (isNordic ? 200_000 : 20_000) * markets;
+  const heuristicImpl = heuristicImplFloor + platformMonthly * markets;
+  // INVOICE-FIRST: real resource-plan total wins if available.
+  const implCost = inputs.invoiceImplementationUSD != null
+    ? inputs.invoiceImplementationUSD
+    : heuristicImpl;
   // Raw break-even in months. Under current model (proportional
   // savings vs proportional platform overhead) this is typically
   // sub-1 month at low conversation costs — so we return a

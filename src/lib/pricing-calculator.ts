@@ -249,6 +249,64 @@ export function formatUSD(amount: number): string {
   return `$${Math.round(amount).toLocaleString("en-US")}`;
 }
 
+/** True when `cfg` has any meaningful field populated (i.e. the AE
+ *  has filled the 2026 pricing builder — not just toggled the section
+ *  open). Used by consumers to decide "render invoice-aware number"
+ *  vs "fall back to legacy heuristic". */
+export function pricingConfigHasContent(cfg?: PricingConfig): boolean {
+  if (!cfg) return false;
+  return Boolean(
+    cfg.chat_va_external || cfg.chat_va_internal || cfg.voice_va ||
+    cfg.chat_expected_monthly || cfg.voice_expected_monthly ||
+    (cfg.success_package && cfg.success_package !== "none") ||
+    (cfg.environments?.length ?? 0) > 0 ||
+    cfg.human_chat_enabled || cfg.van_enabled ||
+    Object.values(cfg.integrations_by_tier ?? {}).some((n) => (n ?? 0) > 0),
+  );
+}
+
+/**
+ * One-stop invoice context used by ROI / Impact / SoW / Commercial.
+ * Returns `null` when no pricing_config is populated, so callers can
+ * cleanly fall back to legacy heuristics.
+ */
+export interface InvoiceContext {
+  monthlyUSD: number;
+  annualUSD: number;
+  implementationOneTimeUSD: number;
+  /** Expected monthly conversations sourced from pricing_config (chat
+   *  volume). Zero when not set — callers should then fall back to
+   *  channel_volumes.chat. */
+  expectedMonthlyChat: number;
+  /** Expected monthly voice minutes. Zero when not set. */
+  expectedMonthlyVoiceMinutes: number;
+}
+
+export function getInvoiceContext(
+  cfg: PricingConfig | undefined,
+  resourcePlanInputs: {
+    deployment_markets?: number;
+    integration_count?: number;
+    customer_team_size?: number;
+  },
+): InvoiceContext | null {
+  if (!pricingConfigHasContent(cfg)) return null;
+  const invoice = calculatePricing(cfg as PricingConfig);
+  const plan = calculateResourcePlan({
+    ...resourcePlanInputs,
+    bundled_success_package: Boolean(
+      cfg && cfg.success_package && cfg.success_package !== "none",
+    ),
+  });
+  return {
+    monthlyUSD: invoice.monthlyTotal,
+    annualUSD: invoice.annualTotal,
+    implementationOneTimeUSD: plan.implementationTotal,
+    expectedMonthlyChat: cfg?.chat_expected_monthly ?? 0,
+    expectedMonthlyVoiceMinutes: cfg?.voice_expected_monthly ?? 0,
+  };
+}
+
 /* ─── Resource plan ────────────────────────────────────────────────
  *  Produces a one-time implementation cost broken down per-role and
  *  per-phase, scaled by the same complexity score that stretches the

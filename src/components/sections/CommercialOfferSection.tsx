@@ -5,7 +5,7 @@ import type { GuideData } from "@/lib/types";
 import type { PricingModel } from "@/lib/types";
 import { getAgentsForGuide } from "@/data/agents";
 import { calculateROI, resolveCurrency, formatWithCurrency } from "@/lib/roi-calculator";
-import { calculatePricing, calculateResourcePlan, formatUSD, type PricingConfig } from "@/lib/pricing-calculator";
+import { calculatePricing, calculateResourcePlan, formatUSD, pricingConfigHasContent } from "@/lib/pricing-calculator";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
@@ -103,18 +103,6 @@ const INVESTMENT_LINES = [
  *  pulled from the same CSV the revenue team uses internally. This
  *  isn't a marketing cards view — it's the deal as scoped. Monthly +
  *  annual totals at the bottom. Groups: Platform / Usage / Add-ons. */
-function pricingConfigHasContent(cfg?: PricingConfig): boolean {
-  if (!cfg) return false;
-  return Boolean(
-    cfg.chat_va_external || cfg.chat_va_internal || cfg.voice_va ||
-    cfg.chat_expected_monthly || cfg.voice_expected_monthly ||
-    cfg.success_package && cfg.success_package !== "none" ||
-    (cfg.environments?.length ?? 0) > 0 ||
-    cfg.human_chat_enabled || cfg.van_enabled ||
-    Object.values(cfg.integrations_by_tier ?? {}).some((n) => (n ?? 0) > 0),
-  );
-}
-
 function InvoiceBlock({ guide }: { guide: GuideData }) {
   const cfg = guide.pricing_config;
   if (!cfg) return null;

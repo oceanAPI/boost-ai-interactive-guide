@@ -9,6 +9,7 @@ import jsPDF from "jspdf";
 import QRCode from "qrcode";
 import type { GuideFormData } from "./types";
 import { calculateROI } from "./roi-calculator";
+import { getInvoiceContext, calculatePricing, pricingConfigHasContent } from "./pricing-calculator";
 import { getOrchestratorConfig, getAgentsForGuide } from "@/data/agents";
 import { ROADMAP_PHASES, ROADMAP_LANES } from "@/data/roadmap";
 
@@ -554,10 +555,31 @@ class SOWBuilder {
       : 70;
 
     const vols = form.channel_volumes;
-    const totalVol = (vols.chat || 0) + (vols.voice || 0) + (vols.email || 0) + (vols.social || 0);
     const cost = parseFloat(form.conversation_cost) || 5;
 
-    if (totalVol === 0) {
+    // Invoice-first: if the 2026 pricing builder is populated, the
+    // SoW quotes the same monthly + implementation numbers as the
+    // Commercial Offer. Falls back to the legacy channel-volumes
+    // heuristic when not.
+    const ig = form.integrations ?? {};
+    const integrationCount =
+      (ig.channel?.length || 0) + (ig.human_handover?.length || 0) +
+      (ig.openid?.length || 0) + (ig.utility?.length || 0) + (ig.voice?.length || 0);
+    const teamSize =
+      (form.resources?.stakeholder_owners || 0) +
+      (form.resources?.ai_trainers || 0) +
+      (form.resources?.technical_resources || 0);
+    const invoiceCtx = getInvoiceContext(form.pricing_config, {
+      deployment_markets: form.deployment_markets,
+      integration_count: integrationCount,
+      customer_team_size: teamSize,
+    });
+
+    const totalVol = invoiceCtx?.expectedMonthlyChat
+      ? invoiceCtx.expectedMonthlyChat
+      : (vols.chat || 0) + (vols.voice || 0) + (vols.email || 0) + (vols.social || 0);
+
+    if (totalVol === 0 && !invoiceCtx) {
       this.body("Channel volumes not specified. ROI projection will be calculated during the Discovery phase with actual volume data.");
       return;
     }
@@ -569,6 +591,8 @@ class SOWBuilder {
       automationRate: avgAutomation,
       markets: form.deployment_markets,
       currency: form.conversation_cost,
+      invoiceMonthlyCostUSD: invoiceCtx?.monthlyUSD,
+      invoiceImplementationUSD: invoiceCtx?.implementationOneTimeUSD,
     });
 
     this.body(
@@ -599,6 +623,54 @@ class SOWBuilder {
     this.doc.setTextColor(...MUTED);
     this.doc.text("* Projections are estimates based on industry benchmarks. Actual results may vary.", MARGIN_L, this.y);
     this.y += 6;
+
+    // 2026 pricing invoice — only when the builder is populated.
+    // Procurement wants the line items, not just the headline.
+    if (pricingConfigHasContent(form.pricing_config)) {
+      this.spacer(8);
+      this.heading("2026 Pricing — Invoice Line Items", 3);
+      const invoice = calculatePricing(form.pricing_config!);
+      const groups: Array<{ title: string; lines: typeof invoice.platform }> = [
+        { title: "Platform",       lines: invoice.platform },
+        { title: "Usage",          lines: invoice.usage },
+        { title: "Add-ons",        lines: invoice.addons },
+      ];
+      const lineWidths = [110, 55];
+      for (const g of groups) {
+        if (g.lines.length === 0) continue;
+        this.tableRow([g.title.toUpperCase(), "Monthly (USD)"], lineWidths, true);
+        for (const l of g.lines) {
+          this.tableRow([l.label, `$${Math.round(l.monthly).toLocaleString("en-US")}`], lineWidths);
+        }
+      }
+      this.spacer(2);
+      this.tableRow(
+        ["Monthly total", `$${Math.round(invoice.monthlyTotal).toLocaleString("en-US")}`],
+        lineWidths,
+        true,
+      );
+      this.tableRow(
+        ["Annual total", `$${Math.round(invoice.annualTotal).toLocaleString("en-US")}`],
+        lineWidths,
+        true,
+      );
+      if (invoiceCtx?.implementationOneTimeUSD) {
+        this.tableRow(
+          ["Implementation (one-time)", `$${Math.round(invoiceCtx.implementationOneTimeUSD).toLocaleString("en-US")}`],
+          lineWidths,
+          true,
+        );
+      }
+      this.spacer(4);
+      this.doc.setFontSize(7);
+      this.doc.setTextColor(...MUTED);
+      this.doc.text(
+        "Pricing reflects the 2026 Boost pricing calculator. Commitments, overage, and service tiers as captured in admin.",
+        MARGIN_L,
+        this.y,
+      );
+      this.y += 6;
+    }
   }
 
   buildSignaturePage(form: GuideFormData) {

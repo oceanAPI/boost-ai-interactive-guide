@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import type { GuideData } from "@/lib/types";
 import { getAgentsForGuide } from "@/data/agents";
 import { calculateROI, resolveCurrency, formatWithCurrency } from "@/lib/roi-calculator";
+import { getInvoiceContext } from "@/lib/pricing-calculator";
 import { SectionHeader, StatCounter } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
@@ -16,8 +17,26 @@ export default function ROISection({
 }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
 
-  // Default values from guide data
-  const totalVolumeFromGuide = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0);
+  // Default values from guide data. When the AE has filled the 2026
+  // pricing builder, prefer its `chat_expected_monthly` over the
+  // channel_volumes total so ROI / Invoice / Impact agree.
+  const ig = guide.integrations ?? {};
+  const integrationCount =
+    (ig.channel?.length || 0) + (ig.human_handover?.length || 0) +
+    (ig.openid?.length || 0) + (ig.utility?.length || 0) + (ig.voice?.length || 0);
+  const teamSize =
+    (guide.resources?.stakeholder_owners || 0) +
+    (guide.resources?.ai_trainers || 0) +
+    (guide.resources?.technical_resources || 0);
+  const invoice = getInvoiceContext(guide.pricing_config, {
+    deployment_markets: guide.deployment_markets,
+    integration_count: integrationCount,
+    customer_team_size: teamSize,
+  });
+
+  const totalVolumeFromGuide = invoice?.expectedMonthlyChat
+    ? invoice.expectedMonthlyChat
+    : Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0);
   const costFromGuide = parseFloat(guide.conversation_cost?.replace(/[^0-9.]/g, "") || "0");
 
   const agents = getAgentsForGuide(guide.areas_of_interest, guide.selected_variants);
@@ -45,8 +64,10 @@ export default function ROISection({
       automationRate: avgRate,
       markets: guide.deployment_markets || 1,
       currency,
+      invoiceMonthlyCostUSD: invoice?.monthlyUSD,
+      invoiceImplementationUSD: invoice?.implementationOneTimeUSD,
     }),
-    [volume, cost, guide.pricing_model, avgRate, guide.deployment_markets, currency],
+    [volume, cost, guide.pricing_model, avgRate, guide.deployment_markets, currency, invoice?.monthlyUSD, invoice?.implementationOneTimeUSD],
   );
 
   const savingsBarWidth = roi.currentMonthlyCost > 0
