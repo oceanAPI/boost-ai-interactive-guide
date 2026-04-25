@@ -18,6 +18,11 @@ import {
   VAN_PRICE,
 } from "@/data/pricing-2026";
 import { pricingConfigHasContent } from "@/lib/pricing-calculator";
+import {
+  createEmptyMarket,
+  rollupMarketVolumes,
+  slugifyMarketKey,
+} from "@/lib/market-volumes";
 import { generateSOWPdf } from "@/lib/generate-sow-pdf";
 import SalesforceImportModal from "@/components/SalesforceImportModal";
 import HubSpotImportModal from "@/components/HubSpotImportModal";
@@ -41,7 +46,7 @@ import {
 } from "@/lib/slide-sections";
 import { AUDIENCE_DEFAULTS } from "@/data/audience-sections";
 import { CASE_STUDIES } from "@/data/case-studies";
-import type { GuideFormData, ChannelVolumes, IntegrationSelections, PricingModel, ResourceAllocation, Audience } from "@/lib/types";
+import type { GuideFormData, ChannelVolumes, MarketVolumes, IntegrationSelections, PricingModel, ResourceAllocation, Audience } from "@/lib/types";
 
 /* ─── Collapsible Section ─── */
 function CollapsibleSection({
@@ -437,6 +442,98 @@ export default function AdminPage() {
         nextPricing = { ...(prev.pricing_config ?? {}), voice_expected_monthly: parsed };
       }
       return { ...prev, channel_volumes: nextVolumes, pricing_config: nextPricing };
+    });
+  };
+
+  /* F11 — per-market volumes mutators.
+     `market_volumes` is the source of truth when set; the rollup
+     `channel_volumes` and the count `deployment_markets` are
+     auto-synced so all existing consumers stay untouched. */
+  const syncRollupFromMarkets = (
+    markets: MarketVolumes[],
+    prev: GuideFormData,
+  ): Partial<GuideFormData> => {
+    const rollup = rollupMarketVolumes(markets);
+    let nextPricing = prev.pricing_config;
+    if (rollup.chat != null || prev.pricing_config?.chat_expected_monthly != null) {
+      nextPricing = {
+        ...(prev.pricing_config ?? {}),
+        chat_expected_monthly: rollup.chat,
+      };
+    }
+    if (rollup.voice != null || prev.pricing_config?.voice_expected_monthly != null) {
+      nextPricing = {
+        ...(nextPricing ?? prev.pricing_config ?? {}),
+        voice_expected_monthly: rollup.voice,
+      };
+    }
+    return {
+      market_volumes: markets,
+      channel_volumes: rollup,
+      deployment_markets: Math.max(1, markets.length),
+      pricing_config: nextPricing,
+    };
+  };
+
+  const enablePerMarket = () => {
+    setForm((prev) => {
+      // First market seeded with the existing flat rollup so we
+      // don't lose the AE's current input on toggle-on.
+      const seedName = prev.company_name || "Primary market";
+      const seed: MarketVolumes = {
+        key: slugifyMarketKey(seedName),
+        name: seedName,
+        volumes: { ...prev.channel_volumes },
+      };
+      return { ...prev, ...syncRollupFromMarkets([seed], prev) };
+    });
+  };
+
+  const disablePerMarket = () => {
+    setForm((prev) => ({ ...prev, market_volumes: undefined }));
+  };
+
+  const addMarket = () => {
+    setForm((prev) => {
+      const next = [...(prev.market_volumes ?? []), createEmptyMarket()];
+      return { ...prev, ...syncRollupFromMarkets(next, prev) };
+    });
+  };
+
+  const removeMarket = (key: string) => {
+    setForm((prev) => {
+      const next = (prev.market_volumes ?? []).filter((m) => m.key !== key);
+      if (next.length === 0) {
+        return { ...prev, market_volumes: undefined };
+      }
+      return { ...prev, ...syncRollupFromMarkets(next, prev) };
+    });
+  };
+
+  const updateMarketField = (
+    key: string,
+    field: "name" | "country",
+    value: string,
+  ) => {
+    setForm((prev) => {
+      const next = (prev.market_volumes ?? []).map((m) =>
+        m.key === key ? { ...m, [field]: value || undefined } : m,
+      );
+      return { ...prev, market_volumes: next };
+    });
+  };
+
+  const updateMarketVolume = (
+    key: string,
+    channel: keyof ChannelVolumes,
+    value: string,
+  ) => {
+    setForm((prev) => {
+      const parsed = value ? parseInt(value) : undefined;
+      const next = (prev.market_volumes ?? []).map((m) =>
+        m.key === key ? { ...m, volumes: { ...m.volumes, [channel]: parsed } } : m,
+      );
+      return { ...prev, ...syncRollupFromMarkets(next, prev) };
     });
   };
 
@@ -1565,32 +1662,157 @@ export default function AdminPage() {
         >
           <AdminPrompt
             question="How much do they handle each month?"
-            helper="Total monthly conversation volume per channel — all markets combined. Anchors the ROI calculator."
+            helper="Total monthly conversation volume per channel. Use single rollup for one market or a quick estimate; switch to per-market when the customer spans multiple regions and you want each one named in the deck."
+            action={
+              <div className="flex items-center gap-1 rounded-full border border-boost-border bg-white p-0.5">
+                <button
+                  type="button"
+                  onClick={() => form.market_volumes && disablePerMarket()}
+                  className={`px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] rounded-full transition-colors ${
+                    !form.market_volumes
+                      ? "bg-boost-purple text-white"
+                      : "text-boost-muted hover:text-boost-dark"
+                  }`}
+                >
+                  Single rollup
+                </button>
+                <button
+                  type="button"
+                  onClick={() => !form.market_volumes && enablePerMarket()}
+                  className={`px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] rounded-full transition-colors ${
+                    form.market_volumes
+                      ? "bg-boost-purple text-white"
+                      : "text-boost-muted hover:text-boost-dark"
+                  }`}
+                >
+                  Per-market
+                </button>
+              </div>
+            }
           />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {([
-              { key: "chat" as const, label: "Chat" },
-              { key: "voice" as const, label: "Voice" },
-              { key: "email" as const, label: "Email" },
-              { key: "social" as const, label: "Social" },
-            ]).map((ch) => (
-              <div key={ch.key}>
-                <AdminMiniLabel>{ch.label}</AdminMiniLabel>
-                <div className="relative mt-1.5">
-                  <input
-                    type="number"
-                    value={form.channel_volumes[ch.key] || ""}
-                    onChange={(e) => updateVolume(ch.key, e.target.value)}
-                    placeholder="0"
-                    className={`${inputClass} tabular-nums pr-10`}
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-boost-muted/70 uppercase tracking-[0.14em] pointer-events-none">
-                    /mo
-                  </span>
+
+          {!form.market_volumes ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {([
+                { key: "chat" as const, label: "Chat" },
+                { key: "voice" as const, label: "Voice" },
+                { key: "email" as const, label: "Email" },
+                { key: "social" as const, label: "Social" },
+              ]).map((ch) => (
+                <div key={ch.key}>
+                  <AdminMiniLabel>{ch.label}</AdminMiniLabel>
+                  <div className="relative mt-1.5">
+                    <input
+                      type="number"
+                      value={form.channel_volumes[ch.key] || ""}
+                      onChange={(e) => updateVolume(ch.key, e.target.value)}
+                      placeholder="0"
+                      className={`${inputClass} tabular-nums pr-10`}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-boost-muted/70 uppercase tracking-[0.14em] pointer-events-none">
+                      /mo
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {form.market_volumes.map((market, idx) => (
+                <div
+                  key={market.key}
+                  className="rounded-xl border border-boost-border bg-white p-4 space-y-3"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="mt-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-boost-surface text-boost-muted text-[10px] font-bold tabular-nums">
+                      {idx + 1}
+                    </span>
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-2">
+                      <input
+                        type="text"
+                        value={market.name}
+                        onChange={(e) => updateMarketField(market.key, "name", e.target.value)}
+                        placeholder="Market name (e.g. Sweden)"
+                        className={`${inputClass}`}
+                      />
+                      <input
+                        type="text"
+                        value={market.country ?? ""}
+                        onChange={(e) =>
+                          updateMarketField(market.key, "country", e.target.value.toUpperCase().slice(0, 2))
+                        }
+                        placeholder="ISO (SE)"
+                        maxLength={2}
+                        className={`${inputClass} tabular-nums uppercase tracking-wide`}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeMarket(market.key)}
+                      aria-label={`Remove ${market.name || "market"}`}
+                      className="mt-1 w-8 h-8 rounded-full text-boost-muted hover:bg-boost-surface hover:text-boost-dark transition-colors flex items-center justify-center text-[14px]"
+                      title="Remove market"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pl-9">
+                    {([
+                      { key: "chat" as const, label: "Chat" },
+                      { key: "voice" as const, label: "Voice" },
+                      { key: "email" as const, label: "Email" },
+                      { key: "social" as const, label: "Social" },
+                    ]).map((ch) => (
+                      <div key={ch.key}>
+                        <p className="text-[9px] font-semibold text-boost-muted uppercase tracking-[0.14em]">{ch.label}</p>
+                        <div className="relative mt-1">
+                          <input
+                            type="number"
+                            value={market.volumes[ch.key] || ""}
+                            onChange={(e) => updateMarketVolume(market.key, ch.key, e.target.value)}
+                            placeholder="0"
+                            className={`${inputClass} tabular-nums pr-9 text-[13px]`}
+                          />
+                          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-boost-muted/70 uppercase tracking-[0.14em] pointer-events-none">
+                            /mo
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={addMarket}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-dashed border-boost-border text-boost-purple hover:bg-boost-purple hover:text-white hover:border-boost-purple transition-colors text-[11px] font-semibold uppercase tracking-[0.14em]"
+                >
+                  <span aria-hidden>+</span>
+                  Add market
+                </button>
+
+                <div className="text-right">
+                  <p className="text-[9px] font-semibold text-boost-muted uppercase tracking-[0.16em]">
+                    Rollup
+                  </p>
+                  <p className="text-[11px] text-boost-dark tabular-nums">
+                    {(["chat", "voice", "email", "social"] as const)
+                      .map((ch) => {
+                        const v = form.channel_volumes[ch];
+                        if (!v) return null;
+                        return `${ch} ${v.toLocaleString()}`;
+                      })
+                      .filter(Boolean)
+                      .join(" · ") || "0"}
+                    {" /mo"}
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
 
           <AdminPrompt
             divider

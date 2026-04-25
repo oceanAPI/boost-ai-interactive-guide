@@ -91,6 +91,7 @@ function GuideContent() {
     areas_of_interest: formData.areas_of_interest || [],
     specific_requirements: formData.specific_requirements || "",
     channel_volumes: formData.channel_volumes || {},
+    market_volumes: formData.market_volumes,
     conversation_cost: formData.conversation_cost || "",
     currency: formData.currency,
     pricing_model: formData.pricing_model || "fixed",

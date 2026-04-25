@@ -5,6 +5,31 @@ export interface ChannelVolumes {
   social?: number;
 }
 
+/** F11 — per-market detail for the same channel mix.
+ *  When `market_volumes` is set on a Form/Guide, the rollup
+ *  `channel_volumes` is auto-derived (sum across markets) and
+ *  `deployment_markets` is auto-derived (length). Consumers
+ *  continue to read `channel_volumes` and don't need to know
+ *  whether the data was authored flat or per-market.
+ *
+ *  A future Impact / Commercial enhancement can opt-in to read
+ *  `market_volumes` directly for per-market visualisations
+ *  (e.g. "Sweden 60% of volume, Norway 25%, Finland 15%").
+ *  Until then, the data is just round-tripped. */
+export interface MarketVolumes {
+  /** Stable identifier — slugified from the name on creation,
+   *  never changes on rename. Used as React key. */
+  key: string;
+  /** Display name — "Sweden", "United Kingdom"… */
+  name: string;
+  /** Optional ISO 3166-1 alpha-2 code ("SE", "GB"). For future
+   *  flag rendering and region grouping. */
+  country?: string;
+  /** Channel volume mix for this single market. Same shape as
+   *  the rollup. */
+  volumes: ChannelVolumes;
+}
+
 export type IntegrationCategoryKey =
   | "channel"
   | "human_handover"
@@ -69,6 +94,11 @@ export interface GuideData {
   areas_of_interest: string[];
   specific_requirements: string;
   channel_volumes: ChannelVolumes;
+  /** F11 — per-market volume detail. When set, the admin auto-syncs
+   *  `channel_volumes` to the rollup and `deployment_markets` to
+   *  the length. Optional; existing shared URLs without this field
+   *  continue to use the flat `channel_volumes` only. */
+  market_volumes?: MarketVolumes[];
   conversation_cost: string;
   /** Explicit currency override set by the admin picker. When
    *  present, takes precedence over inferring from
@@ -134,6 +164,9 @@ export interface GuideFormData {
   areas_of_interest: string[];
   specific_requirements: string;
   channel_volumes: ChannelVolumes;
+  /** F11 — per-market detail. When set, channel_volumes is the
+   *  derived rollup and deployment_markets is derived count. */
+  market_volumes?: MarketVolumes[];
   conversation_cost: string;
   /** Customer-facing currency. Optional — when omitted, components
    *  fall back to `detectCurrency(conversation_cost)` for back-compat
