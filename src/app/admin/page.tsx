@@ -8,6 +8,16 @@ import { INTEGRATION_CATEGORIES } from "@/data/integrations";
 import { INDUSTRIES, INDUSTRY_CATEGORIES, HIDDEN_INDUSTRIES, SUPPORTING_DEPARTMENTS, INDUSTRY_VARIANTS } from "@/data/agents";
 import { encodeGuideData, decodeGuideData } from "@/lib/url-encoding";
 import { CURRENCY_OPTIONS } from "@/lib/roi-calculator";
+import {
+  ENVIRONMENT_ADDONS,
+  INTEGRATION_TIERS,
+  SUCCESS_PACKAGES,
+  HUMAN_CHAT_BASE_PRICE,
+  HUMAN_CHAT_INCLUDED_SEATS,
+  HUMAN_CHAT_PRICE_PER_EXTRA_SEAT,
+  VAN_PRICE,
+} from "@/data/pricing-2026";
+import { pricingConfigHasContent } from "@/lib/pricing-calculator";
 import { generateSOWPdf } from "@/lib/generate-sow-pdf";
 import SalesforceImportModal from "@/components/SalesforceImportModal";
 import HubSpotImportModal from "@/components/HubSpotImportModal";
@@ -669,6 +679,7 @@ export default function AdminPage() {
   );
   const hasAreas = form.areas_of_interest.length > 0;
   const hasPricing = !!(form.conversation_cost);
+  const hasPricingConfig = pricingConfigHasContent(form.pricing_config);
   const hasDeployment =
     form.deployment_markets > 1 ||
     !!form.resources.stakeholder_owners ||
@@ -1085,8 +1096,12 @@ export default function AdminPage() {
         {/* 3 — Pricing & Costs */}
         <CollapsibleSection
           number={3}
-          title="Pricing Model & Costs"
-          subtitle={hasPricing ? `${PRICING_MODELS.find(p => p.key === form.pricing_model)?.label} · ${form.conversation_cost}` : "Choose pricing model and enter cost baseline"}
+          title="Pricing Model & Cost Baseline"
+          subtitle={
+            hasPricing
+              ? `${PRICING_MODELS.find((p) => p.key === form.pricing_model)?.label} · ${form.conversation_cost}`
+              : "Pricing model and per-conversation cost — feeds the ROI math"
+          }
           hasContent={hasPricing}
         >
           <AdminPrompt
@@ -1119,202 +1134,248 @@ export default function AdminPage() {
             className={`${inputClass} max-w-xs`}
           />
 
-          {/* ── 2026 Pricing Builder ──
-              Builds the Commercial-section invoice from the real CSV.
-              All fields optional — leaving them blank falls back to
-              the legacy 3-model pricing cards. */}
-          <div className="mt-8 rounded-xl border border-boost-border bg-boost-surface/40 p-5 space-y-5">
+          <p className="mt-6 text-[11px] text-boost-muted leading-relaxed">
+            The line-item Commercial invoice (Chat tiers, Voice, Success Package, add-ons, integrations) lives in
+            <span className="font-semibold text-boost-dark"> Section 4 · Commercial Invoice Builder</span>.
+          </p>
+        </CollapsibleSection>
+
+        {/* 4 — Commercial Invoice Builder (2026) */}
+        <CollapsibleSection
+          number={4}
+          title="Commercial Invoice Builder (2026)"
+          subtitle={
+            hasPricingConfig
+              ? "Populated — Commercial section will render a line-item invoice"
+              : "Optional — populate to render the 2026 line-item invoice"
+          }
+          hasContent={hasPricingConfig}
+          autoOpenOnContent={false}
+        >
+          <p className="text-[11px] text-boost-muted leading-relaxed mb-5 max-w-prose">
+            Each block below is independent — leave empty to skip that line on the invoice.
+            Prices flow from <code className="px-1 py-0.5 rounded bg-boost-surface text-[10px]">src/data/pricing-2026.ts</code>;
+            updating that file updates every label here.
+          </p>
+
+          {/* Chat VAs */}
+          <AdminMiniLabel>Virtual agents</AdminMiniLabel>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2 mb-6">
             <div>
-              <AdminMiniLabel>2026 Boost Pricing — Commercial Invoice Inputs</AdminMiniLabel>
-              <p className="text-[11px] text-boost-muted mt-1 max-w-prose">
-                Populate these so the Commercial Offer renders a line-item invoice. Blank sections render nothing — only fill what applies.
-              </p>
+              <p className="text-[10px] text-boost-muted">External chat VAs</p>
+              <input
+                type="number"
+                min={0}
+                value={form.pricing_config?.chat_va_external ?? ""}
+                onChange={(e) => updatePricingConfig("chat_va_external", e.target.value ? Number(e.target.value) : undefined)}
+                placeholder="0"
+                className={`${inputClass} mt-1`}
+              />
             </div>
-
-            {/* Chat VAs */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <AdminMiniLabel>External chat VAs</AdminMiniLabel>
-                <input type="number" min={0}
-                  value={form.pricing_config?.chat_va_external ?? ""}
-                  onChange={(e) => updatePricingConfig("chat_va_external", e.target.value ? Number(e.target.value) : undefined)}
-                  placeholder="0" className={`${inputClass} mt-1`} />
-              </div>
-              <div>
-                <AdminMiniLabel>Internal chat VAs</AdminMiniLabel>
-                <input type="number" min={0}
-                  value={form.pricing_config?.chat_va_internal ?? ""}
-                  onChange={(e) => updatePricingConfig("chat_va_internal", e.target.value ? Number(e.target.value) : undefined)}
-                  placeholder="0" className={`${inputClass} mt-1`} />
-              </div>
-              <div>
-                <AdminMiniLabel>Voice VAs</AdminMiniLabel>
-                <input type="number" min={0}
-                  value={form.pricing_config?.voice_va ?? ""}
-                  onChange={(e) => updatePricingConfig("voice_va", e.target.value ? Number(e.target.value) : undefined)}
-                  placeholder="0" className={`${inputClass} mt-1`} />
-              </div>
+            <div>
+              <p className="text-[10px] text-boost-muted">Internal chat VAs</p>
+              <input
+                type="number"
+                min={0}
+                value={form.pricing_config?.chat_va_internal ?? ""}
+                onChange={(e) => updatePricingConfig("chat_va_internal", e.target.value ? Number(e.target.value) : undefined)}
+                placeholder="0"
+                className={`${inputClass} mt-1`}
+              />
             </div>
+            <div>
+              <p className="text-[10px] text-boost-muted">Voice VAs</p>
+              <input
+                type="number"
+                min={0}
+                value={form.pricing_config?.voice_va ?? ""}
+                onChange={(e) => updatePricingConfig("voice_va", e.target.value ? Number(e.target.value) : undefined)}
+                placeholder="0"
+                className={`${inputClass} mt-1`}
+              />
+            </div>
+          </div>
 
-            {/* Chat volume */}
+          {/* Chat volume */}
+          <AdminMiniLabel>Chat volumes</AdminMiniLabel>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 mb-6">
+            <div>
+              <p className="text-[10px] text-boost-muted">Expected monthly conversations</p>
+              <input
+                type="number"
+                min={0}
+                value={form.pricing_config?.chat_expected_monthly ?? ""}
+                onChange={(e) => updatePricingConfig("chat_expected_monthly", e.target.value ? Number(e.target.value) : undefined)}
+                placeholder="25,000"
+                className={`${inputClass} mt-1`}
+              />
+            </div>
+            <div>
+              <p className="text-[10px] text-boost-muted">Committed monthly (10% discount)</p>
+              <input
+                type="number"
+                min={0}
+                value={form.pricing_config?.chat_committed_monthly ?? ""}
+                onChange={(e) => updatePricingConfig("chat_committed_monthly", e.target.value ? Number(e.target.value) : undefined)}
+                placeholder="20,000"
+                className={`${inputClass} mt-1`}
+              />
+            </div>
+          </div>
+
+          {/* Voice service + volume */}
+          <AdminMiniLabel>Voice volumes & service</AdminMiniLabel>
+          <div className="mt-2 mb-6 space-y-3">
+            <AdminChipRow>
+              {(["enterprise", "express"] as const).map((svc) => (
+                <AdminChip
+                  key={svc}
+                  active={(form.pricing_config?.voice_service ?? "enterprise") === svc}
+                  onClick={() => updatePricingConfig("voice_service", svc)}
+                >
+                  {svc === "enterprise" ? "Enterprise" : "Express"}
+                </AdminChip>
+              ))}
+            </AdminChipRow>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <AdminMiniLabel>Chat — expected monthly conversations</AdminMiniLabel>
-                <input type="number" min={0}
-                  value={form.pricing_config?.chat_expected_monthly ?? ""}
-                  onChange={(e) => updatePricingConfig("chat_expected_monthly", e.target.value ? Number(e.target.value) : undefined)}
-                  placeholder="25000" className={`${inputClass} mt-1`} />
-              </div>
-              <div>
-                <AdminMiniLabel>Chat — committed monthly conversations</AdminMiniLabel>
-                <input type="number" min={0}
-                  value={form.pricing_config?.chat_committed_monthly ?? ""}
-                  onChange={(e) => updatePricingConfig("chat_committed_monthly", e.target.value ? Number(e.target.value) : undefined)}
-                  placeholder="20000 (gets 10% discount)" className={`${inputClass} mt-1`} />
-              </div>
-            </div>
-
-            {/* Voice service + volume */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <AdminMiniLabel>Voice service</AdminMiniLabel>
-                <div className="mt-1">
-                  <AdminChipRow>
-                    {(["enterprise", "express"] as const).map((svc) => (
-                      <AdminChip key={svc}
-                        active={(form.pricing_config?.voice_service ?? "enterprise") === svc}
-                        onClick={() => updatePricingConfig("voice_service", svc)}>
-                        {svc === "enterprise" ? "Enterprise" : "Express"}
-                      </AdminChip>
-                    ))}
-                  </AdminChipRow>
-                </div>
-              </div>
-              <div>
-                <AdminMiniLabel>Voice — expected monthly minutes</AdminMiniLabel>
-                <input type="number" min={0}
+                <p className="text-[10px] text-boost-muted">Expected monthly minutes</p>
+                <input
+                  type="number"
+                  min={0}
                   value={form.pricing_config?.voice_expected_monthly ?? ""}
                   onChange={(e) => updatePricingConfig("voice_expected_monthly", e.target.value ? Number(e.target.value) : undefined)}
-                  placeholder="100000" className={`${inputClass} mt-1`} />
+                  placeholder="100,000"
+                  className={`${inputClass} mt-1`}
+                />
               </div>
               <div>
-                <AdminMiniLabel>Voice — committed monthly minutes</AdminMiniLabel>
-                <input type="number" min={0}
+                <p className="text-[10px] text-boost-muted">Committed monthly (10% discount)</p>
+                <input
+                  type="number"
+                  min={0}
                   value={form.pricing_config?.voice_committed_monthly ?? ""}
                   onChange={(e) => updatePricingConfig("voice_committed_monthly", e.target.value ? Number(e.target.value) : undefined)}
-                  placeholder="80000 (gets 10% discount)" className={`${inputClass} mt-1`} />
-              </div>
-            </div>
-
-            {/* Success package */}
-            <div>
-              <AdminMiniLabel>Enterprise Success Package</AdminMiniLabel>
-              <div className="mt-1">
-                <AdminChipRow>
-                  {(["none", "essential", "core", "pro"] as const).map((pkg) => (
-                    <AdminChip key={pkg}
-                      active={(form.pricing_config?.success_package ?? "none") === pkg}
-                      onClick={() => updatePricingConfig("success_package", pkg)}>
-                      {pkg === "none" ? "None" : pkg[0].toUpperCase() + pkg.slice(1)}
-                    </AdminChip>
-                  ))}
-                </AdminChipRow>
-              </div>
-            </div>
-
-            {/* Environments */}
-            <div>
-              <AdminMiniLabel>Environments</AdminMiniLabel>
-              <div className="mt-1">
-                <AdminChipRow>
-                  {([
-                    { key: "sandbox", label: "Sandbox ($1,500)" },
-                    { key: "staging", label: "Staging ($1,000)" },
-                    { key: "custom_cloud", label: "Custom Cloud ($4,500)" },
-                  ] as const).map((env) => {
-                    const current = form.pricing_config?.environments ?? [];
-                    const active = current.includes(env.key);
-                    return (
-                      <AdminChip key={env.key}
-                        active={active}
-                        onClick={() => {
-                          const next = active
-                            ? current.filter((k) => k !== env.key)
-                            : [...current, env.key];
-                          updatePricingConfig("environments", next);
-                        }}>
-                        {env.label}
-                      </AdminChip>
-                    );
-                  })}
-                </AdminChipRow>
-              </div>
-            </div>
-
-            {/* Human Chat + VAN */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <AdminMiniLabel>Human Chat</AdminMiniLabel>
-                <div className="mt-1 flex items-center gap-2">
-                  <AdminChip
-                    active={!!form.pricing_config?.human_chat_enabled}
-                    onClick={() => updatePricingConfig("human_chat_enabled", !form.pricing_config?.human_chat_enabled)}>
-                    {form.pricing_config?.human_chat_enabled ? "Enabled" : "Off"}
-                  </AdminChip>
-                  {form.pricing_config?.human_chat_enabled && (
-                    <input type="number" min={10}
-                      value={form.pricing_config?.human_chat_users ?? 10}
-                      onChange={(e) => updatePricingConfig("human_chat_users", e.target.value ? Number(e.target.value) : 10)}
-                      placeholder="users" className={`${inputClass} max-w-[110px]`} />
-                  )}
-                </div>
-                <p className="text-[10px] text-boost-muted mt-1">$1,800 base (10 users) + $200/extra user</p>
-              </div>
-              <div>
-                <AdminMiniLabel>VA Orchestration (VAN)</AdminMiniLabel>
-                <div className="mt-1">
-                  <AdminChip
-                    active={!!form.pricing_config?.van_enabled}
-                    onClick={() => updatePricingConfig("van_enabled", !form.pricing_config?.van_enabled)}>
-                    {form.pricing_config?.van_enabled ? "Enabled ($1,000/mo)" : "Off"}
-                  </AdminChip>
-                </div>
-              </div>
-            </div>
-
-            {/* Integrations by tier */}
-            <div>
-              <AdminMiniLabel>Integrations by tier (count per type)</AdminMiniLabel>
-              <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
-                {([
-                  { key: "authentication",         label: "Authentication",      price: 350 },
-                  { key: "channel",                label: "Channel",             price: 350 },
-                  { key: "third_party_human_chat", label: "3rd party Human Chat", price: 500 },
-                  { key: "advanced_custom",        label: "Advanced/Custom",     price: 750 },
-                ] as const).map((it) => (
-                  <div key={it.key}>
-                    <p className="text-[10px] text-boost-muted uppercase tracking-wide">{it.label}</p>
-                    <p className="text-[9px] text-boost-muted">${it.price}/mo each</p>
-                    <input type="number" min={0}
-                      value={form.pricing_config?.integrations_by_tier?.[it.key] ?? ""}
-                      onChange={(e) => {
-                        const val = e.target.value ? Number(e.target.value) : undefined;
-                        updatePricingConfig("integrations_by_tier", {
-                          ...(form.pricing_config?.integrations_by_tier ?? {}),
-                          [it.key]: val,
-                        });
-                      }}
-                      placeholder="0" className={`${inputClass} mt-1`} />
-                  </div>
-                ))}
+                  placeholder="80,000"
+                  className={`${inputClass} mt-1`}
+                />
               </div>
             </div>
           </div>
+
+          {/* Success package */}
+          <AdminMiniLabel>Enterprise Success Package</AdminMiniLabel>
+          <div className="mt-2 mb-6">
+            <AdminChipRow>
+              {SUCCESS_PACKAGES.map((pkg) => (
+                <AdminChip
+                  key={pkg.key}
+                  active={(form.pricing_config?.success_package ?? "none") === pkg.key}
+                  onClick={() => updatePricingConfig("success_package", pkg.key)}
+                  title={pkg.blurb}
+                >
+                  {pkg.key === "none"
+                    ? "None"
+                    : `${pkg.label.replace(" Success Package", "")} · $${pkg.monthlyPrice.toLocaleString()}/mo`}
+                </AdminChip>
+              ))}
+            </AdminChipRow>
+          </div>
+
+          {/* Environments */}
+          <AdminMiniLabel>Environments</AdminMiniLabel>
+          <div className="mt-2 mb-6">
+            <AdminChipRow>
+              {ENVIRONMENT_ADDONS.map((env) => {
+                const current = form.pricing_config?.environments ?? [];
+                const active = current.includes(env.key);
+                return (
+                  <AdminChip
+                    key={env.key}
+                    active={active}
+                    onClick={() => {
+                      const next = active
+                        ? current.filter((k) => k !== env.key)
+                        : [...current, env.key];
+                      updatePricingConfig("environments", next);
+                    }}
+                    title={env.blurb}
+                  >
+                    {`${env.label} · $${env.monthlyPrice.toLocaleString()}/mo`}
+                  </AdminChip>
+                );
+              })}
+            </AdminChipRow>
+          </div>
+
+          {/* Human Chat + VAN */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <AdminMiniLabel>Human Chat</AdminMiniLabel>
+              <div className="mt-2 flex items-center gap-2">
+                <AdminChip
+                  active={!!form.pricing_config?.human_chat_enabled}
+                  onClick={() => updatePricingConfig("human_chat_enabled", !form.pricing_config?.human_chat_enabled)}
+                >
+                  {form.pricing_config?.human_chat_enabled ? "Enabled" : "Off"}
+                </AdminChip>
+                {form.pricing_config?.human_chat_enabled && (
+                  <input
+                    type="number"
+                    min={HUMAN_CHAT_INCLUDED_SEATS}
+                    value={form.pricing_config?.human_chat_users ?? HUMAN_CHAT_INCLUDED_SEATS}
+                    onChange={(e) => updatePricingConfig("human_chat_users", e.target.value ? Number(e.target.value) : HUMAN_CHAT_INCLUDED_SEATS)}
+                    placeholder="users"
+                    className={`${inputClass} max-w-[110px]`}
+                  />
+                )}
+              </div>
+              <p className="text-[10px] text-boost-muted mt-1.5">
+                ${HUMAN_CHAT_BASE_PRICE.toLocaleString()} base ({HUMAN_CHAT_INCLUDED_SEATS} seats) + ${HUMAN_CHAT_PRICE_PER_EXTRA_SEAT}/extra seat
+              </p>
+            </div>
+            <div>
+              <AdminMiniLabel>VA Orchestration (VAN)</AdminMiniLabel>
+              <div className="mt-2">
+                <AdminChip
+                  active={!!form.pricing_config?.van_enabled}
+                  onClick={() => updatePricingConfig("van_enabled", !form.pricing_config?.van_enabled)}
+                >
+                  {form.pricing_config?.van_enabled ? `Enabled · $${VAN_PRICE.toLocaleString()}/mo` : "Off"}
+                </AdminChip>
+              </div>
+            </div>
+          </div>
+
+          {/* Integrations by tier */}
+          <AdminMiniLabel>Integrations by tier (count per type)</AdminMiniLabel>
+          <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+            {INTEGRATION_TIERS.map((it) => (
+              <div key={it.key} className="rounded-lg border border-boost-border bg-white p-3">
+                <p className="text-[10px] font-semibold text-boost-dark">{it.label}</p>
+                <p className="text-[9px] text-boost-muted mt-0.5">${it.monthlyPrice}/mo each</p>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.pricing_config?.integrations_by_tier?.[it.key] ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value ? Number(e.target.value) : undefined;
+                    updatePricingConfig("integrations_by_tier", {
+                      ...(form.pricing_config?.integrations_by_tier ?? {}),
+                      [it.key]: val,
+                    });
+                  }}
+                  placeholder="0"
+                  className={`${inputClass} mt-2`}
+                />
+              </div>
+            ))}
+          </div>
         </CollapsibleSection>
 
-        {/* 4 — Deployment & Resources */}
+        {/* 5 — Deployment & Resources */}
         <CollapsibleSection
-          number={4}
+          number={5}
           title="Deployment & Resources"
           subtitle={
             hasDeployment
@@ -1446,7 +1507,7 @@ export default function AdminPage() {
 
         {/* 5 — Requirements & Volumes */}
         <CollapsibleSection
-          number={5}
+          number={6}
           title="Requirements & Volumes"
           subtitle={
             hasRequirements
@@ -1502,7 +1563,7 @@ export default function AdminPage() {
 
         {/* 6 — Integrations */}
         <CollapsibleSection
-          number={6}
+          number={7}
           title="Backend Systems & Integrations"
           subtitle={
             hasIntegrations
@@ -1634,7 +1695,7 @@ export default function AdminPage() {
 
         {/* 7 — Notes */}
         <CollapsibleSection
-          number={7}
+          number={8}
           title="Additional Notes"
           subtitle={hasNotes ? "Notes added" : "Optional — extra context"}
           hasContent={hasNotes}
@@ -1655,7 +1716,7 @@ export default function AdminPage() {
         {/* 8 — Guide Sections */}
         <div ref={guideSectionsRef} className="scroll-mt-20">
         <CollapsibleSection
-          number={8}
+          number={9}
           title="Guide Sections"
           subtitle={
             hasSectionChanges
@@ -1989,7 +2050,7 @@ export default function AdminPage() {
 
         {/* 9 — Case Study Selection */}
         <CollapsibleSection
-          number={9}
+          number={10}
           title="Case Study Selection"
           subtitle={
             hasCustomCaseStudies
@@ -2075,7 +2136,7 @@ export default function AdminPage() {
 
         {/* 10 — Custom Section Content */}
         <CollapsibleSection
-          number={10}
+          number={11}
           title="Custom Section Content"
           subtitle={
             form.custom_section?.title
@@ -2169,7 +2230,7 @@ export default function AdminPage() {
         </CollapsibleSection>
 
         <CollapsibleSection
-          number={11}
+          number={12}
           title="Demos"
           subtitle={
             form.demo_mode === "live"
