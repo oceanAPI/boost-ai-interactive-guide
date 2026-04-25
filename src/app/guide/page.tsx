@@ -95,6 +95,7 @@ function GuideContent() {
     currency: formData.currency,
     pricing_model: formData.pricing_model || "fixed",
     fte_capacity_per_month: formData.fte_capacity_per_month,
+    automation_ramp_months: formData.automation_ramp_months,
     deployment_markets: formData.deployment_markets || 1,
     resources: formData.resources || {},
     integrations: formData.integrations || {},

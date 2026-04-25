@@ -592,6 +592,7 @@ class SOWBuilder {
       markets: form.deployment_markets,
       currency: form.conversation_cost,
       fteCapacityPerMonth: form.fte_capacity_per_month,
+      automationRampMonths: form.automation_ramp_months,
       invoiceMonthlyCostUSD: invoiceCtx?.monthlyUSD,
       invoiceImplementationUSD: invoiceCtx?.implementationOneTimeUSD,
     });

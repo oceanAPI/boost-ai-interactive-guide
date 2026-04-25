@@ -82,6 +82,14 @@ export interface GuideData {
    *  existing shared-URL bookmarks. Sales rep tunes this against
    *  the prospect's actual contact-centre productivity. */
   fte_capacity_per_month?: number;
+  /** Months to reach the target automation rate via linear ramp
+   *  from 0%. When set (> 0), Impact / ROI surfaces show a
+   *  Year-1 time-weighted average instead of steady-state, so the
+   *  numbers reflect what actually lands in the customer's first
+   *  twelve months. Typical realistic values: 3–9. Omitted = no
+   *  ramp = steady-state from go-live (back-compat with existing
+   *  shared URLs). */
+  automation_ramp_months?: number;
   deployment_markets: number;
   resources: ResourceAllocation;
   integrations: IntegrationSelections;
@@ -136,6 +144,10 @@ export interface GuideFormData {
    *  hardcoded 1,500 fallback in roi-calculator. Optional — falls
    *  back to 1,500 when omitted. */
   fte_capacity_per_month?: number;
+  /** Months to reach target automation rate via linear ramp from 0%.
+   *  When set, Impact shows Year-1 weighted average instead of
+   *  steady-state. */
+  automation_ramp_months?: number;
   deployment_markets: number;
   resources: ResourceAllocation;
   integrations: IntegrationSelections;

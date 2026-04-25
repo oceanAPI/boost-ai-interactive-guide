@@ -320,8 +320,9 @@ export default function CommercialOfferSection({ guide, sectionNumber }: { guide
         markets: guide.deployment_markets || 1,
         currency,
         fteCapacityPerMonth: guide.fte_capacity_per_month,
+        automationRampMonths: guide.automation_ramp_months,
       }),
-    [totalVolume, costNum, selectedKey, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month],
+    [totalVolume, costNum, selectedKey, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month, guide.automation_ramp_months],
   );
 
   const formatCurrency = (n: number) => formatWithCurrency(n, currency);

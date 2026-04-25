@@ -314,6 +314,8 @@ function SavingsTimeline({
   currencySymbol,
   currentMonthlyCost,
   newMonthlyCost,
+  rampMonths = 0,
+  steadyStateMonthlySavings,
 }: {
   active: boolean;
   annualSavings: number;
@@ -321,6 +323,13 @@ function SavingsTimeline({
   currencySymbol: string;
   currentMonthlyCost: number;
   newMonthlyCost: number;
+  /** F3b — when > 0, the 3-bar reflects Year-1 average and a caption
+   *  shows the steady-state target. Defaults to 0 (no ramp shown). */
+  rampMonths?: number;
+  /** Monthly savings at steady state — shown as a caption when a
+   *  ramp is configured so the AE can pivot the conversation
+   *  ("here's Year 1, here's where you'll be at Year 2"). */
+  steadyStateMonthlySavings?: number;
 }) {
   const ready = useTabActivation(active);
   const months = 12;
@@ -429,6 +438,24 @@ function SavingsTimeline({
           100%). Boost.ai&apos;s share shrinks as automation rate rises;
           the green bar is what you keep as savings.
         </p>
+
+        {/* F3b — ramp caption: only renders when a months-to-target
+            value is configured. Tells the AE / customer that the
+            green bar above is the Year-1 average, and where steady-
+            state lands. Stays silent when no ramp is set so the
+            default (steady-state) story is unchanged. */}
+        {rampMonths > 0 && steadyStateMonthlySavings != null && (
+          <div className="mt-3 pt-3 border-t border-boost-border/60 flex items-baseline justify-between gap-3">
+            <p className="text-[10px] text-boost-muted leading-snug">
+              <span className="font-semibold text-boost-dark">Year 1 average</span>
+              {" — "}
+              {rampMonths}-month ramp from go-live. Steady state lands at
+            </p>
+            <p className="text-[11px] tabular-nums font-semibold text-boost-green whitespace-nowrap">
+              {fmt(steadyStateMonthlySavings)} / mo
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Timeline bar */}
@@ -531,9 +558,10 @@ export default function ImpactSection({ guide, sectionNumber }: { guide: GuideDa
     markets: guide.deployment_markets || 1,
     currency,
     fteCapacityPerMonth: guide.fte_capacity_per_month,
+    automationRampMonths: guide.automation_ramp_months,
     invoiceMonthlyCostUSD: invoice?.monthlyUSD,
     invoiceImplementationUSD: invoice?.implementationOneTimeUSD,
-  }), [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month, invoice?.monthlyUSD, invoice?.implementationOneTimeUSD]);
+  }), [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month, guide.automation_ramp_months, invoice?.monthlyUSD, invoice?.implementationOneTimeUSD]);
 
   const fmt = (n: number) => formatWithCurrency(n, currency);
 
@@ -608,11 +636,18 @@ export default function ImpactSection({ guide, sectionNumber }: { guide: GuideDa
           {activeTab === "commercial" && (
             <SavingsTimeline
               active={activeTab === "commercial"}
-              annualSavings={roi.annualSavings}
+              // When a ramp is set, the 3-bar tells the Year-1
+              // truth (smaller-than-steady-state savings while
+              // automation builds). When no ramp, year-1 ==
+              // steady-state and these collapse to the original
+              // values — so consumers without F3b see no change.
+              annualSavings={roi.year1AverageMonthlySavings * 12}
               breakEvenMonths={roi.breakEvenMonths}
               currencySymbol={currency}
               currentMonthlyCost={roi.currentMonthlyCost}
-              newMonthlyCost={roi.newMonthlyCost}
+              newMonthlyCost={roi.currentMonthlyCost - roi.year1AverageMonthlySavings}
+              rampMonths={roi.rampMonths}
+              steadyStateMonthlySavings={roi.monthlySavings}
             />
           )}
         </div>

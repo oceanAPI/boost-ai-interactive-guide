@@ -446,10 +446,11 @@ function IntegrationsROI({
         markets: guide.deployment_markets || 1,
         currency,
         fteCapacityPerMonth: guide.fte_capacity_per_month,
+        automationRampMonths: guide.automation_ramp_months,
         invoiceMonthlyCostUSD: invoice?.monthlyUSD,
         invoiceImplementationUSD: invoice?.implementationOneTimeUSD,
       }),
-    [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month, invoice?.monthlyUSD, invoice?.implementationOneTimeUSD],
+    [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month, guide.automation_ramp_months, invoice?.monthlyUSD, invoice?.implementationOneTimeUSD],
   );
 
   const fmt = (n: number) => formatWithCurrency(n, currency);

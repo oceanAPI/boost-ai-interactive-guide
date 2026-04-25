@@ -25,6 +25,14 @@ export interface ROIInputs {
    *  productivity instead of a global 1,500 average. Falls back to
    *  1,500 when undefined or non-positive. */
   fteCapacityPerMonth?: number;
+  /** Months to reach `automationRate` via linear ramp from 0%.
+   *  When > 0, the calculator additionally returns
+   *  year1AverageMonthlySavings / year1AverageRoiPercentage /
+   *  year1AverageAutomationRate populated with time-weighted
+   *  Year-1 values. Steady-state outputs (monthlySavings,
+   *  roiPercentage, etc.) are unchanged so consumers that don't
+   *  opt into the ramp see no behaviour change. */
+  automationRampMonths?: number;
 }
 
 export interface ROIResults {
@@ -38,6 +46,20 @@ export interface ROIResults {
   roiPercentage: number;
   fteEquivalent: number;
   breakEvenMonths: number;
+  /** Effective Year-1 monthly savings under a linear automation
+   *  ramp (0% → target over `automationRampMonths`). Equals
+   *  `monthlySavings` when no ramp is set, so callers can always
+   *  read this field without a guard. */
+  year1AverageMonthlySavings: number;
+  /** Time-weighted Year-1 average automation rate, 0–100. Equals
+   *  the steady-state target when no ramp is set. */
+  year1AverageAutomationRate: number;
+  /** ROI % using the Year-1 average savings rather than steady-
+   *  state. Equals `roiPercentage` when no ramp is set. */
+  year1AverageRoiPercentage: number;
+  /** The ramp parameter that was applied (echoed back for UI
+   *  layers that want to caption the difference). 0 = no ramp. */
+  rampMonths: number;
 }
 
 /**
@@ -141,6 +163,44 @@ export function calculateROI(inputs: ROIInputs): ROIResults {
     : 1500;
   const fteEquivalent = Math.round((automatedConversations / fteCapacity) * 10) / 10;
 
+  // ── Year-1 ramp averaging ──────────────────────────────────────
+  // Linear ramp from 0% automation to `targetRate` over rampM
+  // months. Time-weighted average over the first 12 months:
+  //   rampM <= 0  → target (no ramp)
+  //   rampM <= 12 → target * (1 − rampM / 24)   (½ during ramp,
+  //                                              full thereafter)
+  //   rampM > 12  → target * 6 / rampM          (continuous mean
+  //                                              of k/rampM over
+  //                                              k = 0..12)
+  const rampMonths = Math.max(0, inputs.automationRampMonths ?? 0);
+  const targetRate = rate;
+  const year1AvgRate =
+    rampMonths <= 0
+      ? targetRate
+      : rampMonths <= 12
+        ? targetRate * (1 - rampMonths / 24)
+        : (targetRate * 6) / rampMonths;
+  const year1AvgAutomatedConv = monthlyConversations * year1AvgRate;
+  const year1AvgHumanConv = monthlyConversations - year1AvgAutomatedConv;
+  // Boost.ai cost is the same whether the bot answers or not — the
+  // platform fee + per-VA charges land from go-live. Only the
+  // human-handled volume shrinks as automation ramps. So we
+  // compute year-1 cost using the ramped human volume against
+  // either the invoice (if present) or the heuristic.
+  const year1HeuristicNewCost =
+    year1AvgAutomatedConv * aiCostPerConversation +
+    year1AvgHumanConv * costPerConversation +
+    platformMonthly;
+  const year1NewMonthlyCost =
+    inputs.invoiceMonthlyCostUSD != null
+      ? inputs.invoiceMonthlyCostUSD
+      : year1HeuristicNewCost;
+  const year1AverageMonthlySavings = currentMonthlyCost - year1NewMonthlyCost;
+  const year1AverageRoiPercentage =
+    currentMonthlyCost > 0
+      ? Math.round((year1AverageMonthlySavings / currentMonthlyCost) * 100)
+      : 0;
+
   return {
     currentMonthlyCost,
     automatedConversations,
@@ -152,6 +212,10 @@ export function calculateROI(inputs: ROIInputs): ROIResults {
     roiPercentage,
     fteEquivalent,
     breakEvenMonths,
+    year1AverageMonthlySavings,
+    year1AverageAutomationRate: year1AvgRate * 100,
+    year1AverageRoiPercentage,
+    rampMonths,
   };
 }
 

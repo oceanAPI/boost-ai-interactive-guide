@@ -65,10 +65,11 @@ export default function ROISection({
       markets: guide.deployment_markets || 1,
       currency,
       fteCapacityPerMonth: guide.fte_capacity_per_month,
+      automationRampMonths: guide.automation_ramp_months,
       invoiceMonthlyCostUSD: invoice?.monthlyUSD,
       invoiceImplementationUSD: invoice?.implementationOneTimeUSD,
     }),
-    [volume, cost, guide.pricing_model, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month, invoice?.monthlyUSD, invoice?.implementationOneTimeUSD],
+    [volume, cost, guide.pricing_model, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month, guide.automation_ramp_months, invoice?.monthlyUSD, invoice?.implementationOneTimeUSD],
   );
 
   const savingsBarWidth = roi.currentMonthlyCost > 0

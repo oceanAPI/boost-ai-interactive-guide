@@ -1157,6 +1157,30 @@ export default function AdminPage() {
             <span className="text-[11px] text-boost-muted">conversations / FTE / month</span>
           </div>
 
+          <AdminPrompt
+            divider
+            question="Months to reach target automation rate?"
+            helper="Linear ramp from 0% to the target. Impact will show the Year-1 weighted average instead of steady-state. Leave blank for an immediate steady-state story."
+          />
+          <div className="flex items-baseline gap-2">
+            <input
+              type="number"
+              min={0}
+              max={24}
+              step={1}
+              value={form.automation_ramp_months ?? ""}
+              onChange={(e) =>
+                updateField(
+                  "automation_ramp_months",
+                  e.target.value ? Number(e.target.value) : undefined,
+                )
+              }
+              placeholder="0"
+              className={`${inputClass} max-w-[160px]`}
+            />
+            <span className="text-[11px] text-boost-muted">months to reach target</span>
+          </div>
+
           <p className="mt-6 text-[11px] text-boost-muted leading-relaxed">
             The line-item Commercial invoice (Chat tiers, Voice, Success Package, add-ons, integrations) lives in
             <span className="font-semibold text-boost-dark"> Section 4 · Commercial Invoice Builder</span>.
