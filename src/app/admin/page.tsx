@@ -204,16 +204,25 @@ function RailItem(props: {
   item: RailItemDescriptor;
   active: boolean;
   onJump: () => void;
+  /** Render-order index — drives stagger delay on first mount.
+   *  CSS animation runs once per mount; using `animate-modal-in`
+   *  matches the chat-preview rain-in vocabulary (DataFunnelPanel,
+   *  globals.css @keyframes modalIn). */
+  animationIndex?: number;
 }) {
-  const { item, active, onJump } = props;
+  const { item, active, onJump, animationIndex = 0 } = props;
   return (
     <button
       type="button"
       onClick={onJump}
       className={
-        "relative w-full text-left pl-4 pr-3 py-2 flex items-start gap-2.5 transition-colors " +
+        "animate-modal-in relative w-full text-left pl-4 pr-3 py-2 flex items-start gap-2.5 transition-colors " +
         (active ? "bg-boost-surface/80" : "hover:bg-boost-surface/40")
       }
+      style={{
+        animationDelay: `${Math.min(animationIndex * 80, 1500)}ms`,
+        animationFillMode: "both",
+      }}
     >
       {active ? (
         <span
@@ -221,17 +230,17 @@ function RailItem(props: {
           className="absolute left-0 top-1.5 bottom-1.5 w-[2px] bg-boost-purple rounded-r-full"
         />
       ) : null}
+      {/* Status indicator — green check when section has content,
+          empty circle when added but unfilled. No number prefix. */}
       <span
         className={
-          "flex-shrink-0 mt-[2px] flex items-center justify-center w-[18px] h-[18px] rounded-full text-[9px] font-bold tabular-nums leading-none transition-colors " +
+          "flex-shrink-0 mt-[2px] flex items-center justify-center w-[18px] h-[18px] rounded-full text-[10px] font-bold leading-none transition-colors " +
           (item.hasContent
             ? "bg-boost-green-light text-white"
-            : active
-              ? "bg-boost-purple text-white"
-              : "bg-white ring-1 ring-inset ring-boost-border text-boost-muted")
+            : "bg-white ring-1 ring-inset ring-boost-border text-boost-muted/40")
         }
       >
-        {item.hasContent ? "✓" : item.number}
+        {item.hasContent ? "✓" : ""}
       </span>
       <span className="flex-1 min-w-0">
         <span
@@ -254,9 +263,10 @@ function Rail(props: {
   items: RailItemDescriptor[];
   active: string;
   onJump: (id: string) => void;
-  onGenerate?: () => void;
+  onAddNext?: () => void;
+  nextLabel?: string;
 }) {
-  const { items, active, onJump, onGenerate } = props;
+  const { items, active, onJump, onAddNext, nextLabel } = props;
   const filled = items.filter((i) => i.hasContent).length;
   return (
     <aside
@@ -271,32 +281,45 @@ function Rail(props: {
           <p className="text-[12px] font-semibold text-boost-dark mt-0.5 tabular-nums">
             {filled}
             <span className="text-boost-muted/70 font-medium">
-              {" "}of {items.length} sections filled
+              {" "}{filled === 1 ? "section" : "sections"} filled
             </span>
           </p>
+          {nextLabel ? (
+            <p className="text-[10px] text-boost-muted/80 mt-1.5">
+              Next:{" "}
+              <span className="text-boost-dark/80 font-medium">{nextLabel}</span>
+            </p>
+          ) : null}
         </div>
         <nav className="flex-1 overflow-y-auto py-1">
-          {items.map((s) => (
+          {items.map((s, i) => (
             <RailItem
               key={s.id}
               item={s}
               active={s.id === active}
               onJump={() => onJump(s.id)}
+              animationIndex={i}
             />
           ))}
-        </nav>
-        {onGenerate ? (
-          <div className="border-t border-boost-border/60 bg-boost-surface/40 p-3">
+          {onAddNext ? (
             <button
               type="button"
-              onClick={onGenerate}
-              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-boost-purple-deeper text-white text-[11px] font-bold uppercase tracking-[0.16em] hover:bg-boost-purple transition-colors shadow-sm"
+              onClick={onAddNext}
+              className="w-full text-left pl-4 pr-3 py-2 mt-1 flex items-center gap-2.5 text-boost-muted hover:text-boost-purple hover:bg-boost-surface/60 transition-colors animate-modal-in"
+              style={{ animationDelay: `${Math.min(items.length * 80, 1500)}ms`, animationFillMode: "both" }}
             >
-              <span>Generate engagement</span>
-              <span aria-hidden="true">→</span>
+              <span
+                aria-hidden="true"
+                className="flex-shrink-0 flex items-center justify-center w-[18px] h-[18px] rounded-full border border-dashed border-boost-border text-[12px] leading-none"
+              >
+                +
+              </span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+                Add{nextLabel ? ` ${nextLabel.toLowerCase()}` : " section"}
+              </span>
             </button>
-          </div>
-        ) : null}
+          ) : null}
+        </nav>
       </div>
     </aside>
   );
@@ -1297,7 +1320,12 @@ export default function AdminPage() {
   const hasCustomCaseStudies = (form.selected_case_studies?.length ?? 0) > 0;
 
   const selectedSectionIds = sectionItems.filter((i) => i.enabled).map((i) => i.id);
-  const hasSectionChanges = sectionItems.some((item, i) => !item.enabled || item.id !== SLIDE_SECTIONS[i]?.id);
+  // Reflects actual user touch (manual toggle / reorder) or applied
+  // preset — not the inherent "some defaults are off" state. Otherwise
+  // 15 SLIDE_SECTIONS that default to disabled would force the
+  // hasSectionChanges flag true on every fresh load and spuriously
+  // auto-add the Guide Sections row to the rail.
+  const hasSectionChanges = hasTouchedSections || lastAppliedPresetKey !== null;
 
   /* ─── SOW PDF download ─── */
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -1323,12 +1351,14 @@ export default function AdminPage() {
   );
 
   /* ─── Content detection for accordion state ─── */
+  // start_date is intentionally excluded — it has a default value
+  // (today + 14 days) so including it would make hasCompanyInfo
+  // always-true on fresh load and trigger spurious rail auto-add.
   const hasCompanyInfo = !!(
     form.company_name ||
     form.company_url ||
     form.contact_name ||
-    form.contact_role ||
-    form.start_date
+    form.contact_role
   );
   const hasAreas = form.areas_of_interest.length > 0;
   const hasPricing = !!(form.conversation_cost);
@@ -1506,12 +1536,33 @@ export default function AdminPage() {
     const m = window.location.hash.match(/data=([^&]+)/);
     return m ? "editing" : "choose";
   });
-  /** Which section ids are currently visible / actively authored. Defaults
-   *  to all 12 so today's "everything visible" feel is preserved until the
-   *  rail-driven render lands in commit 3. */
-  const [addedSections, setAddedSections] = useState<SectionId[]>(
-    SECTIONS_REGISTRY.map((s) => s.id),
-  );
+  /** Recommended order for progressive add. Sequence aligns with the
+   *  AE's natural authoring path: identity → industry framing → which
+   *  slides → pricing → packaging → delivery → narrative bits. The
+   *  + Add next button below the active panel walks this list,
+   *  skipping already-added entries. */
+  const SECTION_ORDER: SectionId[] = [
+    "company",
+    "areas",
+    "sections",
+    "pricing",
+    "invoice",
+    "deployment",
+    "requirements",
+    "integrations",
+    "notes",
+    "cases",
+    "custom",
+    "demos",
+  ];
+
+  /** Which section ids are currently visible in the rail. Starts
+   *  minimal (just `company`); the useEffect below auto-merges any
+   *  section whose hasContent flag is true (so prefill / bookmark
+   *  hydration "rains in" the relevant sections). User can also add
+   *  manually via the + Add next button. We never auto-remove —
+   *  removal stays a deliberate action. */
+  const [addedSections, setAddedSections] = useState<SectionId[]>(["company"]);
   /** Active section in the editing rail. Used by commit 3+ to drive the
    *  single-active-panel render. */
   const [activeSection, setActiveSection] = useState<SectionId>("company");
@@ -1521,16 +1572,67 @@ export default function AdminPage() {
    *  in commit 8. */
   const [showAddPicker, setShowAddPicker] = useState(false);
   // Suppress unused-var warnings while these hooks are still partly
-  // dormant. Drops as each commit consumes them. Commit 4 consumes
-  // showGenerateMenu / setShowGenerateMenu (Generate picker).
-  void addedSections;
-  void setAddedSections;
+  // dormant. Drops as each commit consumes them. Commit 6 consumes
+  // addedSections / setAddedSections (progressive rail).
   void showAddPicker;
   void setShowAddPicker;
 
-  /* Rail items derived from SECTIONS_REGISTRY. Pre-computed outside
-     JSX so the layout block stays parser-clean. */
-  const railItems: RailItemDescriptor[] = SECTIONS_REGISTRY.map((s) => ({
+  /* ─── Auto-populate addedSections from hasContent ───
+   *  Any section whose hasContent flag flips true gets added to the
+   *  rail. Source-of-truth for prefill (Pick known company), bookmark
+   *  hydration (#data=...), and audience defaults that fill via
+   *  side-effects. Never removes — explicit action only. */
+  useEffect(() => {
+    setAddedSections((prev) => {
+      const inferred = SECTIONS_REGISTRY.filter((s) => s.hasContent).map((s) => s.id);
+      let changed = false;
+      const next = [...prev];
+      for (const id of inferred) {
+        if (!next.includes(id)) {
+          next.push(id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+    // SECTIONS_REGISTRY references the hasContent flags directly so
+    // this effect implicitly tracks every flag change. Listing them
+    // here is belt-and-braces in case a flag formula changes.
+  }, [
+    hasCompanyInfo,
+    hasAreas,
+    hasPricing,
+    hasPricingConfig,
+    hasDeployment,
+    hasRequirements,
+    hasIntegrations,
+    hasNotes,
+    hasSectionChanges,
+    hasCustomCaseStudies,
+    form.custom_section?.title,
+    form.demo_mode,
+  ]);
+
+  /** Adds the next unfilled section in SECTION_ORDER. Returns the
+   *  added id (for callers that want to setActiveSection). */
+  const addNextSection = (): SectionId | null => {
+    const next = SECTION_ORDER.find((id) => !addedSections.includes(id));
+    if (!next) return null;
+    setAddedSections((prev) => [...prev, next]);
+    setActiveSection(next);
+    return next;
+  };
+  /** Suggested-next label shown in rail counter. */
+  const nextSectionDef = SECTION_ORDER.map((id) =>
+    SECTIONS_REGISTRY.find((s) => s.id === id),
+  ).find((s) => s && !addedSections.includes(s.id));
+
+  /* Rail items derived from SECTIONS_REGISTRY, filtered by
+     addedSections. Pre-computed outside JSX so the layout block
+     stays parser-clean. */
+  const railItems: RailItemDescriptor[] = SECTIONS_REGISTRY.filter((s) =>
+    addedSections.includes(s.id),
+  ).map((s) => ({
     id: s.id,
     number: s.number,
     title: s.title,
@@ -1684,6 +1786,8 @@ export default function AdminPage() {
           items={railItems}
           active={activeSection}
           onJump={handleJumpSection}
+          onAddNext={nextSectionDef ? addNextSection : undefined}
+          nextLabel={nextSectionDef?.title}
         />
       <main className="flex-1 min-w-0 space-y-4">
         {/* Sections 1 + 2 are SHARED customer metadata \u2014 rendered
