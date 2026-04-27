@@ -3045,110 +3045,55 @@ export default function AdminPage() {
           autoOpenOnContent={false}
           openSignal={guideSectionsOpenSignal}
         >
-          {/* ── Preset cards — the primary UX for picking sections ── */}
-          <div className="mb-5">
-            <p className="text-[11px] font-semibold text-boost-muted uppercase tracking-widest mb-2">
-              Pick a starting point
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {SECTION_PRESETS.map((preset) => {
-                const active = activePresetKey === preset.key;
-                const presetMinutes = estimateMinutes(preset.enable);
-                // Pick up to 4 section labels to tease what's inside
-                const previewLabels = preset.enable
-                  .slice(0, 4)
-                  .map((id) => SLIDE_SECTIONS.find((s) => s.id === id)?.label)
-                  .filter(Boolean) as string[];
-                const extra = preset.enable.length - previewLabels.length;
-                const icon = PRESET_ICONS[preset.key] ?? PRESET_ICONS.full;
-                return (
-                  <button
-                    key={preset.key}
-                    type="button"
-                    onClick={() => applyPreset(preset)}
-                    className={`group relative text-left p-4 rounded-xl border transition-all ${
-                      active
-                        ? "border-boost-green-light bg-boost-green-light/[0.06] shadow-sm ring-1 ring-boost-green-light/40"
-                        : "border-boost-border bg-white hover:border-boost-dark/30 hover:shadow-sm"
-                    }`}
-                  >
-                    {active && (
-                      <span
-                        className="absolute top-3 right-3 w-5 h-5 rounded-full bg-boost-green-light text-white flex items-center justify-center"
-                        aria-label="Selected preset"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      </span>
-                    )}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className={`flex items-center justify-center w-7 h-7 rounded-lg transition-colors ${
-                          active
-                            ? "bg-boost-green-light text-white"
-                            : "bg-boost-surface text-boost-dark/70 group-hover:text-boost-dark"
-                        }`}
-                      >
-                        {icon}
-                      </span>
-                      <span className="text-sm font-semibold text-boost-dark">{preset.label}</span>
-                    </div>
-                    <p className="text-[11px] text-boost-muted leading-snug mb-2.5 pr-5 h-[2.5em]">
-                      {preset.description}
-                    </p>
-                    <div className="flex items-center gap-3 text-[10px] text-boost-muted mb-2.5">
-                      <span className="inline-flex items-center gap-1 font-semibold text-boost-dark/80 tabular-nums">
-                        {preset.enable.length}
-                        <span className="font-normal text-boost-muted">sections</span>
-                      </span>
-                      <span className="text-boost-border">·</span>
-                      <span className="tabular-nums">~{presetMinutes} min</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {previewLabels.map((label) => (
-                        <span
-                          key={label}
-                          className={`text-[10px] px-1.5 py-0.5 rounded ${
-                            active
-                              ? "bg-white text-boost-dark/70 border border-boost-green-light/30"
-                              : "bg-boost-surface text-boost-muted"
-                          }`}
-                        >
-                          {label}
-                        </span>
-                      ))}
-                      {extra > 0 && (
-                        <span
-                          className={`text-[10px] px-1.5 py-0.5 rounded tabular-nums ${
-                            active ? "text-boost-green" : "text-boost-muted"
-                          }`}
-                        >
-                          +{extra}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {/* Preset row — single source of truth for the "shape" of
+              the deck. Each card carries icon + name + count.
+              No description chrome, no preview chip cluster, no
+              layered active state — those overdrew the picker.
 
-          {/* ── Summary band — shows current real state (may differ from preset) ── */}
-          <div className="mb-2 flex items-center gap-2 flex-wrap text-xs px-1">
-            <span className="inline-flex items-center gap-1.5 text-boost-dark">
-              <span className="w-1.5 h-1.5 rounded-full bg-boost-green-light" />
-              <span className="font-semibold tabular-nums">{selectedSectionIds.length}</span>
-              <span className="text-boost-muted">sections</span>
-            </span>
-            <span className="text-boost-border">·</span>
-            <span className="text-boost-muted tabular-nums">~{estimatedReadTime} min scan time</span>
-            {lastAppliedPresetKey && !activePresetKey && (
-              <span className="ml-auto text-[11px] text-boost-muted italic">
-                Edited from {SECTION_PRESETS.find((p) => p.key === lastAppliedPresetKey)?.label}
-              </span>
-            )}
+              The active preset's description renders below the row
+              as one quiet line, only when a preset matches the
+              current toggles (so it disappears the moment the user
+              edits anything individually). */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-2">
+            {SECTION_PRESETS.map((preset) => {
+              const active = activePresetKey === preset.key;
+              const presetMinutes = estimateMinutes(preset.enable);
+              const icon = PRESET_ICONS[preset.key] ?? PRESET_ICONS.full;
+              return (
+                <button
+                  key={preset.key}
+                  type="button"
+                  onClick={() => applyPreset(preset)}
+                  className={`text-left px-3 py-2.5 rounded-lg border transition-colors ${
+                    active
+                      ? "border-boost-green-light bg-boost-green-light/[0.05]"
+                      : "border-boost-border bg-white hover:border-boost-dark/20 hover:bg-boost-surface/40"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      className={`flex items-center justify-center w-4 h-4 ${
+                        active ? "text-boost-green-light" : "text-boost-muted/80"
+                      }`}
+                    >
+                      {icon}
+                    </span>
+                    <span className="text-[13px] font-semibold text-boost-dark truncate">
+                      {preset.label}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-boost-muted tabular-nums">
+                    {preset.enable.length} sections · ~{presetMinutes} min
+                  </p>
+                </button>
+              );
+            })}
           </div>
+          {activePresetKey && (
+            <p className="text-[11px] text-boost-muted leading-relaxed mb-3 px-1">
+              {SECTION_PRESETS.find((p) => p.key === activePresetKey)?.description}
+            </p>
+          )}
 
           {/* ── Advanced: customise individual sections (hidden by default) ── */}
           <details className="group mt-4 rounded-lg border border-boost-border/60 bg-boost-surface/20">
@@ -3170,36 +3115,34 @@ export default function AdminPage() {
               </span>
             </summary>
             <div className="p-3 border-t border-boost-border/60 bg-white rounded-b-lg">
-              <div className="mb-3 flex items-center gap-2 flex-wrap text-xs">
-                <span className="flex items-center gap-2 ml-auto">
-                  <button
-                    type="button"
-                    onClick={() => setAllEnabled(true)}
-                    className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors"
-                  >
-                    Enable all
-                  </button>
-                  <span className="text-boost-border">·</span>
-                  <button
-                    type="button"
-                    onClick={() => setAllEnabled(false)}
-                    className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors"
-                  >
-                    Disable all
-                  </button>
-                  <span className="text-boost-border">·</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setHasTouchedSections(true);
-                      setLastAppliedPresetKey(null);
-                      setSectionItems(SLIDE_SECTIONS.map((s) => ({ ...s, enabled: s.defaultEnabled ?? true })));
-                    }}
-                    className="text-[11px] text-boost-muted hover:text-boost-dark transition-colors"
-                  >
-                    Reset order
-                  </button>
-                </span>
+              <div className="mb-3 flex items-center justify-end gap-2.5 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setAllEnabled(true)}
+                  className="text-boost-muted hover:text-boost-dark transition-colors"
+                >
+                  Enable all
+                </button>
+                <span className="text-boost-border" aria-hidden="true">·</span>
+                <button
+                  type="button"
+                  onClick={() => setAllEnabled(false)}
+                  className="text-boost-muted hover:text-boost-dark transition-colors"
+                >
+                  Disable all
+                </button>
+                <span className="text-boost-border" aria-hidden="true">·</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHasTouchedSections(true);
+                    setLastAppliedPresetKey(null);
+                    setSectionItems(SLIDE_SECTIONS.map((s) => ({ ...s, enabled: s.defaultEnabled ?? true })));
+                  }}
+                  className="text-boost-muted hover:text-boost-dark transition-colors"
+                >
+                  Reset order
+                </button>
               </div>
 
               {/* ── Section list with group headers ── */}
@@ -3218,26 +3161,17 @@ export default function AdminPage() {
                   const groupLabel = SECTION_GROUPS.find((g) => g.key === item.group)?.label ?? item.group;
                   const groupItems = sectionItems.filter((s) => s.group === item.group);
                   const groupEnabledCount = groupItems.filter((s) => s.enabled).length;
-                  const allOn = groupEnabledCount === groupItems.length;
                   rows.push(
                     <div
                       key={`group-${item.group}`}
-                      className="flex items-center gap-3 mt-5 first:mt-0 mb-1.5 px-2"
+                      className="flex items-baseline gap-2 mt-4 first:mt-0 mb-1 px-2"
                     >
-                      <p className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.12em]">
+                      <p className="text-[9px] font-bold text-boost-muted/80 uppercase tracking-[0.16em]">
                         {groupLabel}
                       </p>
-                      <span className="text-[10px] text-boost-muted/60 tabular-nums">
+                      <span className="text-[9px] text-boost-muted/50 tabular-nums">
                         {groupEnabledCount}/{groupItems.length}
                       </span>
-                      <div className="flex-1 h-px bg-boost-border/50" />
-                      <button
-                        type="button"
-                        onClick={() => toggleGroupEnabled(item.group!, !allOn)}
-                        className="text-[10px] text-boost-muted/80 hover:text-boost-dark transition-colors"
-                      >
-                        {allOn ? "Disable all" : "Enable all"}
-                      </button>
                     </div>,
                   );
                 }
@@ -3292,7 +3226,7 @@ export default function AdminPage() {
                         (el) => ((el as HTMLElement).style.opacity = "0"),
                       );
                     }}
-                    className={`relative flex items-center gap-3 py-2 px-2 rounded-lg transition-colors cursor-grab active:cursor-grabbing ${
+                    className={`group relative flex items-center gap-3 py-2 px-2 rounded-lg transition-colors cursor-grab active:cursor-grabbing ${
                       item.enabled ? "bg-white hover:bg-boost-surface/30" : "bg-boost-surface/40"
                     }`}
                   >
@@ -3303,19 +3237,22 @@ export default function AdminPage() {
                       style={{ opacity: 0, top: "-1px" }}
                     />
 
-                    {/* Drag handle — more visible now */}
-                    <span className="flex-shrink-0 text-boost-muted/60 hover:text-boost-dark transition-colors touch-none select-none">
-                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                        <circle cx="5" cy="3" r="1.2" /><circle cx="11" cy="3" r="1.2" />
-                        <circle cx="5" cy="8" r="1.2" /><circle cx="11" cy="8" r="1.2" />
-                        <circle cx="5" cy="13" r="1.2" /><circle cx="11" cy="13" r="1.2" />
+                    {/* Drag handle — quieter (smaller dot grid, lower
+                        contrast). Surfaces on hover so it's still
+                        discoverable, recedes by default. */}
+                    <span className="flex-shrink-0 text-boost-muted/30 group-hover:text-boost-muted/70 transition-colors touch-none select-none">
+                      <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+                        <circle cx="3" cy="3" r="1" /><circle cx="7" cy="3" r="1" />
+                        <circle cx="3" cy="7" r="1" /><circle cx="7" cy="7" r="1" />
+                        <circle cx="3" cy="11" r="1" /><circle cx="7" cy="11" r="1" />
                       </svg>
                     </span>
 
-                    {/* Toggle switch — much clearer on/off affordance than the checkbox */}
+                    {/* Toggle switch */}
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleSection(item.id); }}
                       aria-pressed={item.enabled}
+                      title={item.hint ?? undefined}
                       className={`relative flex-shrink-0 w-9 h-5 rounded-full transition-colors p-0 border-0 ${
                         item.enabled ? "bg-boost-green-light" : "bg-boost-border"
                       }`}
@@ -3327,34 +3264,17 @@ export default function AdminPage() {
                       />
                     </button>
 
-                    {/* Label + hint */}
-                    <div className="flex-1 min-w-0 flex items-center gap-2">
-                      <span
-                        className={`text-sm select-none truncate ${
-                          item.enabled ? "text-boost-dark font-medium" : "text-boost-muted"
-                        }`}
-                      >
-                        {item.label}
-                      </span>
-                      {item.minutes !== undefined && (
-                        <span className="text-[10px] text-boost-muted/60 tabular-nums shrink-0">
-                          ~{item.minutes}m
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Hint tooltip (shown on hover via native title) */}
-                    {item.hint && (
-                      <span
-                        className="shrink-0 text-boost-muted/40 hover:text-boost-dark transition-colors cursor-help"
-                        title={item.hint}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="12" cy="12" r="10" />
-                          <path d="M12 16v-4M12 8h.01" />
-                        </svg>
-                      </span>
-                    )}
+                    {/* Label only — minutes + help icon dropped, the
+                        hint string is reachable via the toggle's
+                        native tooltip. Less per-row noise. */}
+                    <span
+                      className={`flex-1 min-w-0 text-sm select-none truncate ${
+                        item.enabled ? "text-boost-dark font-medium" : "text-boost-muted"
+                      }`}
+                      title={item.hint ?? undefined}
+                    >
+                      {item.label}
+                    </span>
                   </div>,
                 );
               });
