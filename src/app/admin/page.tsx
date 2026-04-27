@@ -355,6 +355,252 @@ const PRICING_MODELS: { key: PricingModel; label: string; description: string }[
   },
 ];
 
+/* ─── Brand sparkle ───
+ * Small 4-point star, mirrors the new boost.ai customer-deck
+ * decoration. Used as soft chrome around hero areas in the journey
+ * stages. */
+function Sparkle(props: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={props.className}
+      aria-hidden="true"
+    >
+      <path d="M12 2 L13.4 10.6 L22 12 L13.4 13.4 L12 22 L10.6 13.4 L2 12 L10.6 10.6 Z" />
+    </svg>
+  );
+}
+
+/* ─── Choose stage ───
+ * Entry point of the engagement journey. Two faded-purple-glyph cards:
+ * "Pick a known company" (prefill) recommended, "Start from scratch"
+ * (custom). User taps one to advance. */
+function ChooseStage(props: {
+  onPickPrefill: () => void;
+  onPickCustom: () => void;
+}) {
+  const { onPickPrefill, onPickCustom } = props;
+  return (
+    <main className="flex-1 flex flex-col items-center justify-center px-6 sm:px-10 py-10">
+      <div className="w-full max-w-3xl">
+        <div className="relative text-center mb-10 sm:mb-12">
+          <Sparkle className="absolute left-[20%] -top-2 w-4 h-4 text-boost-green-light/35" />
+          <Sparkle className="absolute right-[18%] top-7 w-3 h-3 text-boost-green-light/45" />
+          <Sparkle className="absolute right-[6%] top-12 w-2.5 h-2.5 text-boost-green-light/30" />
+          <p className="text-[11px] font-bold text-boost-muted uppercase tracking-[0.2em] mb-3">
+            New engagement
+          </p>
+          <h1 className="text-3xl sm:text-[40px] font-bold text-boost-dark tracking-[-0.02em] leading-[1.05]">
+            Where are you starting from?
+          </h1>
+          <p className="text-sm sm:text-base text-boost-muted mt-4 max-w-lg mx-auto">
+            Begin with a curated prefill, or open a blank engagement and
+            type the essentials yourself.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <ChoiceCard
+            onClick={onPickPrefill}
+            kicker="Prefill"
+            title="Pick a known company"
+            bullets={[
+              "Search 40+ curated patterns",
+              "Industry, contact, defaults populate",
+              "Edit anything after",
+            ]}
+            cta="Search prefills"
+            recommended
+            glyph={
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-7 h-7">
+                <circle cx="11" cy="11" r="6" />
+                <line x1="21" y1="21" x2="15.5" y2="15.5" />
+              </svg>
+            }
+          />
+          <ChoiceCard
+            onClick={onPickCustom}
+            kicker="Custom"
+            title="Start from scratch"
+            bullets={[
+              "Type the company name",
+              "Add domain + industry if known",
+              "Everything else stays optional",
+            ]}
+            cta="Open blank"
+            glyph={<span className="text-[28px] font-thin leading-none">+</span>}
+          />
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function ChoiceCard(props: {
+  onClick: () => void;
+  kicker: string;
+  title: string;
+  bullets: string[];
+  cta: string;
+  glyph: React.ReactNode;
+  recommended?: boolean;
+}) {
+  const { onClick, kicker, title, bullets, cta, glyph, recommended } = props;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group relative block text-left rounded-xl border border-boost-border bg-boost-card shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2"
+    >
+      <span
+        aria-hidden="true"
+        className={
+          "absolute left-0 top-0 bottom-0 w-1 transition-all group-hover:w-1.5 " +
+          (recommended ? "bg-boost-green-light" : "bg-boost-lavender")
+        }
+      />
+      <div className="p-6 sm:p-7">
+        <span className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-boost-purple/8 text-boost-purple/60 mb-5 transition-all duration-300 group-hover:bg-boost-purple/12 group-hover:text-boost-purple/80 group-hover:scale-[1.04]">
+          {glyph}
+        </span>
+        <div className="flex items-baseline gap-2.5 mb-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-boost-purple">{kicker}</p>
+          {recommended ? (
+            <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-boost-green">
+              Recommended
+            </span>
+          ) : null}
+        </div>
+        <h3 className="text-lg font-semibold text-boost-dark mb-3 tracking-tight">{title}</h3>
+        <ul className="space-y-1.5 mb-5">
+          {bullets.map((b, i) => (
+            <li key={i} className="text-xs text-boost-text-secondary flex items-start gap-2">
+              <span
+                aria-hidden="true"
+                className={
+                  "mt-1 w-1 h-1 rounded-full flex-shrink-0 " +
+                  (recommended ? "bg-boost-green-light" : "bg-boost-muted/60")
+                }
+              />
+              <span>{b}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="flex items-center justify-between pt-3 border-t border-boost-border/60">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-muted">{cta}</span>
+          <span aria-hidden="true" className="text-boost-muted group-hover:text-boost-purple group-hover:translate-x-0.5 transition-all">→</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+/* ─── Custom-entry stage ───
+ * Minimal essentials when AE wants to start blank — no prefill match
+ * or no need for one. Writes directly into the form's identity fields,
+ * then transitions to editing. */
+function CustomEntryStage(props: {
+  onCreate: (fields: { name: string; domain: string; category: string }) => void;
+  onBack: () => void;
+}) {
+  const { onCreate, onBack } = props;
+  const [name, setName] = useState("");
+  const [domain, setDomain] = useState("");
+  const [category, setCategory] = useState("");
+  const ready = name.trim().length > 0;
+  return (
+    <main className="flex-1 px-6 sm:px-10 py-12">
+      <div className="max-w-[520px] mx-auto">
+        <div className="text-center mb-8">
+          <p className="text-[11px] font-semibold text-boost-muted uppercase tracking-[0.18em] mb-3">
+            Pick a starting point
+          </p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-boost-dark tracking-tight">
+            Open a blank engagement
+          </h1>
+          <p className="text-sm text-boost-muted mt-3 max-w-md mx-auto">
+            Just the essentials — everything else is optional and added later.
+          </p>
+        </div>
+        <div className="bg-boost-card border border-boost-border rounded-xl shadow-sm p-5 sm:p-6">
+          <div className="space-y-4">
+            <CustomEntryField
+              label="Company name"
+              value={name}
+              onChange={setName}
+              placeholder="e.g. Acme Insurance"
+              autoFocus
+            />
+            <CustomEntryField
+              label="Domain"
+              value={domain}
+              onChange={setDomain}
+              placeholder="acme.com"
+              optional
+            />
+            <CustomEntryField
+              label="Industry / category"
+              value={category}
+              onChange={setCategory}
+              placeholder="Insurance"
+              optional
+            />
+          </div>
+          <div className="mt-6 pt-5 border-t border-boost-border/60 flex justify-between items-center">
+            <button
+              type="button"
+              onClick={onBack}
+              className="text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-muted hover:text-boost-dark transition-colors"
+            >
+              ← Back
+            </button>
+            <button
+              type="button"
+              onClick={() => ready && onCreate({ name: name.trim(), domain: domain.trim(), category: category.trim() })}
+              disabled={!ready}
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-boost-purple-deeper text-white rounded-lg text-[12px] font-semibold uppercase tracking-[0.14em] hover:bg-boost-purple transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Continue
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function CustomEntryField(props: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  autoFocus?: boolean;
+  optional?: boolean;
+}) {
+  const { label, value, onChange, placeholder, autoFocus, optional } = props;
+  return (
+    <div>
+      <label className="block text-[10px] font-bold uppercase tracking-[0.16em] text-boost-muted mb-1.5">
+        {label}
+        {optional ? (
+          <span className="ml-1.5 text-boost-muted/60 normal-case font-medium tracking-normal">
+            optional
+          </span>
+        ) : null}
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        className="w-full px-3.5 py-2.5 text-[14px] bg-white border border-boost-border rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light/40 focus-visible:border-boost-green-light/40 placeholder:text-boost-muted/60"
+      />
+    </div>
+  );
+}
+
 /* ─── Main Page ─── */
 export default function AdminPage() {
   const router = useRouter();
@@ -425,18 +671,36 @@ export default function AdminPage() {
     }
   }, []);
 
-  /* ─── URL-based prefill (?prefill=<base64>) ─── */
+  /* ─── URL-based prefill ───
+   *  Two paths into form hydration:
+   *    1. ?prefill=<base64> — legacy query-string prefill (CRM links).
+   *       Decoded once on mount, then stripped from the URL so reloads
+   *       don't keep re-applying.
+   *    2. #data=<base64>... — bookmark continuation. Same decode, but
+   *       hash is preserved so reload stays in editing stage. The stage
+   *       useState above already initialized to "editing" if hash data
+   *       was present at mount. */
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // Path 1: query-string prefill
     const params = new URLSearchParams(window.location.search);
-    const prefill = params.get("prefill");
-    if (!prefill) return;
-    const decoded = decodeGuideData(prefill);
-    if (decoded) {
-      setForm((prev) => ({ ...prev, ...decoded }));
-      // Clean the URL so reloads don't keep re-applying prefill
-      const cleanUrl = window.location.pathname + window.location.hash;
-      window.history.replaceState({}, "", cleanUrl);
+    const prefillQuery = params.get("prefill");
+    if (prefillQuery) {
+      const decoded = decodeGuideData(prefillQuery);
+      if (decoded) {
+        setForm((prev) => ({ ...prev, ...decoded }));
+        const cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, "", cleanUrl);
+      }
+      return;
+    }
+    // Path 2: hash bookmark
+    const m = window.location.hash.match(/data=([^&]+)/);
+    if (m) {
+      const decoded = decodeGuideData(decodeURIComponent(m[1]));
+      if (decoded) {
+        setForm((prev) => ({ ...prev, ...decoded }));
+      }
     }
   }, []);
 
@@ -1034,9 +1298,15 @@ export default function AdminPage() {
     },
   ];
 
-  /** Stage is "editing" so the legacy 12-card scroll renders unchanged.
-   *  Subsequent commits add stage routing + alternative renders. */
-  const [stage, setStage] = useState<Stage>("editing");
+  /** Stage init: read #data= from URL on first render. If present,
+   *  start in editing stage (bookmark continuation). Otherwise default
+   *  to choose so empty /admin lands on the journey entry. SSR-safe via
+   *  typeof window guard. */
+  const [stage, setStage] = useState<Stage>(() => {
+    if (typeof window === "undefined") return "choose";
+    const m = window.location.hash.match(/data=([^&]+)/);
+    return m ? "editing" : "choose";
+  });
   /** Which section ids are currently visible / actively authored. Defaults
    *  to all 12 so today's "everything visible" feel is preserved until the
    *  rail-driven render lands in commit 3. */
@@ -1052,10 +1322,8 @@ export default function AdminPage() {
    *  in commit 8. */
   const [showAddPicker, setShowAddPicker] = useState(false);
   // Suppress unused-var warnings while these hooks are still partly
-  // dormant. Drops as each commit consumes them. Commit 2 consumes
-  // activeSection / setActiveSection / SECTIONS_REGISTRY (rail nav).
-  void stage;
-  void setStage;
+  // dormant. Drops as each commit consumes them. Commit 3 consumes
+  // stage / setStage (journey routing).
   void addedSections;
   void setAddedSections;
   void showGenerateMenu;
@@ -1213,6 +1481,29 @@ export default function AdminPage() {
         </div>
       </header>
 
+      {stage === "choose" ? (
+        <ChooseStage
+          onPickPrefill={() => setStage("editing")}
+          onPickCustom={() => setStage("custom-entry")}
+        />
+      ) : null}
+
+      {stage === "custom-entry" ? (
+        <CustomEntryStage
+          onCreate={(fields) => {
+            setForm((prev) => ({
+              ...prev,
+              company_name: fields.name,
+              company_url: fields.domain,
+            }));
+            setStage("editing");
+            setActiveSection("company");
+          }}
+          onBack={() => setStage("choose")}
+        />
+      ) : null}
+
+      {stage === "editing" ? (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex gap-6 items-start">
         <Rail items={railItems} active={activeSection} onJump={handleJumpSection} />
       <main className="flex-1 min-w-0 space-y-4">
@@ -2931,6 +3222,7 @@ export default function AdminPage() {
         ) : null}
       </main>
       </div>
+      ) : null}
 
       {/* Salesforce import modal */}
       <SalesforceImportModal
