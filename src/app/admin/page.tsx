@@ -249,8 +249,9 @@ function Rail(props: {
   items: RailItemDescriptor[];
   active: string;
   onJump: (id: string) => void;
+  onGenerate?: () => void;
 }) {
-  const { items, active, onJump } = props;
+  const { items, active, onJump, onGenerate } = props;
   const filled = items.filter((i) => i.hasContent).length;
   return (
     <aside
@@ -279,6 +280,18 @@ function Rail(props: {
             />
           ))}
         </nav>
+        {onGenerate ? (
+          <div className="border-t border-boost-border/60 bg-boost-surface/40 p-3">
+            <button
+              type="button"
+              onClick={onGenerate}
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-boost-purple-deeper text-white text-[11px] font-bold uppercase tracking-[0.16em] hover:bg-boost-purple transition-colors shadow-sm"
+            >
+              <span>Generate engagement</span>
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        ) : null}
       </div>
     </aside>
   );
@@ -597,6 +610,146 @@ function CustomEntryField(props: {
         autoFocus={autoFocus}
         className="w-full px-3.5 py-2.5 text-[14px] bg-white border border-boost-border rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light/40 focus-visible:border-boost-green-light/40 placeholder:text-boost-muted/60"
       />
+    </div>
+  );
+}
+
+/* ─── Generate menu ───
+ * Traffic-light picker shown when AE clicks Generate Engagement in
+ * the rail. Three ready outputs (green) wire to existing handlers:
+ *   Presentation         → handleStartPresentation (navigates to /slides)
+ *   SoW PDF              → handleDownloadSOW (PDF download)
+ *   Interactive Engagement → handleSubmit (navigates to /guide via
+ *                            preset-nudge-aware proceedWithGenerate)
+ *
+ * Two orange options (Push to SF, Push to HS) and one grey (Save) are
+ * placeholders for the future-tables work. They render dimmed and
+ * fire no-op handlers — clear visual signal that they're known-future
+ * work, not broken. */
+type GenerateOutputStatus = "ready" | "soon-orange" | "soon-grey";
+
+interface GenerateOutputOption {
+  id: string;
+  title: string;
+  hint: string;
+  status: GenerateOutputStatus;
+  glyph: string;
+  onPick?: () => void;
+}
+
+function generateStatusToken(status: GenerateOutputStatus) {
+  switch (status) {
+    case "ready":
+      return { dot: "bg-boost-green-light", label: "Ready", labelColor: "text-boost-green" };
+    case "soon-orange":
+      return { dot: "bg-boost-orange", label: "Coming soon", labelColor: "text-boost-orange" };
+    case "soon-grey":
+      return { dot: "bg-boost-muted/60", label: "Future", labelColor: "text-boost-muted/80" };
+  }
+}
+
+function GenerateMenu(props: {
+  options: GenerateOutputOption[];
+  onClose: () => void;
+}) {
+  const { options, onClose } = props;
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Generate engagement"
+      className="fixed inset-0 z-30 flex items-start justify-center bg-boost-dark/35 backdrop-blur-[2px] p-6 pt-20"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[600px] bg-boost-card rounded-xl border border-boost-border shadow-xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="px-5 py-4 border-b border-boost-border flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-boost-muted">
+              Generate engagement
+            </p>
+            <h3 className="text-[15px] font-semibold text-boost-dark mt-0.5 tracking-tight">
+              Pick an output
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="text-boost-muted hover:text-boost-dark text-lg leading-none px-2 py-1 rounded-md hover:bg-boost-surface"
+          >
+            ✕
+          </button>
+        </header>
+        <ul className="p-2 max-h-[60vh] overflow-y-auto">
+          {options.map((opt) => {
+            const tok = generateStatusToken(opt.status);
+            const dim = opt.status !== "ready";
+            const handleClick = () => {
+              if (opt.onPick) {
+                opt.onPick();
+                onClose();
+              }
+            };
+            return (
+              <li key={opt.id}>
+                <button
+                  type="button"
+                  onClick={handleClick}
+                  disabled={!opt.onPick}
+                  className={
+                    "w-full text-left px-3 py-3 rounded-lg flex items-center gap-3 transition-colors " +
+                    (dim
+                      ? "hover:bg-boost-surface/60 disabled:cursor-not-allowed"
+                      : "hover:bg-boost-surface")
+                  }
+                >
+                  <span
+                    className={
+                      "flex-shrink-0 relative w-9 h-9 rounded-full bg-boost-purple/8 text-boost-purple/70 flex items-center justify-center text-[14px] " +
+                      (dim ? "opacity-70" : "")
+                    }
+                  >
+                    {opt.glyph}
+                    <span
+                      className={
+                        "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-boost-card " +
+                        tok.dot
+                      }
+                    />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="flex items-baseline gap-2">
+                      <span
+                        className={
+                          "block text-[13px] font-semibold tracking-tight " +
+                          (dim ? "text-boost-dark/75" : "text-boost-dark")
+                        }
+                      >
+                        {opt.title}
+                      </span>
+                      <span
+                        className={
+                          "text-[9px] font-semibold uppercase tracking-[0.16em] " +
+                          tok.labelColor
+                        }
+                      >
+                        {tok.label}
+                      </span>
+                    </span>
+                    <span className="block text-[11px] text-boost-muted mt-0.5">{opt.hint}</span>
+                  </span>
+                  <span aria-hidden="true" className={"text-boost-muted/60 " + (dim ? "opacity-50" : "")}>
+                    →
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -1322,12 +1475,10 @@ export default function AdminPage() {
    *  in commit 8. */
   const [showAddPicker, setShowAddPicker] = useState(false);
   // Suppress unused-var warnings while these hooks are still partly
-  // dormant. Drops as each commit consumes them. Commit 3 consumes
-  // stage / setStage (journey routing).
+  // dormant. Drops as each commit consumes them. Commit 4 consumes
+  // showGenerateMenu / setShowGenerateMenu (Generate picker).
   void addedSections;
   void setAddedSections;
-  void showGenerateMenu;
-  void setShowGenerateMenu;
   void showAddPicker;
   void setShowAddPicker;
 
@@ -1505,7 +1656,12 @@ export default function AdminPage() {
 
       {stage === "editing" ? (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex gap-6 items-start">
-        <Rail items={railItems} active={activeSection} onJump={handleJumpSection} />
+        <Rail
+          items={railItems}
+          active={activeSection}
+          onJump={handleJumpSection}
+          onGenerate={() => setShowGenerateMenu(true)}
+        />
       <main className="flex-1 min-w-0 space-y-4">
         {/* Sections 1 + 2 are SHARED customer metadata \u2014 rendered
             for every audience. Company identity, contact, start date,
@@ -3247,6 +3403,60 @@ export default function AdminPage() {
       />
 
       {/* Feedback backlog modal is mounted globally by <FeedbackProvider /> in root layout. */}
+
+      {/* Generate menu — traffic-light picker for engagement output */}
+      {showGenerateMenu ? (
+        <GenerateMenu
+          onClose={() => setShowGenerateMenu(false)}
+          options={[
+            {
+              id: "presentation",
+              title: "Presentation",
+              hint: "Full-screen slide deck for live walk-throughs.",
+              status: "ready",
+              glyph: "▷",
+              onPick: handleStartPresentation,
+            },
+            {
+              id: "sow-pdf",
+              title: "SoW PDF",
+              hint: "Procurement-friendly downloadable scope.",
+              status: "ready",
+              glyph: "↓",
+              onPick: handleDownloadSOW,
+            },
+            {
+              id: "interactive",
+              title: "Interactive Engagement",
+              hint: "Shareable URL the customer can browse on their own.",
+              status: "ready",
+              glyph: "✦",
+              onPick: handleSubmit,
+            },
+            {
+              id: "push-salesforce",
+              title: "Push to Salesforce",
+              hint: "Sync engagement back into the opportunity record.",
+              status: "soon-orange",
+              glyph: "◆",
+            },
+            {
+              id: "push-hubspot",
+              title: "Push to HubSpot",
+              hint: "Sync engagement back into the deal pipeline.",
+              status: "soon-orange",
+              glyph: "◆",
+            },
+            {
+              id: "save",
+              title: "Save engagement",
+              hint: "Stash a draft you can return to or share with a teammate.",
+              status: "soon-grey",
+              glyph: "✓",
+            },
+          ]}
+        />
+      ) : null}
 
       {/* Preset nudge — soft speed-bump when generating an untouched default guide */}
       {showPresetNudge && (
