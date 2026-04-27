@@ -185,6 +185,105 @@ function CollapsibleSection({
   );
 }
 
+/* ─── Section Rail ───
+ * Persistent left-side navigator for the journey shell. */
+interface RailItemDescriptor {
+  id: string;
+  number: number;
+  title: string;
+  preview: string;
+  hasContent: boolean;
+}
+
+function RailItem(props: {
+  item: RailItemDescriptor;
+  active: boolean;
+  onJump: () => void;
+}) {
+  const { item, active, onJump } = props;
+  return (
+    <button
+      type="button"
+      onClick={onJump}
+      className={
+        "relative w-full text-left pl-4 pr-3 py-2 flex items-start gap-2.5 transition-colors " +
+        (active ? "bg-boost-surface/80" : "hover:bg-boost-surface/40")
+      }
+    >
+      {active ? (
+        <span
+          aria-hidden="true"
+          className="absolute left-0 top-1.5 bottom-1.5 w-[2px] bg-boost-purple rounded-r-full"
+        />
+      ) : null}
+      <span
+        className={
+          "flex-shrink-0 mt-[2px] flex items-center justify-center w-[18px] h-[18px] rounded-full text-[9px] font-bold tabular-nums leading-none transition-colors " +
+          (item.hasContent
+            ? "bg-boost-green-light text-white"
+            : active
+              ? "bg-boost-purple text-white"
+              : "bg-white ring-1 ring-inset ring-boost-border text-boost-muted")
+        }
+      >
+        {item.hasContent ? "✓" : item.number}
+      </span>
+      <span className="flex-1 min-w-0">
+        <span
+          className={
+            "block text-[12px] font-semibold leading-snug truncate " +
+            (active ? "text-boost-dark" : "text-boost-dark/85")
+          }
+        >
+          {item.title}
+        </span>
+        <span className="block text-[10px] text-boost-muted leading-tight truncate mt-0.5">
+          {item.preview}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+function Rail(props: {
+  items: RailItemDescriptor[];
+  active: string;
+  onJump: (id: string) => void;
+}) {
+  const { items, active, onJump } = props;
+  const filled = items.filter((i) => i.hasContent).length;
+  return (
+    <aside
+      className="hidden lg:flex w-[252px] shrink-0 flex-col sticky self-start"
+      style={{ top: "76px", maxHeight: "calc(100vh - 92px)" }}
+    >
+      <div className="flex flex-col flex-1 min-h-0 rounded-2xl border border-boost-border bg-boost-card shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-boost-border">
+          <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-boost-muted">
+            Build engagement
+          </p>
+          <p className="text-[12px] font-semibold text-boost-dark mt-0.5 tabular-nums">
+            {filled}
+            <span className="text-boost-muted/70 font-medium">
+              {" "}of {items.length} sections filled
+            </span>
+          </p>
+        </div>
+        <nav className="flex-1 overflow-y-auto py-1">
+          {items.map((s) => (
+            <RailItem
+              key={s.id}
+              item={s}
+              active={s.id === active}
+              onJump={() => onJump(s.id)}
+            />
+          ))}
+        </nav>
+      </div>
+    </aside>
+  );
+}
+
 /* ─── Helpers ─── */
 function FieldLabel({
   children,
@@ -952,19 +1051,30 @@ export default function AdminPage() {
   /** Add-section picker open state — drives the rail's "+ Add" affordance
    *  in commit 8. */
   const [showAddPicker, setShowAddPicker] = useState(false);
-  // Suppress unused-var warnings while these hooks are dormant. Removed
-  // as each commit consumes them. Keeps build green during transition.
+  // Suppress unused-var warnings while these hooks are still partly
+  // dormant. Drops as each commit consumes them. Commit 2 consumes
+  // activeSection / setActiveSection / SECTIONS_REGISTRY (rail nav).
   void stage;
   void setStage;
   void addedSections;
   void setAddedSections;
-  void activeSection;
-  void setActiveSection;
   void showGenerateMenu;
   void setShowGenerateMenu;
   void showAddPicker;
   void setShowAddPicker;
-  void SECTIONS_REGISTRY;
+
+  /* Rail items derived from SECTIONS_REGISTRY. Pre-computed outside
+     JSX so the layout block stays parser-clean. */
+  const railItems: RailItemDescriptor[] = SECTIONS_REGISTRY.map((s) => ({
+    id: s.id,
+    number: s.number,
+    title: s.title,
+    preview: s.preview,
+    hasContent: s.hasContent,
+  }));
+  const handleJumpSection = (id: string) => {
+    setActiveSection(id as SectionId);
+  };
 
   return (
     <div className="min-h-screen bg-boost-surface">
@@ -1103,7 +1213,9 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex gap-6 items-start">
+        <Rail items={railItems} active={activeSection} onJump={handleJumpSection} />
+      <main className="flex-1 min-w-0 space-y-4">
         {/* Sections 1 + 2 are SHARED customer metadata \u2014 rendered
             for every audience. Company identity, contact, start date,
             and the customer's vertical drive block defaults (agenda
@@ -1113,6 +1225,7 @@ export default function AdminPage() {
             and the generated guide reads generic. */}
 
         {/* 1 — Company Info */}
+        {activeSection === "company" ? (
         <CollapsibleSection
           number={1}
           title="Company Information"
@@ -1235,8 +1348,10 @@ export default function AdminPage() {
             </div>
           </details>
         </CollapsibleSection>
+        ) : null}
 
         {/* 2 — Areas of Interest */}
+        {activeSection === "areas" ? (
         <CollapsibleSection
           number={2}
           title="Areas of Interest"
@@ -1364,8 +1479,10 @@ export default function AdminPage() {
               );
             })}
         </CollapsibleSection>
+        ) : null}
 
         {/* 3 — Pricing & Costs */}
+        {activeSection === "pricing" ? (
         <CollapsibleSection
           number={3}
           title="Pricing Model & ROI Inputs"
@@ -1458,8 +1575,10 @@ export default function AdminPage() {
             <span className="font-semibold text-boost-dark"> Section 4 · Commercial Invoice Builder</span>.
           </p>
         </CollapsibleSection>
+        ) : null}
 
         {/* 4 — Commercial Invoice Builder (2026) */}
+        {activeSection === "invoice" ? (
         <CollapsibleSection
           number={4}
           title="Commercial Invoice Builder (2026)"
@@ -1691,8 +1810,10 @@ export default function AdminPage() {
             ))}
           </div>
         </CollapsibleSection>
+        ) : null}
 
         {/* 5 — Deployment & Resources */}
+        {activeSection === "deployment" ? (
         <CollapsibleSection
           number={5}
           title="Deployment & Resources"
@@ -1823,8 +1944,10 @@ export default function AdminPage() {
             </span>
           </label>
         </CollapsibleSection>
+        ) : null}
 
         {/* 5 — Requirements & Volumes */}
+        {activeSection === "requirements" ? (
         <CollapsibleSection
           number={6}
           title="Requirements & Volumes"
@@ -2004,8 +2127,10 @@ export default function AdminPage() {
             className={`${inputClass} resize-none leading-relaxed`}
           />
         </CollapsibleSection>
+        ) : null}
 
         {/* 6 — Integrations */}
+        {activeSection === "integrations" ? (
         <CollapsibleSection
           number={7}
           title="Backend Systems & Integrations"
@@ -2136,8 +2261,10 @@ export default function AdminPage() {
             })}
           </div>
         </CollapsibleSection>
+        ) : null}
 
         {/* 7 — Notes */}
+        {activeSection === "notes" ? (
         <CollapsibleSection
           number={8}
           title="Additional Notes"
@@ -2156,8 +2283,10 @@ export default function AdminPage() {
             className={`${inputClass} resize-none leading-relaxed`}
           />
         </CollapsibleSection>
+        ) : null}
 
         {/* 8 — Guide Sections */}
+        {activeSection === "sections" ? (
         <div ref={guideSectionsRef} className="scroll-mt-20">
         <CollapsibleSection
           number={9}
@@ -2491,8 +2620,10 @@ export default function AdminPage() {
           </details>
         </CollapsibleSection>
         </div>
+        ) : null}
 
         {/* 9 — Case Study Selection */}
+        {activeSection === "cases" ? (
         <CollapsibleSection
           number={10}
           title="Case Study Selection"
@@ -2577,8 +2708,10 @@ export default function AdminPage() {
             })}
           </div>
         </CollapsibleSection>
+        ) : null}
 
         {/* 10 — Custom Section Content */}
+        {activeSection === "custom" ? (
         <CollapsibleSection
           number={11}
           title="Custom Section Content"
@@ -2672,7 +2805,9 @@ export default function AdminPage() {
             </div>
           </div>
         </CollapsibleSection>
+        ) : null}
 
+        {activeSection === "demos" ? (
         <CollapsibleSection
           number={12}
           title="Demos"
@@ -2793,7 +2928,9 @@ export default function AdminPage() {
             </div>
           )}
         </CollapsibleSection>
+        ) : null}
       </main>
+      </div>
 
       {/* Salesforce import modal */}
       <SalesforceImportModal
