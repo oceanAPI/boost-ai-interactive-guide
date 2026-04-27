@@ -698,12 +698,19 @@ interface GenerateOutputOption {
   status: GenerateOutputStatus;
   glyph: string;
   onPick?: () => void;
+  /** When true, the option renders with a "Recommended" tracked-
+   *  uppercase label next to the title. Visual hint that this is the
+   *  default expected choice; doesn't change behavior. */
+  recommended?: boolean;
 }
 
 function generateStatusToken(status: GenerateOutputStatus) {
   switch (status) {
     case "ready":
-      return { dot: "bg-boost-green-light", label: "Ready", labelColor: "text-boost-green" };
+      // No label — the green dot is enough. Reduces visual noise on
+      // the most common case so the "Coming soon" / "Future" labels
+      // stand out as warnings about availability.
+      return { dot: "bg-boost-green-light", label: null, labelColor: "" };
     case "soon-orange":
       return { dot: "bg-boost-orange", label: "Coming soon", labelColor: "text-boost-orange" };
     case "soon-grey":
@@ -793,14 +800,21 @@ function GenerateMenu(props: {
                       >
                         {opt.title}
                       </span>
-                      <span
-                        className={
-                          "text-[9px] font-semibold uppercase tracking-[0.16em] " +
-                          tok.labelColor
-                        }
-                      >
-                        {tok.label}
-                      </span>
+                      {opt.recommended ? (
+                        <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-boost-green">
+                          Recommended
+                        </span>
+                      ) : null}
+                      {tok.label ? (
+                        <span
+                          className={
+                            "text-[9px] font-semibold uppercase tracking-[0.16em] " +
+                            tok.labelColor
+                          }
+                        >
+                          {tok.label}
+                        </span>
+                      ) : null}
                     </span>
                     <span className="block text-[11px] text-boost-muted mt-0.5">{opt.hint}</span>
                   </span>
@@ -1614,10 +1628,25 @@ export default function AdminPage() {
   ]);
 
   /** Adds the next unfilled section in SECTION_ORDER. Returns the
-   *  added id (for callers that want to setActiveSection). */
+   *  added id (for callers that want to setActiveSection).
+   *
+   *  Pro shortcut: once the AE has accumulated more than 3 sections
+   *  (the recommended minimum: Company, Areas, Guide Sections) the
+   *  next + click reveals ALL remaining sections at once instead of
+   *  one-by-one. The rain-in animation staggers them across ~1s so
+   *  the screen doesn't dump. Slow path stays one-at-a-time for
+   *  newcomers who want to learn the catalogue. */
   const addNextSection = (): SectionId | null => {
-    const next = SECTION_ORDER.find((id) => !addedSections.includes(id));
-    if (!next) return null;
+    const remaining = SECTION_ORDER.filter((id) => !addedSections.includes(id));
+    if (remaining.length === 0) return null;
+    if (addedSections.length > 3) {
+      // Reveal all remaining at once
+      setAddedSections((prev) => [...prev, ...remaining]);
+      setActiveSection(remaining[0]);
+      return remaining[0];
+    }
+    // Reveal next one at a time
+    const next = remaining[0];
     setAddedSections((prev) => [...prev, next]);
     setActiveSection(next);
     return next;
@@ -1626,6 +1655,17 @@ export default function AdminPage() {
   const nextSectionDef = SECTION_ORDER.map((id) =>
     SECTIONS_REGISTRY.find((s) => s.id === id),
   ).find((s) => s && !addedSections.includes(s.id));
+  /** When the pro shortcut would trigger, the + button's label
+   *  reflects that it's an "add the rest" action, not a single add. */
+  const remainingCount = SECTION_ORDER.filter(
+    (id) => !addedSections.includes(id),
+  ).length;
+  // Label fragment shown after the "+ Add " prefix in the rail. The
+  // rail renders "Add {nextLabel}" so don't prefix with another "Add".
+  const addNextLabel =
+    addedSections.length > 3 && remainingCount > 1
+      ? `${remainingCount} more`
+      : nextSectionDef?.title;
 
   /* Rail items derived from SECTIONS_REGISTRY, filtered by
      addedSections. Pre-computed outside JSX so the layout block
@@ -1787,7 +1827,7 @@ export default function AdminPage() {
           active={activeSection}
           onJump={handleJumpSection}
           onAddNext={nextSectionDef ? addNextSection : undefined}
-          nextLabel={nextSectionDef?.title}
+          nextLabel={addNextLabel}
         />
       <main className="flex-1 min-w-0 space-y-4">
         {/* Sections 1 + 2 are SHARED customer metadata \u2014 rendered
@@ -1867,10 +1907,15 @@ export default function AdminPage() {
           />
 
           {/* Edit details — raw text inputs. Open by default when form is empty
-              (newbies land here), closed by default when a prefill has run. */}
+              (newbies land here), closed by default when a prefill has run.
+              `open` is uncontrolled after mount: if we kept it bound to
+              `!form.company_name`, the disclosure would auto-close on the
+              first keystroke and yank focus from the input. Plain `open`
+              attribute (boolean, no value) sets initial state only —
+              browser handles toggle from there. */}
           <details
             className="group mt-4 rounded-lg border border-boost-border/60 bg-boost-surface/20"
-            open={!form.company_name}
+            open
           >
             <summary className="flex items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-boost-dark/80 cursor-pointer hover:text-boost-dark select-none list-none">
               <span className="inline-flex items-center gap-2">
@@ -3562,6 +3607,15 @@ export default function AdminPage() {
           onClose={() => setShowGenerateMenu(false)}
           options={[
             {
+              id: "interactive",
+              title: "Interactive Engagement",
+              hint: "Shareable URL the customer can browse on their own.",
+              status: "ready",
+              glyph: "✦",
+              onPick: handleSubmit,
+              recommended: true,
+            },
+            {
               id: "presentation",
               title: "Presentation",
               hint: "Full-screen slide deck for live walk-throughs.",
@@ -3576,14 +3630,6 @@ export default function AdminPage() {
               status: "ready",
               glyph: "↓",
               onPick: handleDownloadSOW,
-            },
-            {
-              id: "interactive",
-              title: "Interactive Engagement",
-              hint: "Shareable URL the customer can browse on their own.",
-              status: "ready",
-              glyph: "✦",
-              onPick: handleSubmit,
             },
             {
               id: "push-salesforce",
