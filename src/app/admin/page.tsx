@@ -259,14 +259,88 @@ function RailItem(props: {
   );
 }
 
+/* ─── Rail customer header ───
+ *  Shows the engagement subject at the top of the rail when in editing
+ *  stage. Logo cascade: explicit `logoUrl` (curated pattern override)
+ *  → Brandfetch CDN derived from `domain` → initials fallback.
+ *  Brandfetch returns 404 for unknown domains; the <img onError>
+ *  flips to the initials tile so we never show a broken-image icon. */
+function RailCustomerHeader(props: {
+  name: string;
+  logoUrl?: string | null;
+  domain?: string;
+  category?: string;
+}) {
+  const { name, logoUrl, domain, category } = props;
+  // Brandfetch URL derived from a clean domain (strip protocol/path).
+  const cleanDomain = domain
+    ? domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim()
+    : "";
+  const brandfetchUrl = cleanDomain ? `https://cdn.brandfetch.io/${cleanDomain}` : null;
+  const finalSrc = logoUrl || brandfetchUrl;
+  // Initials: first 2 letters of name, or "?" if no name set.
+  const initials = (() => {
+    const t = name.trim();
+    if (!t) return "?";
+    const parts = t.split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  })();
+  // Skip the header entirely on a brand-new engagement so the rail's
+  // counter still feels like the start. Once any identity hint exists
+  // (name OR domain), show it.
+  if (!name.trim() && !cleanDomain) return null;
+  return (
+    <div className="px-4 py-3 border-b border-boost-border flex items-center gap-2.5">
+      <RailLogoTile src={finalSrc} initials={initials} alt={name || "Customer"} />
+      <div className="min-w-0">
+        <p className="text-[12px] font-semibold text-boost-dark truncate tracking-tight">
+          {name.trim() || cleanDomain || "Untitled"}
+        </p>
+        {category ? (
+          <p className="text-[10px] text-boost-muted truncate mt-0.5">{category}</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function RailLogoTile(props: { src?: string | null; initials: string; alt: string }) {
+  const { src, initials, alt } = props;
+  const [failed, setFailed] = useState(false);
+  // Reset failure state when src changes (e.g., AE swaps prefill).
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+  const showImage = src && !failed;
+  return (
+    <span className="flex-shrink-0 w-9 h-9 rounded-full bg-boost-purple/8 ring-1 ring-boost-border/60 flex items-center justify-center overflow-hidden">
+      {showImage ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt={alt}
+          onError={() => setFailed(true)}
+          className="max-w-[80%] max-h-[80%] object-contain"
+        />
+      ) : (
+        <span className="text-[10px] font-bold text-boost-purple/80 tabular-nums">
+          {initials}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function Rail(props: {
   items: RailItemDescriptor[];
   active: string;
   onJump: (id: string) => void;
   onAddNext?: () => void;
   nextLabel?: string;
+  customer?: { name: string; logoUrl?: string | null; domain?: string; category?: string };
 }) {
-  const { items, active, onJump, onAddNext, nextLabel } = props;
+  const { items, active, onJump, onAddNext, nextLabel, customer } = props;
   const filled = items.filter((i) => i.hasContent).length;
   return (
     <aside
@@ -274,6 +348,14 @@ function Rail(props: {
       style={{ top: "76px", maxHeight: "calc(100vh - 92px)" }}
     >
       <div className="flex flex-col flex-1 min-h-0 rounded-2xl border border-boost-border bg-boost-card shadow-sm overflow-hidden">
+        {customer ? (
+          <RailCustomerHeader
+            name={customer.name}
+            logoUrl={customer.logoUrl}
+            domain={customer.domain}
+            category={customer.category}
+          />
+        ) : null}
         <div className="px-4 py-3 border-b border-boost-border">
           <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-boost-muted">
             Build engagement
@@ -1828,6 +1910,20 @@ export default function AdminPage() {
           onJump={handleJumpSection}
           onAddNext={nextSectionDef ? addNextSection : undefined}
           nextLabel={addNextLabel}
+          customer={{
+            name: form.company_name,
+            logoUrl: prefilledLogo,
+            domain: form.company_url,
+            // Category line: prefill summary if available (e.g.
+            // "Insurance · mutual"), otherwise the first selected
+            // industry's label, otherwise undefined (header skips line).
+            category:
+              prefilledSummary ||
+              (form.areas_of_interest?.length
+                ? INDUSTRIES.find((i) => i.key === form.areas_of_interest[0])?.label
+                : undefined) ||
+              undefined,
+          }}
         />
       <main className="flex-1 min-w-0 space-y-4">
         {/* Sections 1 + 2 are SHARED customer metadata \u2014 rendered
