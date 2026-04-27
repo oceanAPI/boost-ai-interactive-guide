@@ -791,6 +791,181 @@ export default function AdminPage() {
   const hasIntegrations = totalIntegrations > 0;
   const hasNotes = !!form.custom_notes;
 
+  /* ─── Journey state (dormant in this commit) ───
+   * Foundation for the engagement-journey shell migration.
+   *
+   * Today the page renders the same as before — all 12 CollapsibleSection
+   * cards in a vertical scroll. The state below is in place so subsequent
+   * commits can drive a rail + active-section UX without further
+   * architectural moves. Each entry maps 1:1 to one of today's sections.
+   *
+   * `stage` defaults to "editing" so the legacy scroll renders unchanged
+   * when no journey UI is rendered yet. Stages "choose" / "search" /
+   * "custom-entry" become active in commit 4. */
+  type Stage = "choose" | "search" | "custom-entry" | "editing";
+  type SectionId =
+    | "company"
+    | "areas"
+    | "pricing"
+    | "invoice"
+    | "deployment"
+    | "requirements"
+    | "integrations"
+    | "notes"
+    | "sections"
+    | "cases"
+    | "custom"
+    | "demos";
+
+  interface SectionMeta {
+    id: SectionId;
+    /** Existing CollapsibleSection number (1-12). Stable for back-compat. */
+    number: number;
+    title: string;
+    /** Brief one-liner shown in rail row. Dynamic where possible. */
+    preview: string;
+    /** True if the section has any user-entered content. Drives the green-
+     *  check on rail rows and the bookmark auto-add logic in commit 4. */
+    hasContent: boolean;
+  }
+
+  const SECTIONS_REGISTRY: SectionMeta[] = [
+    {
+      id: "company",
+      number: 1,
+      title: "Company Information",
+      preview: form.company_name || "Identity, contact, kickoff",
+      hasContent: hasCompanyInfo,
+    },
+    {
+      id: "areas",
+      number: 2,
+      title: "Areas of Interest",
+      preview: hasAreas
+        ? `${form.areas_of_interest.length} area${form.areas_of_interest.length === 1 ? "" : "s"} selected`
+        : "Industry verticals & sub-areas",
+      hasContent: hasAreas,
+    },
+    {
+      id: "pricing",
+      number: 3,
+      title: "Pricing Model & ROI",
+      preview: hasPricing
+        ? `${form.pricing_model} · ${form.conversation_cost}`
+        : "Cost / conv, FTE capacity, ramp",
+      hasContent: hasPricing,
+    },
+    {
+      id: "invoice",
+      number: 4,
+      title: "Commercial Invoice Builder",
+      preview: hasPricingConfig ? "2026 invoice populated" : "2026 line-item invoice",
+      hasContent: hasPricingConfig,
+    },
+    {
+      id: "deployment",
+      number: 5,
+      title: "Deployment & Resources",
+      preview: hasDeployment
+        ? `${form.deployment_markets} market${form.deployment_markets === 1 ? "" : "s"}`
+        : "Markets, team, capacity",
+      hasContent: hasDeployment,
+    },
+    {
+      id: "requirements",
+      number: 6,
+      title: "Requirements & Volumes",
+      preview: form.market_volumes
+        ? `${form.market_volumes.length} markets, per-market`
+        : hasRequirements
+          ? "Volumes added"
+          : "Per-market or rollup",
+      hasContent: hasRequirements,
+    },
+    {
+      id: "integrations",
+      number: 7,
+      title: "Backend Integrations",
+      preview: hasIntegrations
+        ? `${totalIntegrations} integration${totalIntegrations === 1 ? "" : "s"} selected`
+        : "Auth, channels, CRM",
+      hasContent: hasIntegrations,
+    },
+    {
+      id: "notes",
+      number: 8,
+      title: "Additional Notes",
+      preview: hasNotes ? "Notes added" : "Optional context",
+      hasContent: hasNotes,
+    },
+    {
+      id: "sections",
+      number: 9,
+      title: "Guide Sections",
+      preview: `${selectedSectionIds.length} of ${sectionItems.length} · ~${estimatedReadTime} min`,
+      hasContent: hasSectionChanges,
+    },
+    {
+      id: "cases",
+      number: 10,
+      title: "Case Study Selection",
+      preview: hasCustomCaseStudies
+        ? `${form.selected_case_studies?.length} stor${(form.selected_case_studies?.length ?? 0) === 1 ? "y" : "ies"} selected`
+        : "Industry-relevant default",
+      hasContent: hasCustomCaseStudies,
+    },
+    {
+      id: "custom",
+      number: 11,
+      title: "Custom Section",
+      preview: form.custom_section?.title || "Optional bespoke section",
+      hasContent: !!form.custom_section?.title,
+    },
+    {
+      id: "demos",
+      number: 12,
+      title: "Demos",
+      preview:
+        form.demo_mode === "live"
+          ? "Live shared tenant"
+          : form.demo_mode === "custom_live"
+            ? form.demo_tenant || "Live custom tenant"
+            : "Default scripted demo",
+      hasContent: form.demo_mode !== undefined && form.demo_mode !== "simulated",
+    },
+  ];
+
+  /** Stage is "editing" so the legacy 12-card scroll renders unchanged.
+   *  Subsequent commits add stage routing + alternative renders. */
+  const [stage, setStage] = useState<Stage>("editing");
+  /** Which section ids are currently visible / actively authored. Defaults
+   *  to all 12 so today's "everything visible" feel is preserved until the
+   *  rail-driven render lands in commit 3. */
+  const [addedSections, setAddedSections] = useState<SectionId[]>(
+    SECTIONS_REGISTRY.map((s) => s.id),
+  );
+  /** Active section in the editing rail. Used by commit 3+ to drive the
+   *  single-active-panel render. */
+  const [activeSection, setActiveSection] = useState<SectionId>("company");
+  /** Generate menu open state — drives the traffic-light picker in commit 5. */
+  const [showGenerateMenu, setShowGenerateMenu] = useState(false);
+  /** Add-section picker open state — drives the rail's "+ Add" affordance
+   *  in commit 8. */
+  const [showAddPicker, setShowAddPicker] = useState(false);
+  // Suppress unused-var warnings while these hooks are dormant. Removed
+  // as each commit consumes them. Keeps build green during transition.
+  void stage;
+  void setStage;
+  void addedSections;
+  void setAddedSections;
+  void activeSection;
+  void setActiveSection;
+  void showGenerateMenu;
+  void setShowGenerateMenu;
+  void showAddPicker;
+  void setShowAddPicker;
+  void SECTIONS_REGISTRY;
+
   return (
     <div className="min-h-screen bg-boost-surface">
       {/* Audience banner — renders for any audience routed from the
