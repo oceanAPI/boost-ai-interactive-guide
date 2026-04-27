@@ -73,7 +73,12 @@ function CollapsibleSection({
   children: React.ReactNode;
   customBadge?: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen ?? false);
+  // Default to open: in the journey shell only ONE section is mounted
+  // at a time (single-active render). Forcing the user to click again
+  // to expand is unnecessary friction. Sections can still pass
+  // `defaultOpen={false}` to start collapsed if a future use case
+  // demands it.
+  const [open, setOpen] = useState(defaultOpen ?? true);
 
   useEffect(() => {
     if (autoOpenOnContent && hasContent) setOpen(true);
@@ -511,19 +516,28 @@ function ChoiceCard(props: {
 /* ─── Custom-entry stage ───
  * Minimal essentials when AE wants to start blank — no prefill match
  * or no need for one. Writes directly into the form's identity fields,
- * then transitions to editing. */
+ * then transitions to editing.
+ *
+ * Industry is picked from the same chip list as Section 2's Areas of
+ * Interest (single-select on entry, AE can add more later in editing).
+ * Either company_name OR industryKey must be present to enter editing
+ * — neither = nothing to generate against. */
 function CustomEntryStage(props: {
-  onCreate: (fields: { name: string; domain: string; category: string }) => void;
+  industries: ReadonlyArray<{ readonly key: string; readonly label: string }>;
+  onCreate: (fields: { name: string; domain: string; industryKey: string | null }) => void;
   onBack: () => void;
 }) {
-  const { onCreate, onBack } = props;
+  const { industries, onCreate, onBack } = props;
   const [name, setName] = useState("");
   const [domain, setDomain] = useState("");
-  const [category, setCategory] = useState("");
-  const ready = name.trim().length > 0;
+  const [industryKey, setIndustryKey] = useState<string | null>(null);
+  // Either name OR industry must be set — the generate gate later
+  // reads `hasCompanyInfo || hasAreas`, so requiring one of those at
+  // entry time makes the rule transparent up-front.
+  const ready = name.trim().length > 0 || industryKey !== null;
   return (
     <main className="flex-1 px-6 sm:px-10 py-12">
-      <div className="max-w-[520px] mx-auto">
+      <div className="max-w-[560px] mx-auto">
         <div className="text-center mb-8">
           <p className="text-[11px] font-semibold text-boost-muted uppercase tracking-[0.18em] mb-3">
             Pick a starting point
@@ -532,7 +546,7 @@ function CustomEntryStage(props: {
             Open a blank engagement
           </h1>
           <p className="text-sm text-boost-muted mt-3 max-w-md mx-auto">
-            Just the essentials — everything else is optional and added later.
+            Company name or industry — at least one. Everything else stays optional.
           </p>
         </div>
         <div className="bg-boost-card border border-boost-border rounded-xl shadow-sm p-5 sm:p-6">
@@ -543,6 +557,7 @@ function CustomEntryStage(props: {
               onChange={setName}
               placeholder="e.g. Acme Insurance"
               autoFocus
+              optional
             />
             <CustomEntryField
               label="Domain"
@@ -551,13 +566,38 @@ function CustomEntryStage(props: {
               placeholder="acme.com"
               optional
             />
-            <CustomEntryField
-              label="Industry / category"
-              value={category}
-              onChange={setCategory}
-              placeholder="Insurance"
-              optional
-            />
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-[0.16em] text-boost-muted mb-2">
+                Industry
+                <span className="ml-1.5 text-boost-muted/60 normal-case font-medium tracking-normal">
+                  optional · pick one to start
+                </span>
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {industries.map((ind) => {
+                  const active = industryKey === ind.key;
+                  return (
+                    <button
+                      key={ind.key}
+                      type="button"
+                      onClick={() => setIndustryKey(active ? null : ind.key)}
+                      className={
+                        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors border " +
+                        (active
+                          ? "bg-boost-purple text-white border-boost-purple shadow-sm"
+                          : "bg-white text-boost-dark border-boost-border hover:border-boost-purple/40")
+                      }
+                    >
+                      {active ? <span aria-hidden="true" className="-ml-0.5">●</span> : null}
+                      {ind.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-boost-muted mt-2">
+                You can add more industries (and edit anything) once you&apos;re in.
+              </p>
+            </div>
           </div>
           <div className="mt-6 pt-5 border-t border-boost-border/60 flex justify-between items-center">
             <button
@@ -569,7 +609,7 @@ function CustomEntryStage(props: {
             </button>
             <button
               type="button"
-              onClick={() => ready && onCreate({ name: name.trim(), domain: domain.trim(), category: category.trim() })}
+              onClick={() => ready && onCreate({ name: name.trim(), domain: domain.trim(), industryKey })}
               disabled={!ready}
               className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-boost-purple-deeper text-white rounded-lg text-[12px] font-semibold uppercase tracking-[0.14em] hover:bg-boost-purple transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
@@ -1307,6 +1347,12 @@ export default function AdminPage() {
   const hasIntegrations = totalIntegrations > 0;
   const hasNotes = !!form.custom_notes;
 
+  /** Generate gate: at minimum we need a customer label — either the
+   *  company name OR a selected industry (Areas of Interest). If both
+   *  are empty there's nothing to generate against. Guide Sections has
+   *  reasonable defaults from SLIDE_SECTIONS so it doesn't gate. */
+  const canGenerate = hasCompanyInfo || hasAreas;
+
   /* ─── Journey state (dormant in this commit) ───
    * Foundation for the engagement-journey shell migration.
    *
@@ -1581,53 +1627,25 @@ export default function AdminPage() {
               />
             </Link>
           </div>
+          {/* Top-bar action — single Generate Engagement button. Gate:
+              renders only on editing stage AND when canGenerate is true
+              (company name or areas of interest filled). All output
+              variants (Presentation / SoW PDF / Interactive Engagement)
+              live in the picker that opens from this button. CRM
+              imports (Salesforce / HubSpot) moved into Company
+              Information's body. Choose / custom-entry stages hide
+              this entirely so the chrome stays quiet during entry. */}
           <div className="flex items-center gap-1 sm:gap-1.5">
-            <button
-              onClick={() => setShowSalesforce(true)}
-              className="px-2 sm:px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface transition-colors flex-shrink-0 flex items-center gap-1.5"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00A1E0" strokeWidth="2">
-                <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" />
-              </svg>
-              <span className="hidden sm:inline">Salesforce</span>
-            </button>
-            <button
-              onClick={() => setShowHubspot(true)}
-              className="px-2 sm:px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface transition-colors flex-shrink-0 flex items-center gap-1.5"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="#FF7A59">
-                <path d="M17.2 9.2V6.7a1.7 1.7 0 001-1.5V5a1.7 1.7 0 00-1.7-1.7h-.2A1.7 1.7 0 0014.6 5v.2a1.7 1.7 0 001 1.5v2.5a5.3 5.3 0 00-2.4 1.3l-6.4-5a2.1 2.1 0 00.1-.6 2.1 2.1 0 10-2.1 2.1c.4 0 .8-.1 1.1-.3l6.3 4.9a5.3 5.3 0 00-.5 2.3 5.3 5.3 0 00.7 2.6l-2 2a1.8 1.8 0 00-.5-.1 1.8 1.8 0 101.8 1.8 1.8 1.8 0 00-.1-.5l2-2a5.3 5.3 0 103.6-8.5zM16.5 17a3 3 0 01-3-3 3 3 0 013-3 3 3 0 013 3 3 3 0 01-3 3z" />
-              </svg>
-              <span className="hidden sm:inline">HubSpot</span>
-            </button>
-            <button
-              onClick={handleDownloadSOW}
-              disabled={generatingPdf}
-              className="px-2 sm:px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0 flex items-center gap-1.5"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-              </svg>
-              <span className="hidden sm:inline">{generatingPdf ? "Generating..." : "SOW"}</span>
-            </button>
-            <button
-              onClick={handleStartPresentation}
-              className="px-2 sm:px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface transition-colors flex-shrink-0 flex items-center gap-1.5"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
-              </svg>
-              <span className="hidden sm:inline">Guide</span>
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="px-2 sm:px-3 py-2 text-sm border border-boost-border text-boost-dark font-semibold rounded-lg hover:bg-boost-surface transition-colors flex-shrink-0 flex items-center gap-1.5"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              <span className="hidden sm:inline">Generate</span>
-            </button>
+            {stage === "editing" && canGenerate ? (
+              <button
+                type="button"
+                onClick={() => setShowGenerateMenu(true)}
+                className="px-3 sm:px-4 py-2 bg-boost-purple-deeper text-white text-[11px] font-bold uppercase tracking-[0.16em] rounded-lg hover:bg-boost-purple transition-colors shadow-sm flex items-center gap-1.5"
+              >
+                <span>Generate engagement</span>
+                <span aria-hidden="true">→</span>
+              </button>
+            ) : null}
           </div>
         </div>
       </header>
@@ -1641,14 +1659,20 @@ export default function AdminPage() {
 
       {stage === "custom-entry" ? (
         <CustomEntryStage
+          industries={INDUSTRIES.filter((i) => !HIDDEN_INDUSTRIES.has(i.key))}
           onCreate={(fields) => {
             setForm((prev) => ({
               ...prev,
               company_name: fields.name,
               company_url: fields.domain,
+              areas_of_interest: fields.industryKey
+                ? Array.from(new Set([...(prev.areas_of_interest || []), fields.industryKey]))
+                : prev.areas_of_interest,
             }));
             setStage("editing");
-            setActiveSection("company");
+            // If they picked an industry but no name, land them on areas
+            // so the rail makes the customer-label fallback obvious.
+            setActiveSection(fields.name ? "company" : (fields.industryKey ? "areas" : "company"));
           }}
           onBack={() => setStage("choose")}
         />
@@ -1660,7 +1684,6 @@ export default function AdminPage() {
           items={railItems}
           active={activeSection}
           onJump={handleJumpSection}
-          onGenerate={() => setShowGenerateMenu(true)}
         />
       <main className="flex-1 min-w-0 space-y-4">
         {/* Sections 1 + 2 are SHARED customer metadata \u2014 rendered
@@ -1697,6 +1720,31 @@ export default function AdminPage() {
                   </svg>
                   Search log
                 </span>
+              </button>
+            </div>
+            {/* CRM imports — pull customer data from Salesforce or
+                HubSpot into the form. Push (export back to CRM) lives
+                in the Generate menu. Two-way split is intentional:
+                pull-from is metadata-stage, push-to is delivery-stage. */}
+            <div className="flex items-center gap-2 flex-wrap mt-3">
+              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-boost-muted/80">
+                Import from
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowSalesforce(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-boost-border/80 bg-white text-boost-muted text-[10px] font-semibold uppercase tracking-[0.14em] hover:text-boost-dark hover:border-boost-purple/40 transition-colors"
+              >
+                <span aria-hidden="true" className="w-1 h-1 rounded-full bg-boost-orange/70" />
+                Salesforce
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowHubspot(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-boost-border/80 bg-white text-boost-muted text-[10px] font-semibold uppercase tracking-[0.14em] hover:text-boost-dark hover:border-boost-purple/40 transition-colors"
+              >
+                <span aria-hidden="true" className="w-1 h-1 rounded-full bg-boost-orange/70" />
+                HubSpot
               </button>
             </div>
           </div>
