@@ -313,18 +313,23 @@ function RailLogoTile(props: { src?: string | null; initials: string; alt: strin
     setFailed(false);
   }, [src]);
   const showImage = src && !failed;
+  // Square-rounded white tile with thin border — matches the
+  // CompanyLogoChip vocabulary used in case studies + dossier card.
+  // Real logos look more like trademarks against a clean white frame
+  // than against a tinted circle. Initials fall back to the same
+  // frame so the rail header rhythm stays consistent.
   return (
-    <span className="flex-shrink-0 w-9 h-9 rounded-full bg-boost-purple/8 ring-1 ring-boost-border/60 flex items-center justify-center overflow-hidden">
+    <span className="flex-shrink-0 w-9 h-9 rounded-lg bg-white ring-1 ring-boost-border/70 shadow-sm flex items-center justify-center overflow-hidden p-1">
       {showImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt={alt}
           onError={() => setFailed(true)}
-          className="max-w-[80%] max-h-[80%] object-contain"
+          className="max-w-full max-h-full object-contain"
         />
       ) : (
-        <span className="text-[10px] font-bold text-boost-purple/80 tabular-nums">
+        <span className="text-[10px] font-bold text-boost-purple/80 tabular-nums tracking-tight">
           {initials}
         </span>
       )}
