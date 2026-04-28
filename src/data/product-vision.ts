@@ -2,10 +2,75 @@
  * boost.ai Product Vision
  * The strategic narrative behind the 2026 roadmap.
  *
- * Four pillars + the Test Studio determinism spotlight + A2A heritage + Knowledge Transformation clarity + credibility stats.
+ * Sourced from the canonical "Product Roadmap 2026" deck (slides 1-39):
+ * - Tagline + opening (slides 1-2)
+ * - Three Product Strategy pillars (slide 3)
+ * - Four focus areas + regulated-enterprises question (slide 4)
+ * - Per-focus-area Product Vision paragraphs (slides 7+, already wired)
+ * - Test Studio determinism spotlight + A2A heritage + Knowledge
+ *   Transformation + credibility stats (boost narrative additions).
  */
 
 import type { FocusArea } from "./product-roadmap-2026";
+
+/* ─── Company tagline — appears at the foot of every PDS slide ─── */
+export const COMPANY_TAGLINE = "Trust every conversation";
+
+/* ─── Vision opening — slide 2 of the PDS ─── */
+export interface VisionOpening {
+  paragraphs: string[];
+  /** The italicised closing line — rendered with emphasis. */
+  emphasis: string;
+}
+
+export const VISION_OPENING: VisionOpening = {
+  paragraphs: [
+    "There will be a complete shift in how people interact with technology at every level — and that will be through conversations. It will influence everything we do from shopping, to entertainment, to music, to travel, to education — and will impact how every Enterprise business is built and run.",
+    "It will shift how whole societies communicate, and the relationship and interface that everyone has with technology — across every channel we use today, and those just around the corner.",
+  ],
+  emphasis:
+    "The future isn't about automation — it's about conversations, and creating and guiding the operating layer of a more intuitive, human-centered digital world.",
+};
+
+/* ─── Three Product Strategy pillars — slide 3 of the PDS ─── *
+ * "Our future is built on meaningful outcomes — The boost.ai Product
+ * Strategy." These pillars sit BEFORE the four focus areas: they're
+ * the why; the focus areas are the where; the per-focus-area phases
+ * are the how. */
+export interface StrategyPillar {
+  id: "simplifying" | "control" | "security";
+  title: string;
+  /** Two-tone title — the second word renders in italic accent style. */
+  emphasis: string;
+  body: string;
+}
+
+export const STRATEGY_PILLARS: StrategyPillar[] = [
+  {
+    id: "simplifying",
+    title: "Simplifying",
+    emphasis: "complexity",
+    body: "As the technical capabilities grow more complex, our focus must stay on simplicity — in ideas, user experience, delivery and deployment — to ensure success can truly scale.",
+  },
+  {
+    id: "control",
+    title: "Right level",
+    emphasis: "of Control",
+    body: "Control is the foundation to all future success in CAI AI — especially for Enterprises in regulated industries. As Generative AI evolves daily, we remain relentless in pushing boundaries of what trusted, controllable AI can do.",
+  },
+  {
+    id: "security",
+    title: "Security &",
+    emphasis: "Safety first",
+    body: "Every idea we bring to life starts with a simple, non-negotiable commitment: security and safety first. This is not just a technical requirement — it's the foundation of every product & every relationship we build.",
+  },
+];
+
+/* ─── Focus-areas closing line — slide 4 of the PDS ─── *
+ * The four focus areas (voice / agentic / adoption / scalability) sit
+ * inside this framing question. */
+export const FOCUS_AREAS_OUTRO =
+  "And how do we do all this while still providing the confidence that regulated enterprises expect?";
 
 export interface VisionPillar {
   id: FocusArea;
