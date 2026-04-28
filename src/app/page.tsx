@@ -1,12 +1,18 @@
 "use client";
 
 /* ──────────────────────────────────────────────────────────────
- *  Workspace landing — audience chooser.
+ *  Workspace landing — role chooser.
  *
- *  Replaces the old `router.replace("/admin")` redirect. Three
- *  cards route to /admin?audience=<key>. Sales card lands on
- *  today's admin unchanged; CE + PS cards land on the same admin
- *  route but will progressively get their own work-mode shells.
+ *  Reframed from "audience picker for one customer record" to
+ *  "one platform for everything at work." The three live audiences
+ *  (Sales / CE / PS) sit alongside preview cards for the broader
+ *  vision — People, Engineering, Operations — and a featured
+ *  Analytics card showing the kind of cross-engagement signal
+ *  this surface unlocks once DB + auth + VPN are in place.
+ *
+ *  Re-use is the rule: anything that lives here is shareable
+ *  across the team. Custom one-off content (a single-shot keynote
+ *  deck, ad-hoc client memo) stays out of this surface.
  *
  *  Old deep links to /admin (no audience param) still work and
  *  resolve to Sales by default — zero regression for existing
@@ -16,38 +22,42 @@
 import Link from "next/link";
 import BoostIcon from "@/components/BoostIcon";
 import BoostLogo from "@/components/BoostLogo";
-import type { Audience } from "@/lib/types";
 
-interface AudienceCard {
-  audience: Audience;
+interface LandingCard {
+  /** Stable slug — used as React key + nominally as a future route. */
+  key: string;
   label: string;
-  /** Short one-liner shown under the label. */
+  /** One-liner shown under the label. */
   tagline: string;
   /** BoostIcon name — must exist under /public/icons/purple/. */
   icon: string;
-  /** Three bullet points describing the kind of work this mode handles.
-   *  Kept deliberately tight — this page is a chooser, not a pitch. */
+  /** Three bullet points describing the kind of work this card handles. */
   bullets: string[];
-  /** When true, the card renders in a "coming soon" muted state — still
-   *  clickable (lands on the placeholder) but visually de-emphasised
-   *  so the user knows which modes are production-ready. */
+  /** Where the card routes when clicked. Live cards point at the
+   *  real /admin?audience=… surface. Preview cards point at "#" so
+   *  the click is captured (no nav) — they're affordance-only until
+   *  DB + auth land. */
+  href: string;
+  /** When true, the card renders muted with a "Coming soon" pill
+   *  and the click is a no-op. */
   comingSoon?: boolean;
 }
 
-const CARDS: AudienceCard[] = [
+const CARDS: LandingCard[] = [
   {
-    audience: "sales",
+    key: "sales",
     label: "Sales",
-    tagline: "Prospect-facing guide assembly",
+    tagline: "Prospect-facing engagement assembly",
     icon: "handshake",
     bullets: [
       "Customer dossier + discovery",
       "Interactive guide + slide deck",
       "ROI, SOW, commercial offer",
     ],
+    href: "/admin?audience=sales",
   },
   {
-    audience: "customer-excellence",
+    key: "customer-excellence",
     label: "Customer Excellence",
     tagline: "Post-sale reviews, success planning, inspiration",
     icon: "growth-graph",
@@ -56,10 +66,11 @@ const CARDS: AudienceCard[] = [
       "Success planning workshops",
       "Recommendations from live data",
     ],
+    href: "/admin?audience=customer-excellence",
     comingSoon: true,
   },
   {
-    audience: "professional-services",
+    key: "professional-services",
     label: "Professional Services",
     tagline: "Scoping, architecture, delivery",
     icon: "cogs",
@@ -68,15 +79,78 @@ const CARDS: AudienceCard[] = [
       "Scope of Work + project plan",
       "Hypercare + handoff to CE",
     ],
+    href: "/admin?audience=professional-services",
     comingSoon: true,
+  },
+  {
+    key: "people",
+    label: "People",
+    tagline: "Recruiting, onboarding, role-based content reuse",
+    icon: "users",
+    bullets: [
+      "Hiring decks + interview kits",
+      "Onboarding paths by role",
+      "Role-claimable areas & access",
+    ],
+    href: "#",
+    comingSoon: true,
+  },
+  {
+    key: "engineering",
+    label: "Engineering",
+    tagline: "Reviews, architecture showcases, team rituals",
+    icon: "brain-processor",
+    bullets: [
+      "Architecture decision logs",
+      "Engineering review templates",
+      "Reusable tech storytelling",
+    ],
+    href: "#",
+    comingSoon: true,
+  },
+  {
+    key: "operations",
+    label: "Operations",
+    tagline: "Timewriting, invoicing, customer overview",
+    icon: "time",
+    bullets: [
+      "Hours by project & role",
+      "Invoice generation from engagements",
+      "Customer-record source of truth",
+    ],
+    href: "#",
+    comingSoon: true,
+  },
+];
+
+/** Analytics gets its own treatment — wider tile with inline
+ *  mini-stats so the vision (cross-engagement signal once DB + auth
+ *  are in place) reads at a glance. Numbers are plausibly funny
+ *  placeholder data — they hint at the kinds of signals this
+ *  surface will eventually expose. */
+const ANALYTICS_STATS: Array<{ stat: string; caption: string }> = [
+  {
+    stat: "47×",
+    caption: "Sigurd shared the H&M deck this week",
+  },
+  {
+    stat: "11m",
+    caption: "Longest stare at a SoW PDF (the CFO closed)",
+  },
+  {
+    stat: "84%",
+    caption: "Of sessions edit the Conversation cost field",
+  },
+  {
+    stat: "8m 12s",
+    caption: "Avg deck-build time. Fastest: 2m 47s",
   },
 ];
 
 export default function WorkspaceLanding() {
   return (
     <div className="min-h-screen bg-boost-bg flex flex-col">
-      {/* Header — minimal, just the brand + an eyebrow so the page
-          doesn't feel untethered. */}
+      {/* Header — minimal, just the brand + an eyebrow. */}
       <header className="px-6 sm:px-10 pt-8 pb-4 flex items-center justify-between">
         <BoostLogo className="h-7 w-auto text-boost-purple" />
         <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
@@ -84,99 +158,180 @@ export default function WorkspaceLanding() {
         </p>
       </header>
 
-      {/* Centered chooser. */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 sm:px-10 py-10">
+      <main className="flex-1 flex flex-col items-center px-6 sm:px-10 py-10">
         <div className="w-full max-w-5xl">
           <div className="text-center mb-10 sm:mb-14">
             <p className="text-[11px] font-semibold text-boost-muted uppercase tracking-[0.18em] mb-3">
-              Pick your work mode
+              Your workspace
             </p>
             <h1 className="text-3xl sm:text-4xl font-semibold text-boost-dark tracking-tight">
-              One customer, three lenses.
+              One interactive platform. Everything at work.
             </h1>
             <p className="text-sm sm:text-base text-boost-muted mt-3 max-w-xl mx-auto">
-              Same underlying customer record, same design system, different work
-              surface depending on where you are in the lifecycle.
+              Re-use is the rule. One-off content stays elsewhere — what you build
+              here is for the whole team. Admin lives behind auth; the engagements
+              themselves stay shareable.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {CARDS.map((card) => (
-              <Link
-                key={card.audience}
-                href={`/admin?audience=${card.audience}`}
-                className="group relative block rounded-xl border border-boost-border bg-boost-card shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2"
-                aria-label={`Enter ${card.label} work mode`}
-              >
-                {/* Left accent stripe — green-light by default, muted for
-                    coming-soon cards, thickens on hover. */}
-                <span
-                  aria-hidden="true"
-                  className={`absolute left-0 top-0 bottom-0 w-1 transition-all group-hover:w-1.5 ${
-                    card.comingSoon ? "bg-boost-lavender" : "bg-boost-green-light"
+          {/* Role grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {CARDS.map((card) => {
+              const isPlaceholder = card.href === "#";
+              const Wrapper = isPlaceholder
+                ? ({ children, ...rest }: { children: React.ReactNode; className?: string; [k: string]: unknown }) => (
+                    <div role="button" aria-disabled="true" {...rest}>{children}</div>
+                  )
+                : ({ children, ...rest }: { children: React.ReactNode; className?: string; [k: string]: unknown }) => (
+                    <Link href={card.href} {...rest}>{children}</Link>
+                  );
+              return (
+                <Wrapper
+                  key={card.key}
+                  className={`group relative block rounded-xl border border-boost-border bg-boost-card shadow-sm transition-all overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 ${
+                    isPlaceholder
+                      ? "cursor-not-allowed opacity-80"
+                      : "hover:shadow-lg hover:-translate-y-0.5"
                   }`}
-                />
-
-                {card.comingSoon && (
+                  aria-label={`Enter ${card.label} work mode`}
+                >
+                  {/* Left accent stripe — green-light for live, lavender for preview. */}
                   <span
                     aria-hidden="true"
-                    className="absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-boost-surface text-[9px] font-semibold uppercase tracking-[0.14em] text-boost-muted"
-                  >
-                    Coming soon
-                  </span>
-                )}
+                    className={`absolute left-0 top-0 bottom-0 w-1 transition-all ${
+                      isPlaceholder ? "" : "group-hover:w-1.5"
+                    } ${
+                      card.comingSoon ? "bg-boost-lavender" : "bg-boost-green-light"
+                    }`}
+                  />
 
-                <div className="p-5 sm:p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-boost-surface">
-                      <BoostIcon name={card.icon} size={24} />
-                    </span>
-                    <div className="min-w-0">
-                      <h2 className="text-lg font-semibold text-boost-dark truncate">
-                        {card.label}
-                      </h2>
-                      <p className="text-xs text-boost-muted truncate">{card.tagline}</p>
-                    </div>
-                  </div>
-
-                  <ul className="space-y-1.5 mb-4">
-                    {card.bullets.map((b, i) => (
-                      <li
-                        key={i}
-                        className="text-xs text-boost-text-secondary flex items-start gap-2"
-                      >
-                        <span
-                          aria-hidden="true"
-                          className={`mt-1 w-1 h-1 rounded-full flex-shrink-0 ${
-                            card.comingSoon ? "bg-boost-muted/60" : "bg-boost-green-light"
-                          }`}
-                        />
-                        <span>{b}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="flex items-center justify-between pt-3 border-t border-boost-border/60">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-muted">
-                      {card.comingSoon ? "Preview mode" : "Enter"}
-                    </span>
+                  {card.comingSoon && (
                     <span
                       aria-hidden="true"
-                      className="text-boost-muted group-hover:text-boost-purple group-hover:translate-x-0.5 transition-all"
+                      className="absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-boost-surface text-[9px] font-semibold uppercase tracking-[0.14em] text-boost-muted"
                     >
-                      →
+                      Coming soon
                     </span>
+                  )}
+
+                  <div className="p-5 sm:p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-boost-surface">
+                        <BoostIcon name={card.icon} size={24} />
+                      </span>
+                      <div className="min-w-0">
+                        <h2 className="text-lg font-semibold text-boost-dark truncate">
+                          {card.label}
+                        </h2>
+                        <p className="text-xs text-boost-muted truncate">{card.tagline}</p>
+                      </div>
+                    </div>
+
+                    <ul className="space-y-1.5 mb-4">
+                      {card.bullets.map((b, i) => (
+                        <li
+                          key={i}
+                          className="text-xs text-boost-text-secondary flex items-start gap-2"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`mt-1 w-1 h-1 rounded-full flex-shrink-0 ${
+                              card.comingSoon ? "bg-boost-muted/60" : "bg-boost-green-light"
+                            }`}
+                          />
+                          <span>{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-boost-border/60">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-muted">
+                        {card.comingSoon ? "Preview mode" : "Enter"}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className={`text-boost-muted transition-all ${
+                          isPlaceholder ? "" : "group-hover:text-boost-purple group-hover:translate-x-0.5"
+                        }`}
+                      >
+                        →
+                      </span>
+                    </div>
+                  </div>
+                </Wrapper>
+              );
+            })}
+          </div>
+
+          {/* Analytics — wide showcase tile. Lives below the role grid
+              because it's cross-cutting (not a role itself) and because
+              the inline mini-stats need horizontal room. */}
+          <div
+            role="button"
+            aria-disabled="true"
+            aria-label="Analytics — coming soon"
+            className="mt-5 group relative block rounded-xl border border-boost-border bg-boost-card shadow-sm overflow-hidden cursor-not-allowed opacity-80"
+          >
+            <span
+              aria-hidden="true"
+              className="absolute left-0 top-0 bottom-0 w-1 bg-boost-lavender"
+            />
+            <span
+              aria-hidden="true"
+              className="absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-boost-surface text-[9px] font-semibold uppercase tracking-[0.14em] text-boost-muted"
+            >
+              Coming soon
+            </span>
+
+            <div className="p-5 sm:p-6 grid grid-cols-1 lg:grid-cols-[minmax(0,260px)_1fr] gap-5 lg:gap-8 items-start">
+              {/* Left: identity */}
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-boost-surface">
+                    <BoostIcon name="bar-chart" size={24} />
+                  </span>
+                  <div className="min-w-0">
+                    <h2 className="text-lg font-semibold text-boost-dark truncate">
+                      Analytics
+                    </h2>
+                    <p className="text-xs text-boost-muted">
+                      What&apos;s actually happening across your engagements
+                    </p>
                   </div>
                 </div>
-              </Link>
-            ))}
+                <p className="text-xs text-boost-text-secondary leading-relaxed max-w-prose">
+                  Once DB + auth land, every shared engagement reports back.
+                  Who opened it, what they dwelled on, where they bounced,
+                  which fields editors keep changing. Cross-team signal,
+                  not a private dashboard.
+                </p>
+              </div>
+
+              {/* Right: 4-up mini stats */}
+              <div className="grid grid-cols-2 gap-3">
+                {ANALYTICS_STATS.map((s, i) => (
+                  <div
+                    key={i}
+                    className="rounded-lg border border-boost-border/60 bg-white px-4 py-3"
+                  >
+                    <p className="text-xl font-bold text-boost-dark tabular-nums tracking-tight">
+                      {s.stat}
+                    </p>
+                    <p className="text-[11px] text-boost-muted leading-snug mt-0.5">
+                      {s.caption}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Footnote — quietly explains the routing so power users know
               audience is a URL param, not session state. */}
           <p className="text-center text-[11px] text-boost-muted/70 mt-10">
-            Audience carries through the URL (<code className="text-boost-muted">?audience=…</code>){" "}
-            so any guide you generate stays in the mode you picked.
+            Live cards carry the role through the URL (
+            <code className="text-boost-muted">?audience=…</code>). Preview cards
+            unlock once DB + auth are in place.
           </p>
         </div>
       </main>
