@@ -183,7 +183,7 @@ export function calculateROI(inputs: ROIInputs): ROIResults {
   const year1AvgAutomatedConv = monthlyConversations * year1AvgRate;
   const year1AvgHumanConv = monthlyConversations - year1AvgAutomatedConv;
   // Boost.ai cost is the same whether the bot answers or not — the
-  // platform fee + per-VA charges land from go-live. Only the
+  // platform fee + per-agent charges land from go-live. Only the
   // human-handled volume shrinks as automation ramps. So we
   // compute year-1 cost using the ramped human volume against
   // either the invoice (if present) or the heuristic.

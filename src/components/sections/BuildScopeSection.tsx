@@ -86,7 +86,7 @@ const PROVIDER_TENANT: Record<string, string> = {
 
 const FEATURE_LABEL: Record<PsGenAiFeature, string> = {
   ai_trainer_efficiency: "AI Trainer Efficiency",
-  generative_action: "Generative Action",
+  generative_action: "Agentic action",
   ai_review: "AI Review",
   handover_summary: "Handover Summary",
 };

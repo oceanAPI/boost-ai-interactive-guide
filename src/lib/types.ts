@@ -278,7 +278,7 @@ export interface GuideFormData {
    *  regression for existing share URLs. Set via admin "Demos". */
   demo_mode?: DemoMode;
   /** Only used when `demo_mode === "custom_live"` — the tenant
-   *  domain (e.g. `"acme.boost.ai"`) for a customer's own chatbot.
+   *  domain (e.g. `"acme.boost.ai"`) for a customer's own AI Agent.
    *  Ignored in other modes. */
   demo_tenant?: string;
 }
@@ -835,7 +835,7 @@ export interface PsKpi {
 
 export interface PsUseCase {
   title: string;
-  /** The current-state experience the VA replaces or augments. */
+  /** The current-state experience the AI Agent replaces or augments. */
   today: string;
   /** The post-launch experience this use-case creates. */
   tomorrow: string;
@@ -911,7 +911,7 @@ export interface PsCustomerApi {
   name: string;
   /** HTTP verb + intent of use (e.g. "GET · resolve order status"). */
   method: string;
-  /** What this API enables in the VA flow. */
+  /** What this API enables in the AI Agent flow. */
   purpose: string;
 }
 

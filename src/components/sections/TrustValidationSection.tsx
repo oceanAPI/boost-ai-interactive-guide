@@ -376,7 +376,7 @@ export default function TrustValidationSection({ guide, sectionNumber }: { guide
           className="text-boost-muted text-sm leading-relaxed max-w-xl transition-all"
           style={{ opacity: heroVisible ? 1 : 0, transitionDuration: "500ms", transitionDelay: "600ms" }}
         >
-          Not a general-purpose chatbot retrofitted for enterprise. A platform engineered from
+          Not a general-purpose AI Agent retrofitted for enterprise. A platform engineered from
           the ground up for compliance-first organisations where hallucination isn&apos;t a quirk — it&apos;s
           a regulatory event.
         </p>

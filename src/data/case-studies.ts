@@ -60,7 +60,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     videoUrl: "https://vimeo.com/505132407",
     context: { industry: "Banking" },
     challenge: "DNB's contact center received several thousand chat conversations daily, many easily handled by agents but consuming valuable time and resources. The bank had to use part-time temporary workers to manage the enormous volume of incoming chat traffic.",
-    solution: "Boost.ai deployed Aino, an AI chatbot built to handle a broad spectrum of inquiries including credit cards, loans, and account interactions. The solution uses advanced Natural Language Understanding to automate high-volume queries and seamlessly route complex interactions to human agents.",
+    solution: "Boost.ai deployed Aino, an AI Agent built to handle a broad spectrum of inquiries including credit cards, loans, and account interactions. The solution uses advanced Natural Language Understanding to automate high-volume queries and seamlessly route complex interactions to human agents.",
     results: [
       { metric: "Chat traffic automated", value: "50-60%" },
       { metric: "Total service traffic automated", value: "20-22%", improvement: "across chat, phone and email" },
@@ -88,7 +88,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     logoUrl: "https://cdn.brandfetch.io/dnb.no",
     context: { industry: "Banking" },
     challenge: "DNB's customer service agents struggled to access the various routines and processes needed to help customers across phone, email, and live chat. Manual document management was inefficient and time-consuming, causing delays and degrading the customer experience.",
-    solution: "DNB deployed Juno, an internal virtual agent on the boost.ai platform, to help agents instantly access department-specific routines. Using platform filtering, Juno serves seven business units without separate bots, integrates with APIs and RPA systems, and auto-checks system status to flag disruptions to agents.",
+    solution: "DNB deployed Juno, an internal AI Agent on the boost.ai platform, to help agents instantly access department-specific routines. Using platform filtering, Juno serves seven business units without separate bots, integrates with APIs and RPA systems, and auto-checks system status to flag disruptions to agents.",
     results: [
       { metric: "Daily active users", value: "1,200" },
       { metric: "Conversations per month", value: "80,000" },
@@ -115,16 +115,16 @@ export const CASE_STUDIES: CaseStudy[] = [
     image: "/photos/case-studies/sparebank-1-ostlandet.png",
     logoUrl: "https://cdn.brandfetch.io/sparebank1.no",
     context: { size: "496,000+ customers", industry: "Banking" },
-    challenge: "In 2018, SpareBank 1 Østlandet saw growing demand for digital service channels as customer expectations evolved and competitors deployed chatbots. The bank sought a scalable solution to enable intuitive customer engagement across its website.",
-    solution: "SpareBank 1 Østlandet deployed boost.ai's conversational AI platform starting in 2018, launching their AI Agent 'Ida.' In December 2024 they became one of the first banks globally to put boost.ai's Generative Action into a customer-facing context, using LLMs within pre-approved guardrails for compliance and safety.",
+    challenge: "In 2018, SpareBank 1 Østlandet saw growing demand for digital service channels as customer expectations evolved and competitors deployed AI Agents. The bank sought a scalable solution to enable intuitive customer engagement across its website.",
+    solution: "SpareBank 1 Østlandet deployed boost.ai's conversational AI platform starting in 2018, launching their AI Agent 'Ida.' In December 2024 they became one of the first banks globally to put boost.ai's Agentic action into a customer-facing context, using LLMs within pre-approved guardrails for compliance and safety.",
     results: [
       { metric: "Conversations handled by Ida", value: "2.3 million", improvement: "since launch" },
-      { metric: "Conversations since Generative Action launch", value: "85,000", improvement: "since December 1, 2024" },
+      { metric: "Conversations since Agentic action launch", value: "85,000", improvement: "since December 1, 2024" },
       { metric: "Customer inquiries routed through Ida", value: "28%", improvement: "all channels" },
       { metric: "Automation rate", value: "41%" },
       { metric: "Powered by generative AI", value: "10%", improvement: "6,800+ conversations since Dec 2024" },
     ],
-    timeline: "Partnership from 2017; Ida launched 2018; Generative Action Dec 2024",
+    timeline: "Partnership from 2017; Ida launched 2018; Agentic action Dec 2024",
     sourceUrl: "https://boost.ai/case-studies/how-sparebank-1-ostlandet-is-writing-the-playbook-for-generative-ai-adoption-in-banks/",
     quote: {
       text: "People used to talk about chatbots negatively, but that's changing. Now, customers want to test it, engage with it, and see how it performs.",
@@ -143,7 +143,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     logoUrl: "https://cdn.brandfetch.io/islandsbanki.is",
     context: { industry: "Banking" },
     challenge: "Íslandsbanki was shifting from a branch-heavy model to digital banking while managing contact-center strain. When the app or website experienced downtime, calls would spike, and there was no 24/7 support to help customers. The bank saw growing demand for online chat over phone calls and needed a scalable self-service layer.",
-    solution: "Boost.ai deployed Fróði, an AI-powered virtual agent built on the boost.ai conversational AI platform. The rollout leaned on boost.ai's 1,500+ pre-loaded banking topics and no-code conversation builder. A two-day POC — run with Nordic consultancy Advania — validated the approach before full deployment, with backend integration to call-center systems for seamless handoff to human agents.",
+    solution: "Boost.ai deployed Fróði, an AI Agent built on the boost.ai conversational AI platform. The rollout leaned on boost.ai's 1,500+ pre-loaded banking topics and no-code conversation builder. A two-day POC — run with Nordic consultancy Advania — validated the approach before full deployment, with backend integration to call-center systems for seamless handoff to human agents.",
     results: [
       { metric: "Chat traffic automated", value: "50%", improvement: "within 6 months" },
       { metric: "Conversation resolution rate", value: "97%" },
@@ -217,7 +217,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     videoUrl: "https://vimeo.com/511542233",
     context: { size: "4 million+ customers", industry: "Insurance" },
     challenge: "Insurance is an inherently complex industry that can often leave consumers struggling with policy wording and product information. Tryg wanted to tackle this customer service challenge while also maximising the efficiency of its support staff across three principal markets: Denmark, Norway, and Sweden.",
-    solution: "Tryg deployed three distinct virtual agents on boost.ai's no-code conversational AI platform: Mia in Norway for customer-facing claims and product support, Rosa in Denmark for internal employee support, and Ebbe in Sweden for customer assistance, with API integrations for automated tasks.",
+    solution: "Tryg deployed three distinct AI Agents on boost.ai's no-code conversational AI platform: Mia in Norway for customer-facing claims and product support, Rosa in Denmark for internal employee support, and Ebbe in Sweden for customer assistance, with API integrations for automated tasks.",
     results: [
       { metric: "Mia automation rate", value: "80%", improvement: "cases handled without human support" },
       { metric: "Mia conversations (2020)", value: "200,000" },
@@ -246,9 +246,9 @@ export const CASE_STUDIES: CaseStudy[] = [
     videoUrl: "https://vimeo.com/387423701",
     context: { industry: "Telecom" },
     challenge: "In 2023, telcos ranked last in customer satisfaction against other private-sector industries. Customers increasingly expected technical fluency and fast responses, pushing telecom companies to invest in better service infrastructure and strategies.",
-    solution: "Telenor deployed Telmi, a conversational AI virtual agent built by boost.ai and accessible via the company website. Telmi uses deep learning and natural language technologies to interact at an advanced conversational level, with 20+ unique integrations letting logged-in customers request PUK codes, upgrade data plans, view invoices, and access account details.",
+    solution: "Telenor deployed Telmi, a conversational AI Agent built by boost.ai and accessible via the company website. Telmi uses deep learning and natural language technologies to interact at an advanced conversational level, with 20+ unique integrations letting logged-in customers request PUK codes, upgrade data plans, view invoices, and access account details.",
     results: [
-      { metric: "Unique integrations", value: "20+", improvement: "one of the most advanced virtual agents of its kind" },
+      { metric: "Unique integrations", value: "20+", improvement: "one of the most advanced AI Agents of its kind" },
     ],
     timeline: "Launched January 2019",
     sourceUrl: "https://boost.ai/case-studies/enhancing-telecom-customer-experience-with-conversational-ai/",
@@ -268,11 +268,11 @@ export const CASE_STUDIES: CaseStudy[] = [
     image: "/photos/case-studies/a1-slovenia.png",
     logoUrl: "https://cdn.brandfetch.io/a1.si",
     context: { size: "800,000+ customers", industry: "Telecom" },
-    challenge: "A1 Slovenia faced rising customer expectations for seamless digital support while its previous chatbot operated on static flows, acting more as a query filter than a resolution tool. The lack of flexibility caused customer drop-off before transfers and frequently resulted in lost context during escalations, making complex inquiries hard to answer accurately.",
-    solution: "A1 deployed Lumi, a hybrid AI agent on boost.ai's Conversational AI Platform using Generative Action. Lumi handles both routine and complex inquiries by dynamically selecting between predefined answers and LLM-generated context-aware responses, integrated with A1's knowledge base and NLU capabilities.",
+    challenge: "A1 Slovenia faced rising customer expectations for seamless digital support while its previous solution operated on static flows, acting more as a query filter than a resolution tool. The lack of flexibility caused customer drop-off before transfers and frequently resulted in lost context during escalations, making complex inquiries hard to answer accurately.",
+    solution: "A1 deployed Lumi, a hybrid AI Agent on boost.ai's Conversational AI Platform using Agentic action. Lumi handles both routine and complex inquiries by dynamically selecting between predefined answers and LLM-generated context-aware responses, integrated with A1's knowledge base and NLU capabilities.",
     results: [
       { metric: "NPS increase (Lumi-only interactions)", value: "+113 pts", improvement: "from ~-53 to 60" },
-      { metric: "NPS increase (escalated interactions)", value: "+35 pts", improvement: "vs prior chatbot" },
+      { metric: "NPS increase (escalated interactions)", value: "+35 pts", improvement: "vs prior solution" },
       { metric: "Interactions handled by Lumi", value: "53.3%" },
       { metric: "Escalation likelihood reduction", value: "70%", improvement: "for queries using generative AI" },
     ],
@@ -295,7 +295,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     logoUrl: "/logos/fibia.svg",
     context: { industry: "Telecom" },
     challenge: "Fibia handled a consistently high volume of customer inquiries, from account-specific requests to general package and service FAQs. This demand placed increasing strain on customer service teams and highlighted the need for a solution that could support routine service while evolving into a trusted extension of the team.",
-    solution: "Boost.ai's no-code conversational AI platform let Fibia launch an AI Agent with minimal ramp-up and zero backend development. The agent initially focused on routine queries, then expanded with Generative Action — boost.ai's per-topic LLM functionality — to move beyond predefined answers and produce context-aware responses.",
+    solution: "Boost.ai's no-code conversational AI platform let Fibia launch an AI Agent with minimal ramp-up and zero backend development. The agent initially focused on routine queries, then expanded with Agentic action — boost.ai's per-topic LLM functionality — to move beyond predefined answers and produce context-aware responses.",
     results: [
       { metric: "Automation rate", value: "53%" },
       { metric: "Escalation rate", value: "-50%", improvement: "dropped to 4.6%" },
@@ -304,7 +304,7 @@ export const CASE_STUDIES: CaseStudy[] = [
       { metric: "Avg chat duration reduction", value: "-3 min" },
       { metric: "Avg conversation length", value: "2 messages" },
     ],
-    timeline: "Ongoing — generative AI rollout with Generative Action",
+    timeline: "Ongoing — generative AI rollout with Agentic action",
     sourceUrl: "https://boost.ai/case-studies/how-fibia-is-elevating-customer-experience-with-a-future-ready-ai-strategy/",
   },
   {
@@ -318,7 +318,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     logoUrl: "https://cdn.brandfetch.io/hallon.se",
     context: { industry: "Telecom" },
     challenge: "As Hallon's customer base rapidly expanded, the company faced significant challenges managing surging inquiries. Traditional customer service methods were strained with growing email backlogs and high dropped chat frequencies, underscoring the critical need for a scalable solution.",
-    solution: "Hallon implemented Berry, a conversational AI-powered virtual agent built on the boost.ai platform. Using boost.ai's no-code conversation builder and pre-built telecom content, Berry was deployed in under six months to handle common inquiries and streamline customer service processes.",
+    solution: "Hallon implemented Berry, a conversational AI Agent built on the boost.ai platform. Using boost.ai's no-code conversation builder and pre-built telecom content, Berry was deployed in under six months to handle common inquiries and streamline customer service processes.",
     results: [
       { metric: "Resolution rate", value: "90%" },
       { metric: "Inquiries fully automated", value: "65%" },
@@ -344,8 +344,8 @@ export const CASE_STUDIES: CaseStudy[] = [
     image: "/photos/case-studies/tourradar.png",
     logoUrl: "https://cdn.brandfetch.io/tourradar.com",
     context: { size: "2M+ travelers", industry: "Travel" },
-    challenge: "TourRadar's support team handled 5,000+ chat interactions monthly while serving 2 million+ travelers across time zones. They needed to handle everything from simple itinerary questions to complex tour recommendations, while avoiding rigid templated chatbot responses and the burden of constant content updates.",
-    solution: "TourRadar deployed boost.ai's platform with advanced generative AI, including Generative Action for dynamic, context-aware responses grounded in approved knowledge sources. The AI Agent handles booking details, account support, cancellations, and payment issues across 31+ topics, with direct CRM integration for agent assistance.",
+    challenge: "TourRadar's support team handled 5,000+ chat interactions monthly while serving 2 million+ travelers across time zones. They needed to handle everything from simple itinerary questions to complex tour recommendations, while avoiding rigid templated AI Agent responses and the burden of constant content updates.",
+    solution: "TourRadar deployed boost.ai's platform with advanced generative AI, including Agentic action for dynamic, context-aware responses grounded in approved knowledge sources. The AI Agent handles booking details, account support, cancellations, and payment issues across 31+ topics, with direct CRM integration for agent assistance.",
     results: [
       { metric: "Customer inquiries handled by AI", value: "82%" },
       { metric: "Live chat deflection", value: "50% → 80%" },
@@ -375,7 +375,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     challenge:
       "Ageas needed to adapt its customer service to meet diverse customer preferences while reducing the time agents spent on repetitive, straightforward questions — without compromising the quality of more complex policy-specific support.",
     solution:
-      "Boost.ai deployed a conversational AI virtual agent with over 1,500 pre-built service, support and claims intents, integrated directly with Ageas's contact-centre platform for seamless human handover. The agent answers FAQs 24/7 and routes policy-specific or complex queries straight to live agents.",
+      "Boost.ai deployed a conversational AI Agent with over 1,500 pre-built service, support and claims intents, integrated directly with Ageas's contact-centre platform for seamless human handover. The agent answers FAQs 24/7 and routes policy-specific or complex queries straight to live agents.",
     results: [
       { metric: "FAQ chat inquiries resolved in first conversation", value: "77%" },
       { metric: "Monthly customer interactions handled", value: "~10,000" },

@@ -852,7 +852,7 @@ function SimulatedDemoBody({ guide, sectionNumber }: { guide: GuideData; section
                     { name: "Escalated", dot: "bg-amber-500", border: "border-l-amber-500", desc: "Conversations with transferred to human or transfer labels. Sub-classified as by request (customer asked), by fallback (unknown intent + escalation offered), immediate (requested in first message), or by design (all other escalations — like this one)." },
                     { name: "Automated", dot: "bg-boost-green", border: "border-l-boost-green", desc: "Remaining conversations with the helped label. Sub-classified as transactional (API connector executed), informational, URL (URL button clicked), or informational, in-chat (all other resolved conversations)." },
                     { name: "Unsolved", dot: "bg-red-400", border: "border-l-red-400", desc: "Conversations labeled not helped, unless they contain specific escalation patterns." },
-                    { name: "Not relevant", dot: "bg-gray-400", border: "border-l-gray-400", desc: "All remaining conversations — trolling, incomprehensible, or not relevant for the virtual agent." },
+                    { name: "Not relevant", dot: "bg-gray-400", border: "border-l-gray-400", desc: "All remaining conversations — trolling, incomprehensible, or not relevant for the AI Agent." },
                   ].map((cat) => (
                     <div key={cat.name} className={`flex gap-3 items-start p-3 rounded-lg border border-boost-border border-l-[3px] ${cat.border} bg-white`}>
                       <span className={`w-2.5 h-2.5 rounded-full ${cat.dot} flex-shrink-0 mt-1`} />

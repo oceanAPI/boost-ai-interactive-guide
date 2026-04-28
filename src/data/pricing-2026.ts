@@ -44,7 +44,9 @@ export const VOICE_TIERS: VoiceTier[] = [
   { name: "Tier 5", upTo: null,      enterprisePricePerMinute: 0.08, expressPricePerMinute: 0.07 },
 ];
 
-/** Monthly platform fees, USD per VA. Identical across channels. */
+/** Monthly platform fees, USD per AI Agent. Identical across channels.
+ *  Constant names retain the `_VA_` suffix for internal stability —
+ *  the `va` shorthand is a technical reference, not user-facing. */
 export const PLATFORM_FEE_PER_VA_EXTERNAL = 2_500;
 export const PLATFORM_FEE_PER_VA_INTERNAL = 2_500;
 export const PLATFORM_FEE_PER_VA_VOICE    = 2_500;
@@ -90,7 +92,7 @@ export const HUMAN_CHAT_BASE_PRICE = 1_800;
 export const HUMAN_CHAT_INCLUDED_SEATS = 10;
 export const HUMAN_CHAT_PRICE_PER_EXTRA_SEAT = 200;
 
-/** VA Orchestration Network — flat monthly if enabled. */
+/** AI Agent Orchestration Network (VAN) — flat monthly if enabled. */
 export const VAN_PRICE = 1_000;
 
 export type IntegrationTier = "authentication" | "channel" | "third_party_human_chat" | "advanced_custom";

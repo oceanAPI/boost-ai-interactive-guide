@@ -36,7 +36,7 @@ function BoostIcon({ name, size = 28 }: { name: string; size?: number }) {
 /* SecurityCard replaced by shared ExpandableCard from @/components/ui/ExpandableCard */
 
 /* ═══════════════════════════════════════════════════════════════
-   Card 1 — Generative Action Flow
+   Card 1 — Agentic Action Flow
    Purple step flow showing how guardrails wrap every interaction
    ═══════════════════════════════════════════════════════════════ */
 function GenerativeActionFlow() {
@@ -816,7 +816,7 @@ export default function SecurityComplianceSection({
   // Paired rows: clicking either card in a row expands/collapses both together.
   // Only matters on sm+ screens where we're 2 cols; on mobile each card stacks
   // naturally so per-card state is fine — but using paired state works there too.
-  const [row1Open, setRow1Open] = useState(true); // Generative Action Flow + PII Masking (defaultOpen pair)
+  const [row1Open, setRow1Open] = useState(true); // Agentic Action Flow + PII Masking (defaultOpen pair)
   const [row2Open, setRow2Open] = useState(false); // Compliance Certs + Guardrail Config
   const [row3Open, setRow3Open] = useState(false); // Data Handling + Regulatory Readiness
 
@@ -847,9 +847,9 @@ export default function SecurityComplianceSection({
 
       {/* Expandable card grid — left/right in each row are paired: toggling one toggles both */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Row 1: Generative Action Flow + PII Masking */}
+        {/* Row 1: Agentic Action Flow + PII Masking */}
         <ExpandableCard
-          title="Generative Action Flow"
+          title="Agentic Action Flow"
           subtitle="How every interaction is secured end-to-end"
           icon={<BoostIcon name="shield-medal" />}
           accentColor="border-boost-purple"

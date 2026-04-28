@@ -91,7 +91,7 @@ export const A2A_HERITAGE: Callout = {
   eyebrow: "A2A since 2017",
   heading: "We didn't pivot to agent-to-agent. We pioneered it.",
   body: [
-    "boost built Virtual Agent Network (VAN) back in 2017 — cited in EU documents discussing the future of chatbots and conversational AI. Because of our hybrid architecture, a boost agent can hold a conversation with another agent without exposing an attack surface.",
+    "boost built Virtual Agent Network (VAN) back in 2017 — cited in EU documents discussing the future of AI Agents and conversational AI. Because of our hybrid architecture, a boost agent can hold a conversation with another agent without exposing an attack surface.",
     "The obvious use case is coming home: log into an OpenAI or Anthropic client with your boost-powered bank agent, and your assistant can safely transact with the bank on your behalf. You see the whole transcript. If the external agent misbehaves, that's on them — not on the user, and not on the bank.",
   ],
 };

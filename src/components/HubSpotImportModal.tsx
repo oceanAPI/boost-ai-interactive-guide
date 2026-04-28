@@ -27,7 +27,7 @@ const HS_ACCOUNTS: HSAccount[] = [
       resources: { stakeholder_owners: 3, ai_trainers: 4, technical_resources: 2, supporting_departments: ["IT", "Customer Service", "Compliance"], knowledge_management: true },
       integrations: { channel: ["Zendesk Chat", "Meta Messenger"], human_handover: ["Genesys Cloud"], voice: ["Boost Voice"], utility: ["Salesforce CRM"] },
       specific_requirements: "Must support Norwegian, Swedish, Danish, and Finnish languages. GDPR compliance mandatory.",
-      custom_notes: "Existing chatbot vendor contract expires Q3 2026. Migration path needed.",
+      custom_notes: "Existing AI Agent vendor contract expires Q3 2026. Migration path needed.",
     },
   },
   {

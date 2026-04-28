@@ -125,7 +125,7 @@ function statusMeta(status: ChatConversationState["chat_status"] | null) {
   }
   // default + virtual_agent
   return {
-    label: "Virtual agent",
+    label: "AI Agent",
     dot: "bg-boost-green-light",
     text: "text-boost-green",
     bg: "bg-boost-green/5 border-boost-green/20",
@@ -943,7 +943,7 @@ function buildInsightPieces(trace: ExportTraceSuccess): InsightPiece[] {
             ? `Orchestrator · routed to ${primary.skill.title}`
             : "Orchestrator · routed to a specialist",
           subtitle:
-            "Routed the conversation to the right specialist agent across the VA network",
+            "Routed the conversation to the right specialist agent across the AI Agent network",
           color: "purple",
           raw: rawForExchange,
         });
@@ -1444,7 +1444,7 @@ function answerTypeMeta(
         bandBg: "bg-boost-purple text-white",
         cardBorder: "border-boost-purple/20",
         context:
-          "Routed the conversation to the right specialist agent across the VA network.",
+          "Routed the conversation to the right specialist agent across the AI Agent network.",
       };
     default:
       return {
@@ -1750,7 +1750,7 @@ function ExchangeCard({
  *    1. Matched classical intent → its title (or #id)
  *    2. Bot's action type → "Generative fallback" / "Scripted
  *       content" / the raw action_type name for exotic ones
- *    3. Welcome trigger → "VA welcome"
+ *    3. Welcome trigger → "AI Agent welcome"
  *    4. Unknown fallback state
  */
 function routedToLabel(
@@ -2895,7 +2895,7 @@ function actionContextSentence(
         ? `Captured a detail from ${quoted} into the conversation state.`
         : "Captured a detail into the conversation state.";
     case "orchestrator":
-      return "Routed to the right specialist agent across the VA network.";
+      return "Routed to the right specialist agent across the AI Agent network.";
     default:
       return null;
   }

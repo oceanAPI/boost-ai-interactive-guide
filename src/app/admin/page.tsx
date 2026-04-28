@@ -2388,11 +2388,11 @@ export default function AdminPage() {
             updating that file updates every label here.
           </p>
 
-          {/* Chat VAs */}
-          <AdminMiniLabel>Virtual agents</AdminMiniLabel>
+          {/* Chat AI Agents */}
+          <AdminMiniLabel>AI Agents</AdminMiniLabel>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2 mb-6">
             <div>
-              <p className="text-[10px] text-boost-muted">External chat VAs</p>
+              <p className="text-[10px] text-boost-muted">External chat agents</p>
               <input
                 type="number"
                 min={0}
@@ -2403,7 +2403,7 @@ export default function AdminPage() {
               />
             </div>
             <div>
-              <p className="text-[10px] text-boost-muted">Internal chat VAs</p>
+              <p className="text-[10px] text-boost-muted">Internal chat agents</p>
               <input
                 type="number"
                 min={0}
@@ -2414,7 +2414,7 @@ export default function AdminPage() {
               />
             </div>
             <div>
-              <p className="text-[10px] text-boost-muted">Voice VAs</p>
+              <p className="text-[10px] text-boost-muted">Voice agents</p>
               <input
                 type="number"
                 min={0}
@@ -2565,7 +2565,7 @@ export default function AdminPage() {
               </p>
             </div>
             <div>
-              <AdminMiniLabel>VA Orchestration (VAN)</AdminMiniLabel>
+              <AdminMiniLabel>AI Agent Orchestration (VAN)</AdminMiniLabel>
               <div className="mt-2">
                 <AdminChip
                   active={!!form.pricing_config?.van_enabled}
@@ -3774,7 +3774,7 @@ export default function AdminPage() {
                 The Chat Preview is section 08 in the guide. Default is the
                 simulated scripted demo with the AI Review panel — that works
                 on every share URL without any setup. Switch to live when you
-                want the prospect to chat with a real boost.ai virtual agent.
+                want the prospect to chat with a real boost.ai AI Agent.
               </>
             }
           />

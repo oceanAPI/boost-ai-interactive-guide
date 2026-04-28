@@ -56,7 +56,7 @@ function ImplementationPlan() {
     },
     {
       number: 2,
-      name: "Virtual agent build sprints",
+      name: "AI Agent build sprints",
       duration: "9 weeks",
       weeks: [2, 10],
       color: "bg-boost-purple",
@@ -218,7 +218,7 @@ function TeamResponsibilities() {
         { role: "Project manager", commitment: "5–15 hrs/week", detail: "Day-to-day project management, stakeholder coordination, and progress tracking. Main point of contact." },
         { role: "AI Trainers / Content designers", commitment: "2 people, ~30 hrs/week each", detail: "Build and refine conversation flows, manage knowledge base content, and define response quality standards." },
         { role: "Technical resource", commitment: "Varies by scope", detail: "Integration setup, security review, API configuration, and SSO/authentication setup." },
-        { role: "Brand & communications", commitment: "As needed", detail: "Align virtual agent with brand voice, communication guidelines, and tone of voice standards." },
+        { role: "Brand & communications", commitment: "As needed", detail: "Align AI Agent with brand voice, communication guidelines, and tone of voice standards." },
         { role: "User testers", commitment: "~15 min/person/week", detail: "Conduct user testing, provide feedback on conversation quality, and validate real-world scenarios." },
       ],
     },

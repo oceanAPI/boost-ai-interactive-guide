@@ -143,8 +143,8 @@ const PHASE_COMPLEXITY_WEIGHT: Record<string, number> = {
 
 /** Compute 0–1 complexity score from guide signals. Markets dominate
  *  because multi-market localisation is the single biggest delivery
- *  stretch; integrations + resources fill the rest. VA count signals
- *  ambition (more VAs = more conversation design work); Success
+ *  stretch; integrations + resources fill the rest. AI Agent count signals
+ *  ambition (more AI Agents = more conversation design work); Success
  *  Package *compresses* complexity (Pro package = embedded trainer
  *  = less stretch). */
 function computeComplexity(guide?: import("@/lib/types").GuideData): number {
@@ -171,8 +171,8 @@ function computeComplexity(guide?: import("@/lib/types").GuideData): number {
   // Resources: smaller contributor — 0→0, 4→0.5, 8+→1
   const resourceScore = Math.min(1, resourceCount / 8);
 
-  // VA count from 2026 pricing builder — external + internal + voice.
-  // More VAs = more agent design + testing surface. 0→0, 4→0.5, 8+→1.
+  // AI Agent specialist count from 2026 pricing builder — external + internal + voice.
+  // More specialists = more agent design + testing surface. 0→0, 4→0.5, 8+→1.
   const cfg = guide.pricing_config;
   const vaCount =
     (cfg?.chat_va_external ?? 0) + (cfg?.chat_va_internal ?? 0) + (cfg?.voice_va ?? 0);

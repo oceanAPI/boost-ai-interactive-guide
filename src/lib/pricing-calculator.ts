@@ -35,10 +35,12 @@ import {
 } from "@/data/pricing-2026";
 
 export interface PricingConfig {
-  /** Chat virtual agents — billed per VA, external + internal stacked. */
+  /** Chat AI Agents — billed per agent, external + internal stacked.
+   *  Field names retain the `_va_` suffix for URL-encoded backwards-
+   *  compatibility with existing shared bookmarks. */
   chat_va_external?: number;
   chat_va_internal?: number;
-  /** Voice virtual agents — billed at the same $2,500/VA. */
+  /** Voice AI Agents — billed at the same $2,500/agent. */
   voice_va?: number;
 
   /** Monthly conversation forecast. Determines the chat tier. */
@@ -104,22 +106,22 @@ export function calculatePricing(config: PricingConfig): PricingInvoice {
 
   if (chatVAExt > 0) {
     platform.push({
-      label: `Chat VA subscription — External (${chatVAExt})`,
-      detail: `$${PLATFORM_FEE_PER_VA_EXTERNAL.toLocaleString("en-US")} / VA / mo`,
+      label: `Chat AI Agent subscription — External (${chatVAExt})`,
+      detail: `$${PLATFORM_FEE_PER_VA_EXTERNAL.toLocaleString("en-US")} / agent / mo`,
       monthly: chatVAExt * PLATFORM_FEE_PER_VA_EXTERNAL,
     });
   }
   if (chatVAInt > 0) {
     platform.push({
-      label: `Chat VA subscription — Internal (${chatVAInt})`,
-      detail: `$${PLATFORM_FEE_PER_VA_INTERNAL.toLocaleString("en-US")} / VA / mo`,
+      label: `Chat AI Agent subscription — Internal (${chatVAInt})`,
+      detail: `$${PLATFORM_FEE_PER_VA_INTERNAL.toLocaleString("en-US")} / agent / mo`,
       monthly: chatVAInt * PLATFORM_FEE_PER_VA_INTERNAL,
     });
   }
   if (voiceVA > 0) {
     platform.push({
-      label: `Voice VA subscription (${voiceVA})`,
-      detail: `$${PLATFORM_FEE_PER_VA_VOICE.toLocaleString("en-US")} / VA / mo`,
+      label: `Voice AI Agent subscription (${voiceVA})`,
+      detail: `$${PLATFORM_FEE_PER_VA_VOICE.toLocaleString("en-US")} / agent / mo`,
       monthly: voiceVA * PLATFORM_FEE_PER_VA_VOICE,
     });
   }
@@ -214,7 +216,7 @@ export function calculatePricing(config: PricingConfig): PricingInvoice {
   // VAN
   if (config.van_enabled) {
     addons.push({
-      label: "VA Orchestration Network (VAN)",
+      label: "AI Agent Orchestration Network (VAN)",
       detail: `$${VAN_PRICE.toLocaleString("en-US")} / mo`,
       monthly: VAN_PRICE,
     });

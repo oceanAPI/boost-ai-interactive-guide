@@ -70,7 +70,7 @@ export const DEFAULTS: SectionContentMap = {
     industryProof: [
       {
         title: "Financial Services Focus",
-        description: "Purpose-built for banking, insurance, and wealth management — not a generic chatbot retro-fitted",
+        description: "Purpose-built for banking, insurance, and wealth management — not a generic AI Agent retro-fitted",
         stat: "10+ years in FS",
       },
       {
