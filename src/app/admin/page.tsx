@@ -2351,18 +2351,60 @@ export default function AdminPage() {
             ))}
           </AdminChipRow>
 
-          <AdminPrompt
-            divider
-            question="What does one conversation cost today?"
-            helper="Current average, including agent time and overhead. Used as the ROI baseline."
-          />
-          <input
-            type="text"
-            value={form.conversation_cost}
-            onChange={(e) => updateField("conversation_cost", e.target.value)}
-            placeholder="e.g. $8.50, 55 NOK, €6.20"
-            className={`${inputClass} max-w-xs`}
-          />
+          {/* Per-channel baseline cost. Chat is per-conversation;
+              voice is per-minute. Both inputs render when the
+              engagement covers both channels — ROI math sums the
+              two baselines. */}
+          {(() => {
+            const channel = form.channels ?? "chat";
+            const showChat = channel !== "voice";
+            const showVoice = channel !== "chat";
+            const question =
+              channel === "voice"
+                ? "What does one voice minute cost today?"
+                : channel === "both"
+                  ? "What do chat conversations and voice minutes cost today?"
+                  : "What does one conversation cost today?";
+            return (
+              <>
+                <AdminPrompt
+                  divider
+                  question={question}
+                  helper="Current average, including agent time and overhead. Used as the ROI baseline."
+                />
+                <div className="space-y-3">
+                  {showChat ? (
+                    <div>
+                      {channel === "both" && (
+                        <AdminMiniLabel>Chat conversation</AdminMiniLabel>
+                      )}
+                      <input
+                        type="text"
+                        value={form.conversation_cost}
+                        onChange={(e) => updateField("conversation_cost", e.target.value)}
+                        placeholder="e.g. $8.50, 55 NOK, €6.20"
+                        className={`${inputClass} max-w-xs ${channel === "both" ? "mt-1" : ""}`}
+                      />
+                    </div>
+                  ) : null}
+                  {showVoice ? (
+                    <div>
+                      {channel === "both" && (
+                        <AdminMiniLabel>Voice minute</AdminMiniLabel>
+                      )}
+                      <input
+                        type="text"
+                        value={form.voice_cost_per_minute ?? ""}
+                        onChange={(e) => updateField("voice_cost_per_minute", e.target.value || undefined)}
+                        placeholder="e.g. $0.50, 4 NOK, €0.40"
+                        className={`${inputClass} max-w-xs ${channel === "both" ? "mt-1" : ""}`}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              </>
+            );
+          })()}
 
           <AdminPrompt
             divider

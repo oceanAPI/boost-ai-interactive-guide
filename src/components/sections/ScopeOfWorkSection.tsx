@@ -434,23 +434,31 @@ function IntegrationsROI({
     ? invoice.expectedMonthlyChat
     : Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0) || 10000;
   const costNum = parseConversationCost(guide.conversation_cost, 8);
+  const voiceMinutes =
+    invoice?.expectedMonthlyVoiceMinutes ?? guide.channel_volumes.voice ?? 0;
+  const voiceCostPerMin = parseConversationCost(guide.voice_cost_per_minute, 0);
+  const channels = guide.channels ?? "chat";
+  const includeVoice = channels === "voice" || channels === "both";
+  const includeChat = channels !== "voice";
 
   const currency = resolveCurrency(guide.currency, guide.conversation_cost);
   const roi = useMemo(
     () =>
       calculateROI({
-        monthlyConversations: vol,
-        costPerConversation: costNum,
+        monthlyConversations: includeChat ? vol : 0,
+        costPerConversation: includeChat ? costNum : 0,
         pricingModel: guide.pricing_model || "fixed",
         automationRate: avgRate,
         markets: guide.deployment_markets || 1,
         currency,
         fteCapacityPerMonth: guide.fte_capacity_per_month,
         automationRampMonths: guide.automation_ramp_months,
+        monthlyVoiceMinutes: includeVoice ? voiceMinutes : 0,
+        costPerVoiceMinute: includeVoice ? voiceCostPerMin : 0,
         invoiceMonthlyCostUSD: invoice?.monthlyUSD,
         invoiceImplementationUSD: invoice?.implementationOneTimeUSD,
       }),
-    [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month, guide.automation_ramp_months, invoice?.monthlyUSD, invoice?.implementationOneTimeUSD],
+    [vol, costNum, includeChat, voiceMinutes, voiceCostPerMin, includeVoice, guide.pricing_model, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month, guide.automation_ramp_months, invoice?.monthlyUSD, invoice?.implementationOneTimeUSD],
   );
 
   const fmt = (n: number) => formatWithCurrency(n, currency);

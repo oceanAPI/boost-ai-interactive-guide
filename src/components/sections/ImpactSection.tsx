@@ -246,9 +246,14 @@ function AutomationFlow({ active, volume }: { active: boolean; volume: number })
  *  / heatmap) — reviewer couldn't tell if those were real data or
  *  chrome. These tiles are honestly labelled "Illustrative" and use
  *  "typical" language so nobody mistakes them for live telemetry. */
-const DASHBOARD_METRICS = [
+/* Auto-resolution target — channel-aware. Voice handover requirements
+ * make 60% the realistic ceiling for voice-only engagements; chat (or
+ * mixed) holds the 80% historical benchmark. */
+function autoResolvedTarget(channels: import("@/lib/types").ChannelMode | undefined): string {
+  return channels === "voice" ? "60%+" : "80%+";
+}
+const DASHBOARD_METRICS_BASE = [
   {
-    value: "80%+",
     label: "Auto-resolved",
     context: "Typical end-state coverage of FAQ + transactional flows",
   },
@@ -264,8 +269,12 @@ const DASHBOARD_METRICS = [
   },
 ];
 
-function MiniDashboard({ active }: { active: boolean }) {
+function MiniDashboard({ active, channels }: { active: boolean; channels?: import("@/lib/types").ChannelMode }) {
   const ready = useTabActivation(active);
+  const metrics = [
+    { value: autoResolvedTarget(channels), ...DASHBOARD_METRICS_BASE[0] },
+    ...DASHBOARD_METRICS_BASE.slice(1).map((m) => ({ value: (m as { value: string }).value, ...m })),
+  ];
 
   return (
     <div className="py-4">
@@ -273,7 +282,7 @@ function MiniDashboard({ active }: { active: boolean }) {
         Illustrative · the live admin dashboard shows your real numbers
       </p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {DASHBOARD_METRICS.map((m, mi) => (
+        {metrics.map((m, mi) => (
           <div
             key={m.label}
             className="rounded-lg bg-boost-dark p-4 text-white transition-all"
@@ -545,23 +554,34 @@ export default function ImpactSection({ guide, sectionNumber }: { guide: GuideDa
     ? invoice.expectedMonthlyChat
     : Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0) || 10000;
   const costNum = parseConversationCost(guide.conversation_cost, 8);
+  // Voice baseline — additive when channels covers voice. Falls back
+  // to 0 for chat-only or absent-channels engagements (current
+  // behaviour preserved for share URLs without the field).
+  const voiceMinutes =
+    invoice?.expectedMonthlyVoiceMinutes ?? guide.channel_volumes.voice ?? 0;
+  const voiceCostPerMin = parseConversationCost(guide.voice_cost_per_minute, 0);
+  const channels = guide.channels ?? "chat";
+  const includeVoice = channels === "voice" || channels === "both";
+  const includeChat = channels !== "voice";
   const agents = getAgentsForGuide(guide.areas_of_interest, guide.selected_variants);
   const avgRate = agents.length > 0
     ? Math.round(agents.reduce((s, a) => s + a.automationRate, 0) / agents.length) : 80;
 
   const currency = resolveCurrency(guide.currency, guide.conversation_cost);
   const roi = useMemo(() => calculateROI({
-    monthlyConversations: vol,
-    costPerConversation: costNum,
+    monthlyConversations: includeChat ? vol : 0,
+    costPerConversation: includeChat ? costNum : 0,
     pricingModel: guide.pricing_model || "fixed",
     automationRate: avgRate,
     markets: guide.deployment_markets || 1,
     currency,
     fteCapacityPerMonth: guide.fte_capacity_per_month,
     automationRampMonths: guide.automation_ramp_months,
+    monthlyVoiceMinutes: includeVoice ? voiceMinutes : 0,
+    costPerVoiceMinute: includeVoice ? voiceCostPerMin : 0,
     invoiceMonthlyCostUSD: invoice?.monthlyUSD,
     invoiceImplementationUSD: invoice?.implementationOneTimeUSD,
-  }), [vol, costNum, guide.pricing_model, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month, guide.automation_ramp_months, invoice?.monthlyUSD, invoice?.implementationOneTimeUSD]);
+  }), [vol, costNum, includeChat, voiceMinutes, voiceCostPerMin, includeVoice, guide.pricing_model, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month, guide.automation_ramp_months, invoice?.monthlyUSD, invoice?.implementationOneTimeUSD]);
 
   const fmt = (n: number) => formatWithCurrency(n, currency);
 
@@ -632,7 +652,7 @@ export default function ImpactSection({ guide, sectionNumber }: { guide: GuideDa
           {/* Visuals — each tab renders something genuinely different */}
           {activeTab === "csat" && <CSATDistribution active={activeTab === "csat"} />}
           {activeTab === "automation" && <AutomationFlow active={activeTab === "automation"} volume={vol} />}
-          {activeTab === "data" && <MiniDashboard active={activeTab === "data"} />}
+          {activeTab === "data" && <MiniDashboard active={activeTab === "data"} channels={channels} />}
           {activeTab === "commercial" && (
             <SavingsTimeline
               active={activeTab === "commercial"}

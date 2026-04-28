@@ -594,15 +594,28 @@ class SOWBuilder {
     // roi-calculator.ts reads /NOK|SEK|DKK/i.test(currency) — so the
     // bug only worked accidentally when the price string happened to
     // include those tokens. Now passing the explicit currency code.
+    // Per-channel baseline: voice contributes when the engagement
+    // covers voice or both channels. Voice cost-per-minute lives on
+    // `voice_cost_per_minute` (free text). Falls back to 0 / no
+    // contribution when chat-only or when the field is absent.
+    const channels = form.channels ?? "chat";
+    const includeVoice = channels === "voice" || channels === "both";
+    const includeChat = channels !== "voice";
+    const voiceMinutes =
+      invoiceCtx?.expectedMonthlyVoiceMinutes ?? vols.voice ?? 0;
+    const voiceCostPerMin = parseConversationCost(form.voice_cost_per_minute, 0);
+
     const roi = calculateROI({
-      monthlyConversations: totalVol,
-      costPerConversation: cost,
+      monthlyConversations: includeChat ? totalVol : 0,
+      costPerConversation: includeChat ? cost : 0,
       pricingModel: form.pricing_model,
       automationRate: avgAutomation,
       markets: form.deployment_markets,
       currency: form.currency,
       fteCapacityPerMonth: form.fte_capacity_per_month,
       automationRampMonths: form.automation_ramp_months,
+      monthlyVoiceMinutes: includeVoice ? voiceMinutes : 0,
+      costPerVoiceMinute: includeVoice ? voiceCostPerMin : 0,
       invoiceMonthlyCostUSD: invoiceCtx?.monthlyUSD,
       invoiceImplementationUSD: invoiceCtx?.implementationOneTimeUSD,
     });

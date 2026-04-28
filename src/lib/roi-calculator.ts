@@ -33,6 +33,14 @@ export interface ROIInputs {
    *  roiPercentage, etc.) are unchanged so consumers that don't
    *  opt into the ramp see no behaviour change. */
   automationRampMonths?: number;
+  /** Voice-side baseline: monthly minutes × cost per minute. Adds
+   *  to currentMonthlyCost when set. For voice-only engagements,
+   *  callers should set monthlyConversations + costPerConversation
+   *  to 0 and put all the volume on the voice side. For both-channel
+   *  engagements, both contribute. Both default to 0 so omitting
+   *  these doesn't change chat-only behaviour. */
+  monthlyVoiceMinutes?: number;
+  costPerVoiceMinute?: number;
 }
 
 export interface ROIResults {
@@ -87,21 +95,40 @@ const IMPL_MONTHS = 2; // months of platform cost as implementation investment
 
 export function calculateROI(inputs: ROIInputs): ROIResults {
   const { monthlyConversations, costPerConversation, pricingModel, automationRate, markets } = inputs;
+  const monthlyVoiceMinutes = Math.max(0, inputs.monthlyVoiceMinutes ?? 0);
+  const costPerVoiceMinute = Math.max(0, inputs.costPerVoiceMinute ?? 0);
 
   const rate = automationRate / 100;
   const automatedConversations = Math.round(monthlyConversations * rate);
   const humanConversations = monthlyConversations - automatedConversations;
+  // Voice contribution mirrors chat: the same automation rate
+  // applies to voice minutes. Per-channel automation tuning
+  // (e.g. 60% voice / 80% chat) is a follow-up; for now both
+  // channels follow the rate the caller passes in.
+  const automatedVoiceMinutes = Math.round(monthlyVoiceMinutes * rate);
+  const humanVoiceMinutes = monthlyVoiceMinutes - automatedVoiceMinutes;
 
-  const currentMonthlyCost = monthlyConversations * costPerConversation;
+  // Combined baseline: chat conversations at $/conv plus voice
+  // minutes at $/min. Voice contributes 0 when the engagement is
+  // chat-only (caller passes 0/0 for the voice fields), preserving
+  // legacy behaviour for share URLs without channel scope.
+  const currentChatCost = monthlyConversations * costPerConversation;
+  const currentVoiceCost = monthlyVoiceMinutes * costPerVoiceMinute;
+  const currentMonthlyCost = currentChatCost + currentVoiceCost;
 
-  // AI cost per conversation is a fraction of the human cost
+  // AI cost per chat conversation is a fraction of the human cost.
+  // The same fraction applies to voice (per-minute), so the AI's
+  // cost story scales with whichever channel(s) are in scope.
   const aiCostPerConversation = costPerConversation * AI_COST_RATIO[pricingModel];
+  const aiCostPerVoiceMinute = costPerVoiceMinute * AI_COST_RATIO[pricingModel];
 
   // New cost: automated at AI rate + remaining humans at full rate + platform overhead
   const platformMonthly = currentMonthlyCost * PLATFORM_OVERHEAD_RATIO;
   const heuristicNewCost =
     (automatedConversations * aiCostPerConversation) +
     (humanConversations * costPerConversation) +
+    (automatedVoiceMinutes * aiCostPerVoiceMinute) +
+    (humanVoiceMinutes * costPerVoiceMinute) +
     platformMonthly;
 
   // INVOICE-FIRST: when the AE has built a 2026 pricing invoice,

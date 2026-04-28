@@ -304,6 +304,11 @@ export default function CommercialOfferSection({ guide, sectionNumber }: { guide
   // ROI context
   const totalVolume = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0);
   const costNum = parseConversationCost(guide.conversation_cost);
+  const voiceMinutes = guide.channel_volumes.voice ?? 0;
+  const voiceCostPerMin = parseConversationCost(guide.voice_cost_per_minute, 0);
+  const channels = guide.channels ?? "chat";
+  const includeVoice = channels === "voice" || channels === "both";
+  const includeChat = channels !== "voice";
   const agents = getAgentsForGuide(guide.areas_of_interest, guide.selected_variants);
   const avgRate = agents.length > 0
     ? Math.round(agents.reduce((s, a) => s + a.automationRate, 0) / agents.length)
@@ -313,16 +318,18 @@ export default function CommercialOfferSection({ guide, sectionNumber }: { guide
   const roi = useMemo(
     () =>
       calculateROI({
-        monthlyConversations: totalVolume || 10000,
-        costPerConversation: costNum || 8,
+        monthlyConversations: includeChat ? (totalVolume || 10000) : 0,
+        costPerConversation: includeChat ? (costNum || 8) : 0,
         pricingModel: selectedKey,
         automationRate: avgRate,
         markets: guide.deployment_markets || 1,
         currency,
         fteCapacityPerMonth: guide.fte_capacity_per_month,
         automationRampMonths: guide.automation_ramp_months,
+        monthlyVoiceMinutes: includeVoice ? voiceMinutes : 0,
+        costPerVoiceMinute: includeVoice ? voiceCostPerMin : 0,
       }),
-    [totalVolume, costNum, selectedKey, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month, guide.automation_ramp_months],
+    [totalVolume, costNum, includeChat, voiceMinutes, voiceCostPerMin, includeVoice, selectedKey, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month, guide.automation_ramp_months],
   );
 
   const formatCurrency = (n: number) => formatWithCurrency(n, currency);

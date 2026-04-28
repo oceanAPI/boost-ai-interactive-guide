@@ -165,6 +165,14 @@ export interface GuideData {
    *  continue to use the flat `channel_volumes` only. */
   market_volumes?: MarketVolumes[];
   conversation_cost: string;
+  /** Voice baseline cost per MINUTE (free text — "$0.50", "5 NOK").
+   *  Mirrors `conversation_cost` for chat. When the engagement scope
+   *  includes voice (`channels` is "voice" or "both"), ROI math
+   *  computes `voiceMinutes × voiceCostPerMinute` as the voice
+   *  baseline, additive to the chat baseline when channels === "both".
+   *  Optional — falls back to 0 when omitted, in which case voice
+   *  contributes nothing to currentMonthlyCost. */
+  voice_cost_per_minute?: string;
   /** Explicit currency override set by the admin picker. When
    *  present, takes precedence over inferring from
    *  `conversation_cost`. See CurrencyCode below. */
@@ -249,6 +257,10 @@ export interface GuideFormData {
    *  derived rollup and deployment_markets is derived count. */
   market_volumes?: MarketVolumes[];
   conversation_cost: string;
+  /** Voice baseline cost per minute. Free text — "$0.50", "5 NOK".
+   *  Used by ROI math when channels includes voice. Falls back to 0
+   *  when omitted (voice contributes nothing to currentMonthlyCost). */
+  voice_cost_per_minute?: string;
   /** Customer-facing currency. Optional — when omitted, components
    *  fall back to `detectCurrency(conversation_cost)` for back-compat
    *  with existing shared-URL bookmarks. */

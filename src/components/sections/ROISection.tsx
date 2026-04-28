@@ -38,6 +38,14 @@ export default function ROISection({
     ? invoice.expectedMonthlyChat
     : Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0);
   const costFromGuide = parseConversationCost(guide.conversation_cost);
+  /* Voice baseline — additive when the engagement scope is "voice"
+     or "both". Read from the invoice if pricing_config is populated,
+     else from channel_volumes.voice. Cost from the standalone
+     voice_cost_per_minute field. Both default to 0 so chat-only
+     engagements behave as before. */
+  const voiceMinutesFromGuide =
+    invoice?.expectedMonthlyVoiceMinutes ?? guide.channel_volumes.voice ?? 0;
+  const voiceCostPerMinuteFromGuide = parseConversationCost(guide.voice_cost_per_minute, 0);
 
   const agents = getAgentsForGuide(guide.areas_of_interest, guide.selected_variants);
   const avgRate = agents.length > 0
@@ -66,10 +74,12 @@ export default function ROISection({
       currency,
       fteCapacityPerMonth: guide.fte_capacity_per_month,
       automationRampMonths: guide.automation_ramp_months,
+      monthlyVoiceMinutes: guide.channels === "voice" || guide.channels === "both" ? voiceMinutesFromGuide : 0,
+      costPerVoiceMinute: guide.channels === "voice" || guide.channels === "both" ? voiceCostPerMinuteFromGuide : 0,
       invoiceMonthlyCostUSD: invoice?.monthlyUSD,
       invoiceImplementationUSD: invoice?.implementationOneTimeUSD,
     }),
-    [volume, cost, guide.pricing_model, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month, guide.automation_ramp_months, invoice?.monthlyUSD, invoice?.implementationOneTimeUSD],
+    [volume, cost, guide.pricing_model, avgRate, guide.deployment_markets, currency, guide.fte_capacity_per_month, guide.automation_ramp_months, guide.channels, voiceMinutesFromGuide, voiceCostPerMinuteFromGuide, invoice?.monthlyUSD, invoice?.implementationOneTimeUSD],
   );
 
   const savingsBarWidth = roi.currentMonthlyCost > 0
