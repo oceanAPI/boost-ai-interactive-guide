@@ -102,6 +102,7 @@ function GuideContent() {
     integrations: formData.integrations || {},
     pricing_config: formData.pricing_config,
     engagement_framework: formData.engagement_framework,
+    channels: formData.channels,
     custom_notes: formData.custom_notes || "",
   };
 

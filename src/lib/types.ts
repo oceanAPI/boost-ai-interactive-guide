@@ -197,6 +197,12 @@ export interface GuideData {
    *  consumers fall back to ENGAGEMENT_FRAMEWORK_DEFAULTS, which
    *  preserves the legacy hardcoded story. */
   engagement_framework?: EngagementFramework;
+  /** Which channel(s) the engagement covers. Drives auto-toggling
+   *  of channel-specific sections (e.g. Chat Preview hides when
+   *  voice-only) and per-channel ROI baseline cost capture. Default
+   *  "chat" preserves the legacy implicit assumption for existing
+   *  share URLs that don't carry the field. */
+  channels?: ChannelMode;
   custom_notes: string;
   /** Selected case study IDs — empty means show all (industry-sorted) */
   selected_case_studies?: string[];
@@ -210,6 +216,11 @@ export interface GuideData {
     video_url?: string;
   };
 }
+
+/** Channel scope of the engagement. Drives section visibility,
+ *  per-channel ROI baseline-cost capture, and (in follow-up commits)
+ *  voice-flavored phase weeks + agent set. */
+export type ChannelMode = "chat" | "voice" | "both";
 
 /** Explicit currency code override. When set, takes precedence over
  *  inferring the currency from the `conversation_cost` string. Keeps
@@ -261,6 +272,9 @@ export interface GuideFormData {
   /** Timeline / phase / milestone overrides for super users. Absent
    *  = ENGAGEMENT_FRAMEWORK_DEFAULTS apply (legacy behaviour). */
   engagement_framework?: EngagementFramework;
+  /** Channel scope (chat / voice / both). Drives Chat Preview
+   *  auto-visibility and per-channel ROI capture. */
+  channels?: ChannelMode;
   custom_notes: string;
   /** Selected case study IDs — empty means show all (industry-sorted) */
   selected_case_studies?: string[];

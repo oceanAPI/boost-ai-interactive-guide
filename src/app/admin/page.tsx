@@ -955,6 +955,7 @@ export default function AdminPage() {
     channel_volumes: {},
     conversation_cost: "",
     currency: "USD",
+    channels: "chat",
     pricing_model: "fixed",
     deployment_markets: 1,
     resources: {
@@ -1389,6 +1390,21 @@ export default function AdminPage() {
     );
   }, [audience]);
 
+  /* Channel-driven section visibility: voice-only engagements hide
+   *  Chat Preview (id "demo"). Chat or Both restore it. The rep can
+   *  still manually override afterward via the Guide Sections
+   *  customise list — we only flip on the channel change itself. */
+  useEffect(() => {
+    const channel = form.channels ?? "chat";
+    setSectionItems((prev) =>
+      prev.map((item) =>
+        item.id === "demo"
+          ? { ...item, enabled: channel !== "voice" }
+          : item,
+      ),
+    );
+  }, [form.channels]);
+
   const toggleSection = (id: string) => {
     setHasTouchedSections(true);
     setSectionItems((prev) =>
@@ -1588,9 +1604,16 @@ export default function AdminPage() {
       id: "areas",
       number: 2,
       title: "Areas of Interest",
-      preview: hasAreas
-        ? `${form.areas_of_interest.length} area${form.areas_of_interest.length === 1 ? "" : "s"} selected`
-        : "Industry verticals & sub-areas",
+      preview: (() => {
+        const channelLabel =
+          form.channels === "voice" ? "Voice"
+          : form.channels === "both" ? "Voice + Chat"
+          : "Chat";
+        if (hasAreas) {
+          return `${channelLabel} · ${form.areas_of_interest.length} area${form.areas_of_interest.length === 1 ? "" : "s"}`;
+        }
+        return `${channelLabel} · pick industries`;
+      })(),
       hasContent: hasAreas,
     },
     {
@@ -2154,7 +2177,33 @@ export default function AdminPage() {
           }
           hasContent={hasAreas}
         >
+          {/* Channel picker — drives Chat Preview auto-visibility +
+              per-channel ROI baseline + (in follow-up commits) the
+              voice-flavored phase weeks. Sits above the industry
+              chips so the rep makes this call early — chat scope
+              and voice scope want different deck shapes. */}
           <AdminPrompt
+            question="Which channel(s) does this engagement cover?"
+            helper="Drives section visibility and the ROI baseline cost units. Pick Both when the customer wants chat and voice in the same deck."
+          />
+          <AdminChipRow>
+            {([
+              { key: "chat", label: "Chat" },
+              { key: "voice", label: "Voice" },
+              { key: "both", label: "Both" },
+            ] as const).map((opt) => (
+              <AdminChip
+                key={opt.key}
+                active={(form.channels ?? "chat") === opt.key}
+                onClick={() => updateField("channels", opt.key)}
+              >
+                {opt.label}
+              </AdminChip>
+            ))}
+          </AdminChipRow>
+
+          <AdminPrompt
+            divider
             question="Which industries does this customer operate in?"
             helper="Grouped by vertical. Leave empty for a general financial-services guide."
           />
