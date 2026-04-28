@@ -953,6 +953,7 @@ export default function AdminPage() {
     specific_requirements: "",
     channel_volumes: {},
     conversation_cost: "",
+    currency: "USD",
     pricing_model: "fixed",
     deployment_markets: 1,
     resources: {
