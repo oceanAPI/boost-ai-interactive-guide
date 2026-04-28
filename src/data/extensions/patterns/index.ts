@@ -20,6 +20,13 @@ import trygderetten from "./trygderetten";
 import telenorDk from "./telenor-dk";
 import postnord from "./postnord";
 import sas from "./sas";
+import sbab from "./sbab";
+import ikanoBank from "./ikano-bank";
+import svedea from "./svedea";
+import visitorscoverage from "./visitorscoverage";
+import morrowBank from "./morrow-bank";
+import lbForsikring from "./lb-forsikring";
+import lego from "./lego";
 
 export const EXTENSION_COMPANY_PATTERNS: CompanyPattern[] = [
   vanguard,
@@ -32,4 +39,11 @@ export const EXTENSION_COMPANY_PATTERNS: CompanyPattern[] = [
   telenorDk,
   postnord,
   sas,
+  sbab,
+  ikanoBank,
+  svedea,
+  visitorscoverage,
+  morrowBank,
+  lbForsikring,
+  lego,
 ];
