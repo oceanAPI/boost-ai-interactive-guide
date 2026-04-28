@@ -526,12 +526,18 @@ function Sparkle(props: { className?: string }) {
 /* ─── Choose stage ───
  * Entry point of the engagement journey. Two faded-purple-glyph cards:
  * "Pick a known company" (prefill) recommended, "Start from scratch"
- * (custom). User taps one to advance. */
+ * (custom). User taps one to advance.
+ *
+ * Sales audiences also see a third card below "Start from scratch":
+ * Competetive Intel — sister tool that opens in a new tab. The
+ * 'Competetive' spelling is intentional (AE convention); the repo
+ * slug is the canonical 'competitive'. */
 function ChooseStage(props: {
   onPickPrefill: () => void;
   onPickCustom: () => void;
+  audience: Audience | null;
 }) {
-  const { onPickPrefill, onPickCustom } = props;
+  const { onPickPrefill, onPickCustom, audience } = props;
   return (
     <main className="flex-1 flex flex-col items-center justify-center px-6 sm:px-10 py-10">
       <div className="w-full max-w-3xl">
@@ -550,7 +556,12 @@ function ChooseStage(props: {
             type the essentials yourself.
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div
+          className={
+            "grid grid-cols-1 gap-5 " +
+            (audience === "sales" ? "md:grid-cols-3" : "md:grid-cols-2")
+          }
+        >
           <ChoiceCard
             onClick={onPickPrefill}
             kicker="Prefill"
@@ -581,6 +592,37 @@ function ChooseStage(props: {
             cta="Open blank"
             glyph={<span className="text-[28px] font-thin leading-none">+</span>}
           />
+          {/* Competetive Intel — sales-only, third card sitting below
+              "Start from scratch" via md:col-start-2 so the prefill
+              card on the left stays uncrowded. Opens in a new tab —
+              not part of the engagement journey. */}
+          {audience === "sales" ? (
+            <ChoiceCard
+              onClick={() =>
+                window.open(
+                  "https://oceanapi.github.io/competitive-intel/",
+                  "_blank",
+                  "noopener,noreferrer",
+                )
+              }
+              kicker="Sister tool"
+              title="Competetive Intel"
+              bullets={[
+                "Daily competitor briefing",
+                "7 tracked: Kore.ai, Cognigy, Sierra…",
+                "Opens in a new tab",
+              ]}
+              cta="Open intel"
+              external
+              glyph={
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-7 h-7">
+                  <circle cx="12" cy="12" r="9" />
+                  <circle cx="12" cy="12" r="5" />
+                  <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                </svg>
+              }
+            />
+          ) : null}
         </div>
       </div>
     </main>
@@ -595,13 +637,25 @@ function ChoiceCard(props: {
   cta: string;
   glyph: React.ReactNode;
   recommended?: boolean;
+  /** External link affordance — replaces the trailing → arrow with ↗
+   *  to signal "opens in a new tab" semantics. Used by Competetive
+   *  Intel which leaves the engagement journey rather than advancing
+   *  it. */
+  external?: boolean;
+  /** Optional grid placement. Lets a sales-only card slot into the
+   *  second column of the existing 2-col layout without restructuring
+   *  the parent grid. */
+  className?: string;
 }) {
-  const { onClick, kicker, title, bullets, cta, glyph, recommended } = props;
+  const { onClick, kicker, title, bullets, cta, glyph, recommended, external, className } = props;
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group relative block text-left rounded-xl border border-boost-border bg-boost-card shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2"
+      className={
+        "group relative block text-left rounded-xl border border-boost-border bg-boost-card shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2" +
+        (className ? " " + className : "")
+      }
     >
       <span
         aria-hidden="true"
@@ -639,7 +693,9 @@ function ChoiceCard(props: {
         </ul>
         <div className="flex items-center justify-between pt-3 border-t border-boost-border/60">
           <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-muted">{cta}</span>
-          <span aria-hidden="true" className="text-boost-muted group-hover:text-boost-purple group-hover:translate-x-0.5 transition-all">→</span>
+          <span aria-hidden="true" className="text-boost-muted group-hover:text-boost-purple group-hover:translate-x-0.5 transition-all">
+            {external ? "↗" : "→"}
+          </span>
         </div>
       </div>
     </button>
@@ -1897,24 +1953,6 @@ export default function AdminPage() {
                   RailCustomerHeader callsite below) — it's a property
                   of the engagement, not of the audience. CE/PS modes
                   no longer carry that noise here. */}
-              {/* Competetive Intel — sister tool, sales-only. Daily
-                  auto-fetched competitor briefing (Kore.ai / Cognigy /
-                  PolyAI / Sierra / SoundHound / Omilia / Salesforce
-                  Agentforce). Repo: oceanAPI/competitive-intel deployed
-                  to GH Pages. Note: user-facing label keeps the
-                  'Competetive' spelling per AE convention; repo slug
-                  is the canonical 'competitive'. */}
-              {audience === "sales" ? (
-                <a
-                  href="https://oceanapi.github.io/competitive-intel/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 focus-visible:ring-offset-boost-purple rounded-sm px-2 py-0.5 whitespace-nowrap inline-flex items-center gap-1"
-                >
-                  <span>Competetive Intel</span>
-                  <span aria-hidden="true">↗</span>
-                </a>
-              ) : null}
               <Link
                 href="/"
                 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 focus-visible:ring-offset-boost-purple rounded-sm px-2 py-0.5 whitespace-nowrap"
@@ -1970,6 +2008,7 @@ export default function AdminPage() {
         <ChooseStage
           onPickPrefill={() => setStage("editing")}
           onPickCustom={() => setStage("custom-entry")}
+          audience={audience}
         />
       ) : null}
 
