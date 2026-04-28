@@ -1900,15 +1900,16 @@ export default function AdminPage() {
               {/* Competetive Intel — sister tool, sales-only. Daily
                   auto-fetched competitor briefing (Kore.ai / Cognigy /
                   PolyAI / Sierra / SoundHound / Omilia / Salesforce
-                  Agentforce). href is "#" until the deploy URL is
-                  confirmed — swap to the live GH Pages URL when ready. */}
+                  Agentforce). Repo: oceanAPI/competitive-intel deployed
+                  to GH Pages. Note: user-facing label keeps the
+                  'Competetive' spelling per AE convention; repo slug
+                  is the canonical 'competitive'. */}
               {audience === "sales" ? (
                 <a
-                  href="#"
-                  aria-disabled="true"
-                  className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 focus-visible:ring-offset-boost-purple rounded-sm px-2 py-0.5 whitespace-nowrap inline-flex items-center gap-1 cursor-not-allowed opacity-80"
-                  onClick={(e) => e.preventDefault()}
-                  title="Coming soon — deploy URL not yet wired"
+                  href="https://oceanapi.github.io/competitive-intel/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 focus-visible:ring-offset-boost-purple rounded-sm px-2 py-0.5 whitespace-nowrap inline-flex items-center gap-1"
                 >
                   <span>Competetive Intel</span>
                   <span aria-hidden="true">↗</span>
