@@ -124,6 +124,14 @@ export interface EngagementFramework {
   /** Pilot rollout traffic percentage band — [min, max]. Renders
    *  in Quality & Go-Live row as "Pilot (10-20%)". */
   pilot_traffic_pct: [number, number];
+  /** When true, the engagement is a migration FROM an existing
+   *  voice/chat solution TO Boost (rather than greenfield build).
+   *  Drives Roadmap milestone names — migrations follow the
+   *  playbook 8-phase vocabulary (Align / Assess / Enable / Test /
+   *  Fix and plan / Ready / Go Live / Hypercare). Default false =
+   *  greenfield = canonical 4 milestones (Kickoff / Scope sign-off /
+   *  UAT start / Go-Live). */
+  migration?: boolean;
 }
 
 /** Defaults — mirror today's hardcoded values across
@@ -145,6 +153,31 @@ export const ENGAGEMENT_FRAMEWORK_DEFAULTS: EngagementFramework = {
     go_live_week: 8,
   },
   pilot_traffic_pct: [10, 20],
+  migration: false,
+};
+
+/** Migration-mode preset — voice migrations follow the playbook
+ *  8-phase shape compressed into the same 12-week roadmap. Discovery
+ *  collapses to a single align week; Build absorbs the playbook's
+ *  Assess + Enable + Test + Fix and plan + Ready stages; Pilot is
+ *  the Go Live moment; Scale carries the 2-week Hypercare into
+ *  ongoing optimization. */
+export const ENGAGEMENT_FRAMEWORK_MIGRATION: EngagementFramework = {
+  total_weeks: 12,
+  phase_weeks: {
+    discovery: [1, 1],
+    build: [2, 6],
+    pilot: [7, 8],
+    scale: [9, 12],
+  },
+  milestones: {
+    kickoff_week: 1,
+    scope_signoff_weeks: [2, 2],
+    uat_start_week: 5,
+    go_live_week: 7,
+  },
+  pilot_traffic_pct: [10, 20],
+  migration: true,
 };
 
 export interface GuideData {

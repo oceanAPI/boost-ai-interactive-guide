@@ -47,7 +47,7 @@ import {
 import { AUDIENCE_DEFAULTS } from "@/data/audience-sections";
 import { CASE_STUDIES } from "@/data/case-studies";
 import type { GuideFormData, ChannelVolumes, MarketVolumes, IntegrationSelections, PricingModel, ResourceAllocation, Audience, EngagementFramework } from "@/lib/types";
-import { ENGAGEMENT_FRAMEWORK_DEFAULTS } from "@/lib/types";
+import { ENGAGEMENT_FRAMEWORK_DEFAULTS, ENGAGEMENT_FRAMEWORK_MIGRATION } from "@/lib/types";
 
 /* ─── Collapsible Section ─── */
 function CollapsibleSection({
@@ -1665,9 +1665,12 @@ export default function AdminPage() {
       id: "framework",
       number: 13,
       title: "Engagement Framework",
-      preview: hasFramework
-        ? `${effectiveFramework.total_weeks}-wk · custom`
-        : `${effectiveFramework.total_weeks}-wk · default`,
+      preview: (() => {
+        const wks = effectiveFramework.total_weeks;
+        const mode = effectiveFramework.migration ? "migration" : "greenfield";
+        const status = hasFramework ? "custom" : "default";
+        return `${wks}-wk · ${mode} · ${status}`;
+      })(),
       hasContent: hasFramework,
     },
     {
@@ -3164,7 +3167,49 @@ export default function AdminPage() {
           }
           hasContent={hasFramework}
         >
+          {/* Greenfield vs migration. Migration applies a compressed
+              preset that maps the playbook 8-phase shape (Align /
+              Assess / Enable / Test / Fix and plan / Ready / Go Live
+              / Hypercare) onto the same 12-week roadmap. Greenfield
+              keeps the canonical 4-milestone shape (Kickoff / Scope
+              sign-off / UAT start / Go-Live). */}
           <AdminPrompt
+            question="Greenfield build or migration to Boost?"
+            helper="Migration uses the playbook 8-phase shape — compressed Discovery, longer Build absorbing pre-pilot stages, hypercare-driven Scale. Greenfield is the canonical 4-milestone roadmap."
+          />
+          <AdminChipRow>
+            <AdminChip
+              active={!effectiveFramework.migration}
+              onClick={() => {
+                if (effectiveFramework.migration) {
+                  // Switching to greenfield: snap to defaults entirely
+                  // so customised migration values don't bleed through.
+                  setForm((prev) => ({
+                    ...prev,
+                    engagement_framework: { ...ENGAGEMENT_FRAMEWORK_DEFAULTS },
+                  }));
+                }
+              }}
+            >
+              Greenfield
+            </AdminChip>
+            <AdminChip
+              active={!!effectiveFramework.migration}
+              onClick={() => {
+                if (!effectiveFramework.migration) {
+                  setForm((prev) => ({
+                    ...prev,
+                    engagement_framework: { ...ENGAGEMENT_FRAMEWORK_MIGRATION },
+                  }));
+                }
+              }}
+            >
+              Migration
+            </AdminChip>
+          </AdminChipRow>
+
+          <AdminPrompt
+            divider
             question="How long is the engagement?"
             helper="End-to-end weeks from kickoff to full scale. Holiday windows, accelerated rollouts, or extended pilots all flex this number."
             action={

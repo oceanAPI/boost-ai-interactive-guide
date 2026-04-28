@@ -92,13 +92,30 @@ function applyFramework(framework: EngagementFramework): {
   });
 
   // Key Milestones lane: replace week ranges of the four named
-  // milestones with framework values. Other lanes pass through
-  // untouched (their content moves dynamic in a later commit).
+  // milestones with framework values. For migration-mode engagements,
+  // we ALSO rename the milestones to the playbook 8-phase vocabulary
+  // (Align / Assess / Enable / Test / Fix and plan / Ready / Go Live /
+  // Hypercare). The compressed migration phase widths give us room
+  // for an extra in-Build "Test" pulse and a Hypercare ribbon at the
+  // tail.
   const milestoneLookup: Record<string, [number, number]> = {
     Kickoff: [framework.milestones.kickoff_week, framework.milestones.kickoff_week],
     "Scope sign-off": framework.milestones.scope_signoff_weeks,
     "UAT start": [framework.milestones.uat_start_week, framework.milestones.uat_start_week],
     "Go-Live": [framework.milestones.go_live_week, framework.milestones.go_live_week],
+  };
+  /** Migration-mode milestone label overrides. Maps the canonical
+   *  4-milestone names to the playbook 8-phase vocabulary. The
+   *  base ROADMAP_LANES still only carries 4 milestones — adding a
+   *  5th-8th would require schema work. For now, the migration label
+   *  rewrite keeps the procurement-friendly playbook framing while
+   *  leaving the data shape stable. The rep can drag in the rest
+   *  via Customise when needed. */
+  const migrationLabels: Record<string, string> = {
+    Kickoff: "Align",
+    "Scope sign-off": "Assess",
+    "UAT start": "Test",
+    "Go-Live": "Go Live",
   };
   const lanes: RoadmapLane[] = ROADMAP_LANES.map((lane) => {
     if (lane.name === "Key Milestones") {
@@ -106,7 +123,16 @@ function applyFramework(framework: EngagementFramework): {
         ...lane,
         items: lane.items.map((item) => {
           const range = milestoneLookup[item.name];
-          return range ? { ...item, startWeek: range[0], endWeek: range[1] } : item;
+          const labelOverride = framework.migration ? migrationLabels[item.name] : undefined;
+          const next = { ...item };
+          if (range) {
+            next.startWeek = range[0];
+            next.endWeek = range[1];
+          }
+          if (labelOverride) {
+            next.name = labelOverride;
+          }
+          return next;
         }),
       };
     }
