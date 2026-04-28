@@ -9,7 +9,13 @@ import {
   ROADMAP_LANES,
   TOTAL_WEEKS,
   type RoadmapItem,
+  type RoadmapPhase,
+  type RoadmapLane,
 } from "@/data/roadmap";
+import {
+  ENGAGEMENT_FRAMEWORK_DEFAULTS,
+  type EngagementFramework,
+} from "@/lib/types";
 
 /* ─── Helpers ─── */
 
@@ -24,13 +30,16 @@ function formatWeekLabel(startDate: string, week: number): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function getMonthSpans(startDate: string): { label: string; startCol: number; span: number }[] {
+function getMonthSpans(
+  startDate: string,
+  totalWeeks: number = TOTAL_WEEKS,
+): { label: string; startCol: number; span: number }[] {
   const months: { label: string; startCol: number; span: number }[] = [];
   let currentMonth = "";
   let startCol = 1;
   let span = 0;
 
-  for (let w = 1; w <= TOTAL_WEEKS; w++) {
+  for (let w = 1; w <= totalWeeks; w++) {
     const d = getWeekDate(startDate, w);
     const month = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
     if (month !== currentMonth) {
@@ -52,6 +61,73 @@ const PHASE_COLORS = {
   green: "bg-boost-green text-white",
   "green-light": "bg-boost-green-light text-white",
 } as const;
+
+/* ─── Framework effective values ───
+ *
+ *  Take the customer's engagement_framework (or the canonical
+ *  defaults) and project it onto the static ROADMAP_PHASES /
+ *  ROADMAP_LANES. The activity content (Intent mapping, KB
+ *  population, etc.) stays static — only the WEEK NUMBERS bend
+ *  to the framework. Activity content moves to a content table
+ *  in a follow-up commit. */
+function applyFramework(framework: EngagementFramework): {
+  totalWeeks: number;
+  phases: RoadmapPhase[];
+  lanes: RoadmapLane[];
+} {
+  const totalWeeks = framework.total_weeks;
+  // Phase week ranges come from framework. Names + colors stay
+  // canonical so the visual story is consistent across customers.
+  const phaseLookup: Record<string, [number, number]> = {
+    Discovery: framework.phase_weeks.discovery,
+    Build: framework.phase_weeks.build,
+    Pilot: framework.phase_weeks.pilot,
+    Scale: framework.phase_weeks.scale,
+  };
+  const phases: RoadmapPhase[] = ROADMAP_PHASES.map((p) => {
+    const range = phaseLookup[p.name];
+    return range
+      ? { ...p, startWeek: range[0], endWeek: range[1] }
+      : p;
+  });
+
+  // Key Milestones lane: replace week ranges of the four named
+  // milestones with framework values. Other lanes pass through
+  // untouched (their content moves dynamic in a later commit).
+  const milestoneLookup: Record<string, [number, number]> = {
+    Kickoff: [framework.milestones.kickoff_week, framework.milestones.kickoff_week],
+    "Scope sign-off": framework.milestones.scope_signoff_weeks,
+    "UAT start": [framework.milestones.uat_start_week, framework.milestones.uat_start_week],
+    "Go-Live": [framework.milestones.go_live_week, framework.milestones.go_live_week],
+  };
+  const lanes: RoadmapLane[] = ROADMAP_LANES.map((lane) => {
+    if (lane.name === "Key Milestones") {
+      return {
+        ...lane,
+        items: lane.items.map((item) => {
+          const range = milestoneLookup[item.name];
+          return range ? { ...item, startWeek: range[0], endWeek: range[1] } : item;
+        }),
+      };
+    }
+    if (lane.name === "Quality & Go-Live") {
+      // Pilot row label carries the rollout traffic %. We rename
+      // matching items by detecting the "Pilot (" prefix so admin
+      // edits flow through without a brittle exact-match.
+      return {
+        ...lane,
+        items: lane.items.map((item) =>
+          item.name.startsWith("Pilot (")
+            ? { ...item, name: `Pilot (${framework.pilot_traffic_pct[0]}-${framework.pilot_traffic_pct[1]}%)` }
+            : item,
+        ),
+      };
+    }
+    return lane;
+  });
+
+  return { totalWeeks, phases, lanes };
+}
 
 /* F7 — Per-phase complexity weighting.
  * Build absorbs the most complexity (integrations + market localisation),
@@ -368,15 +444,22 @@ export default function RoadmapSection({
     return () => observer.disconnect();
   }, []);
 
+  /* Engagement framework — drives the timeline numbers. Falls back
+   *  to canonical defaults when the customer hasn't customised. The
+   *  applyFramework helper projects the framework onto the static
+   *  phase + lane content. */
+  const framework = guide?.engagement_framework ?? ENGAGEMENT_FRAMEWORK_DEFAULTS;
+  const { totalWeeks, phases, lanes } = applyFramework(framework);
+
   /* Resolve the selected item for the detail panel */
   const selectedItem = (() => {
     if (!selectedKey) return null;
     const [laneStr, itemStr] = selectedKey.split("-");
-    const lane = ROADMAP_LANES[Number(laneStr)];
+    const lane = lanes[Number(laneStr)];
     return lane?.items[Number(itemStr)] ?? null;
   })();
 
-  const months = getMonthSpans(startDate);
+  const months = getMonthSpans(startDate, totalWeeks);
   const startLabel = new Date(startDate).toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
@@ -408,7 +491,7 @@ export default function RoadmapSection({
       <SectionHeader
         number={sectionNumber}
         title="Implementation & Rollout"
-        subtitle={`Starting ${startLabel} — 12-week roadmap from kickoff to full scale${resourceSuffix}`}
+        subtitle={`Starting ${startLabel} — ${totalWeeks}-week roadmap from kickoff to full scale${resourceSuffix}`}
       />
 
       {/* Header content blocks — above the roadmap */}
@@ -427,10 +510,10 @@ export default function RoadmapSection({
           {/* Phase headers */}
           <div
             className="grid"
-            style={{ gridTemplateColumns: `140px repeat(${TOTAL_WEEKS}, 1fr)` }}
+            style={{ gridTemplateColumns: `140px repeat(${totalWeeks}, 1fr)` }}
           >
             <div className="bg-boost-surface border-r border-boost-border" />
-            {ROADMAP_PHASES.map((phase) => {
+            {phases.map((phase) => {
               const weight = PHASE_COMPLEXITY_WEIGHT[phase.name] ?? 0.5;
               const stretchPct = Math.round(complexityScore * weight * 100);
               return (
@@ -469,7 +552,7 @@ export default function RoadmapSection({
           {/* Month labels */}
           <div
             className="grid border-b border-boost-border"
-            style={{ gridTemplateColumns: `140px repeat(${TOTAL_WEEKS}, 1fr)` }}
+            style={{ gridTemplateColumns: `140px repeat(${totalWeeks}, 1fr)` }}
           >
             <div className="bg-boost-surface border-r border-boost-border" />
             {months.map((m) => (
@@ -494,12 +577,12 @@ export default function RoadmapSection({
           {/* Week numbers */}
           <div
             className="grid border-b border-boost-border"
-            style={{ gridTemplateColumns: `140px repeat(${TOTAL_WEEKS}, 1fr)` }}
+            style={{ gridTemplateColumns: `140px repeat(${totalWeeks}, 1fr)` }}
           >
             <div className="bg-boost-surface border-r border-boost-border py-1 px-3 text-[10px] font-medium text-boost-muted">
               Week
             </div>
-            {Array.from({ length: TOTAL_WEEKS }, (_, i) => (
+            {Array.from({ length: totalWeeks }, (_, i) => (
               <div
                 key={i}
                 className={`
@@ -515,11 +598,11 @@ export default function RoadmapSection({
           </div>
 
           {/* Lanes */}
-          {ROADMAP_LANES.map((lane, laneIdx) => (
+          {lanes.map((lane, laneIdx) => (
             <div
               key={lane.name}
               className="grid border-b border-boost-border/50 last:border-b-0"
-              style={{ gridTemplateColumns: `140px repeat(${TOTAL_WEEKS}, 1fr)` }}
+              style={{ gridTemplateColumns: `140px repeat(${totalWeeks}, 1fr)` }}
             >
               {/* Lane label */}
               <div
@@ -543,8 +626,8 @@ export default function RoadmapSection({
                 }}
               >
                 {lane.items.map((item, itemIdx) => {
-                  const leftPct = ((item.startWeek - 1) / TOTAL_WEEKS) * 100;
-                  const widthPct = ((item.endWeek - item.startWeek + 1) / TOTAL_WEEKS) * 100;
+                  const leftPct = ((item.startWeek - 1) / totalWeeks) * 100;
+                  const widthPct = ((item.endWeek - item.startWeek + 1) / totalWeeks) * 100;
                   const key = itemKey(laneIdx, itemIdx);
                   return (
                     <ItemPill
@@ -570,10 +653,10 @@ export default function RoadmapSection({
         {/* Week date labels below the chart */}
         <div
           className="grid mt-1"
-          style={{ gridTemplateColumns: `140px repeat(${TOTAL_WEEKS}, 1fr)` }}
+          style={{ gridTemplateColumns: `140px repeat(${totalWeeks}, 1fr)` }}
         >
           <div />
-          {Array.from({ length: TOTAL_WEEKS }, (_, i) => (
+          {Array.from({ length: totalWeeks }, (_, i) => (
             <div
               key={i}
               className={`
@@ -602,7 +685,7 @@ export default function RoadmapSection({
       <div className="mt-6 md:hidden space-y-6">
         {/* Phase ribbon */}
         <div className="flex rounded-xl overflow-hidden">
-          {ROADMAP_PHASES.map((phase) => {
+          {phases.map((phase) => {
             const span = phase.endWeek - phase.startWeek + 1;
             const weight = PHASE_COMPLEXITY_WEIGHT[phase.name] ?? 0.5;
             const stretchPct = Math.round(complexityScore * weight * 100);
@@ -631,7 +714,7 @@ export default function RoadmapSection({
         </div>
 
         {/* Lane cards */}
-        {ROADMAP_LANES.map((lane, i) => (
+        {lanes.map((lane, i) => (
           <MobileCard
             key={lane.name}
             lane={lane}

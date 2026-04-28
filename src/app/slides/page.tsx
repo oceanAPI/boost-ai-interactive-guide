@@ -100,6 +100,7 @@ function SlidesContent() {
     resources: formData.resources || {},
     integrations: formData.integrations || {},
     pricing_config: formData.pricing_config,
+    engagement_framework: formData.engagement_framework,
     custom_notes: formData.custom_notes || "",
   };
 

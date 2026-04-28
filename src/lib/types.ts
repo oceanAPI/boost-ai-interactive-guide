@@ -82,6 +82,71 @@ export interface ResourceAllocation {
   knowledge_management?: boolean;
 }
 
+/* ─── Engagement Framework ───
+ *
+ *  Holds all the timeline / phase / milestone knobs that the
+ *  Implementation & Rollout, Ways of Working, Business Impact,
+ *  and Scope of Work sections used to render from hardcoded
+ *  defaults.
+ *
+ *  Why nested: matches the future-table shape (one row in an
+ *  `engagement_frameworks` table), keeps all the related knobs
+ *  in one place so admin can show them together, and lets
+ *  consumers fall back to the whole object missing rather than
+ *  per-field optional chains.
+ *
+ *  Why optional on Form/Guide: existing shared URLs don't carry
+ *  a framework. Consumers fall back to ENGAGEMENT_FRAMEWORK_DEFAULTS
+ *  (export from this file) so the live render is unchanged when
+ *  the field is absent. Super users only opt into customisation
+ *  when they need it. */
+export interface EngagementFramework {
+  /** End-to-end engagement length, in weeks. Default 12. */
+  total_weeks: number;
+  /** Phase week boundaries — [startWeek, endWeek] inclusive,
+   *  1-indexed. Phases are allowed to overlap (Pilot can start
+   *  before Build ends). Defaults match ROADMAP_PHASES. */
+  phase_weeks: {
+    discovery: [number, number];
+    build: [number, number];
+    pilot: [number, number];
+    scale: [number, number];
+  };
+  /** Milestone landing weeks. Single-week milestones use a
+   *  number; ranged ones use a tuple. Defaults match
+   *  ROADMAP_LANES[Key Milestones]. */
+  milestones: {
+    kickoff_week: number;
+    scope_signoff_weeks: [number, number];
+    uat_start_week: number;
+    go_live_week: number;
+  };
+  /** Pilot rollout traffic percentage band — [min, max]. Renders
+   *  in Quality & Go-Live row as "Pilot (10-20%)". */
+  pilot_traffic_pct: [number, number];
+}
+
+/** Defaults — mirror today's hardcoded values across
+ *  ROADMAP_PHASES + ROADMAP_LANES + WaysOfWorkingSection.
+ *  When a Form/Guide carries no `engagement_framework`,
+ *  every consumer reads from this constant. */
+export const ENGAGEMENT_FRAMEWORK_DEFAULTS: EngagementFramework = {
+  total_weeks: 12,
+  phase_weeks: {
+    discovery: [1, 2],
+    build: [3, 5],
+    pilot: [6, 7],
+    scale: [8, 12],
+  },
+  milestones: {
+    kickoff_week: 1,
+    scope_signoff_weeks: [2, 3],
+    uat_start_week: 6,
+    go_live_week: 8,
+  },
+  pilot_traffic_pct: [10, 20],
+};
+
 export interface GuideData {
   id: string;
   created_at: string;
@@ -127,6 +192,11 @@ export interface GuideData {
    *  line-item invoice from pricing-calculator.ts instead of the
    *  legacy 3-model tier cards. Absent = legacy render. */
   pricing_config?: PricingConfig;
+  /** Timeline / phase / milestone overrides for super users who
+   *  diverge from the canonical 12-week framework. Absent =
+   *  consumers fall back to ENGAGEMENT_FRAMEWORK_DEFAULTS, which
+   *  preserves the legacy hardcoded story. */
+  engagement_framework?: EngagementFramework;
   custom_notes: string;
   /** Selected case study IDs — empty means show all (industry-sorted) */
   selected_case_studies?: string[];
@@ -188,6 +258,9 @@ export interface GuideFormData {
    *  line-item invoice from pricing-calculator.ts instead of the
    *  legacy 3-model tier cards. Absent = legacy render. */
   pricing_config?: PricingConfig;
+  /** Timeline / phase / milestone overrides for super users. Absent
+   *  = ENGAGEMENT_FRAMEWORK_DEFAULTS apply (legacy behaviour). */
+  engagement_framework?: EngagementFramework;
   custom_notes: string;
   /** Selected case study IDs — empty means show all (industry-sorted) */
   selected_case_studies?: string[];

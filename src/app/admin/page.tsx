@@ -46,7 +46,8 @@ import {
 } from "@/lib/slide-sections";
 import { AUDIENCE_DEFAULTS } from "@/data/audience-sections";
 import { CASE_STUDIES } from "@/data/case-studies";
-import type { GuideFormData, ChannelVolumes, MarketVolumes, IntegrationSelections, PricingModel, ResourceAllocation, Audience } from "@/lib/types";
+import type { GuideFormData, ChannelVolumes, MarketVolumes, IntegrationSelections, PricingModel, ResourceAllocation, Audience, EngagementFramework } from "@/lib/types";
+import { ENGAGEMENT_FRAMEWORK_DEFAULTS } from "@/lib/types";
 
 /* ─── Collapsible Section ─── */
 function CollapsibleSection({
@@ -998,6 +999,25 @@ export default function AdminPage() {
     });
   };
 
+  /** Patch the engagement_framework. Lazily seeds the object from
+   *  ENGAGEMENT_FRAMEWORK_DEFAULTS on the first edit so the form
+   *  goes from "absent" (= use defaults) to a full custom object as
+   *  soon as the user diverges. */
+  const updateFramework = (patch: Partial<EngagementFramework>) => {
+    setForm((prev) => ({
+      ...prev,
+      engagement_framework: {
+        ...(prev.engagement_framework ?? ENGAGEMENT_FRAMEWORK_DEFAULTS),
+        ...patch,
+      },
+    }));
+  };
+  /** Drop the override entirely so consumers fall back to defaults.
+   *  Used by the section's "Reset" link. */
+  const resetFramework = () => {
+    setForm((prev) => ({ ...prev, engagement_framework: undefined }));
+  };
+
   /* ─── Audience detection (?audience=sales|customer-excellence|professional-services) ───
    *  Lifted from the URL on mount. Null until read so the banner never
    *  flashes during SSR hydration. `"sales"` and `null` both render the
@@ -1500,6 +1520,16 @@ export default function AdminPage() {
   );
   const hasIntegrations = totalIntegrations > 0;
   const hasNotes = !!form.custom_notes;
+  /** Framework "custom" detection: any field deviates from the canonical
+   *  defaults. Reads cleanly because the type already enforces shape —
+   *  if a value matches its default, the rep hasn't customised. */
+  const hasFramework = !!form.engagement_framework;
+  /** The effective framework that downstream consumers and the rail
+   *  preview should read. Falls back to the canonical defaults so the
+   *  preview always shows a sensible "X-wk · default" line even when
+   *  the user hasn't opened the section yet. */
+  const effectiveFramework: EngagementFramework =
+    form.engagement_framework ?? ENGAGEMENT_FRAMEWORK_DEFAULTS;
 
   /** Generate gate: at minimum we need a customer label — either the
    *  company name OR a selected industry (Areas of Interest). If both
@@ -1527,6 +1557,7 @@ export default function AdminPage() {
     | "deployment"
     | "requirements"
     | "integrations"
+    | "framework"
     | "notes"
     | "sections"
     | "cases"
@@ -1608,6 +1639,15 @@ export default function AdminPage() {
       hasContent: hasIntegrations,
     },
     {
+      id: "framework",
+      number: 13,
+      title: "Engagement Framework",
+      preview: hasFramework
+        ? `${effectiveFramework.total_weeks}-wk · custom`
+        : `${effectiveFramework.total_weeks}-wk · default`,
+      hasContent: hasFramework,
+    },
+    {
       id: "notes",
       number: 8,
       title: "Additional Notes",
@@ -1674,6 +1714,7 @@ export default function AdminPage() {
     "deployment",
     "requirements",
     "integrations",
+    "framework",
     "notes",
     "cases",
     "custom",
@@ -3011,6 +3052,239 @@ export default function AdminPage() {
               );
             })}
           </div>
+        </CollapsibleSection>
+        ) : null}
+
+        {/* 7b — Engagement Framework
+            Holds the timeline knobs (total weeks, phase ranges,
+            milestone weeks, pilot rollout band) that used to be
+            hardcoded across Roadmap + Ways of Working + Impact +
+            ScopeOfWork. Custom for super users; most reps stay on
+            defaults via prefill. Pac-Man captures customisations
+            for promotion to real prefills downstream. */}
+        {activeSection === "framework" ? (
+        <CollapsibleSection
+          number={13}
+          title="Engagement Framework"
+          subtitle={
+            hasFramework
+              ? `${effectiveFramework.total_weeks}-week framework · custom`
+              : `${effectiveFramework.total_weeks}-week framework · default`
+          }
+          hasContent={hasFramework}
+        >
+          <AdminPrompt
+            question="How long is the engagement?"
+            helper="End-to-end weeks from kickoff to full scale. Holiday windows, accelerated rollouts, or extended pilots all flex this number."
+            action={
+              hasFramework ? (
+                <button
+                  type="button"
+                  onClick={resetFramework}
+                  className="text-[10px] text-boost-muted hover:text-boost-dark transition-colors uppercase tracking-[0.14em]"
+                >
+                  Reset
+                </button>
+              ) : null
+            }
+          />
+          <div className="flex items-baseline gap-2">
+            <input
+              type="number"
+              min={4}
+              max={26}
+              step={1}
+              value={effectiveFramework.total_weeks}
+              onChange={(e) =>
+                updateFramework({
+                  total_weeks: e.target.value ? Number(e.target.value) : ENGAGEMENT_FRAMEWORK_DEFAULTS.total_weeks,
+                })
+              }
+              className={`${inputClass} max-w-[120px] tabular-nums`}
+            />
+            <span className="text-[11px] text-boost-muted">weeks total</span>
+          </div>
+
+          <AdminPrompt
+            divider
+            question="How are the four phases distributed?"
+            helper="Phase weeks are 1-indexed and may overlap (Pilot can begin before Build closes). Render is the stretch grid in Implementation & Rollout."
+          />
+          <div className="space-y-3">
+            {([
+              { key: "discovery", label: "Discovery" },
+              { key: "build", label: "Build" },
+              { key: "pilot", label: "Pilot" },
+              { key: "scale", label: "Scale" },
+            ] as const).map(({ key, label }) => {
+              const range = effectiveFramework.phase_weeks[key];
+              return (
+                <div key={key} className="flex items-baseline gap-3">
+                  <span className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.16em] w-[80px] flex-shrink-0">
+                    {label}
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={effectiveFramework.total_weeks}
+                    value={range[0]}
+                    onChange={(e) =>
+                      updateFramework({
+                        phase_weeks: {
+                          ...effectiveFramework.phase_weeks,
+                          [key]: [Number(e.target.value) || range[0], range[1]],
+                        },
+                      })
+                    }
+                    className={`${inputClass} max-w-[72px] tabular-nums text-center`}
+                  />
+                  <span className="text-[11px] text-boost-muted/70">–</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={effectiveFramework.total_weeks}
+                    value={range[1]}
+                    onChange={(e) =>
+                      updateFramework({
+                        phase_weeks: {
+                          ...effectiveFramework.phase_weeks,
+                          [key]: [range[0], Number(e.target.value) || range[1]],
+                        },
+                      })
+                    }
+                    className={`${inputClass} max-w-[72px] tabular-nums text-center`}
+                  />
+                  <span className="text-[10px] text-boost-muted">week range</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <AdminPrompt
+            divider
+            question="When do the key milestones land?"
+            helper="UAT and Go-Live are the most-customised — biggest customer-side variables. Kickoff almost always week 1."
+          />
+          <div className="space-y-3">
+            {([
+              { key: "kickoff_week", label: "Kickoff", kind: "single" as const },
+              { key: "scope_signoff_weeks", label: "Scope sign-off", kind: "range" as const },
+              { key: "uat_start_week", label: "UAT start", kind: "single" as const },
+              { key: "go_live_week", label: "Go-Live", kind: "single" as const },
+            ]).map((m) => (
+              <div key={m.key} className="flex items-baseline gap-3">
+                <span className="text-[10px] font-bold text-boost-muted uppercase tracking-[0.16em] w-[110px] flex-shrink-0">
+                  {m.label}
+                </span>
+                {m.kind === "single" ? (
+                  <input
+                    type="number"
+                    min={1}
+                    max={effectiveFramework.total_weeks}
+                    value={effectiveFramework.milestones[m.key as "kickoff_week" | "uat_start_week" | "go_live_week"]}
+                    onChange={(e) =>
+                      updateFramework({
+                        milestones: {
+                          ...effectiveFramework.milestones,
+                          [m.key]: Number(e.target.value) || 1,
+                        },
+                      })
+                    }
+                    className={`${inputClass} max-w-[72px] tabular-nums text-center`}
+                  />
+                ) : (
+                  (() => {
+                    const range = effectiveFramework.milestones.scope_signoff_weeks;
+                    return (
+                      <>
+                        <input
+                          type="number"
+                          min={1}
+                          max={effectiveFramework.total_weeks}
+                          value={range[0]}
+                          onChange={(e) =>
+                            updateFramework({
+                              milestones: {
+                                ...effectiveFramework.milestones,
+                                scope_signoff_weeks: [Number(e.target.value) || range[0], range[1]],
+                              },
+                            })
+                          }
+                          className={`${inputClass} max-w-[72px] tabular-nums text-center`}
+                        />
+                        <span className="text-[11px] text-boost-muted/70">–</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={effectiveFramework.total_weeks}
+                          value={range[1]}
+                          onChange={(e) =>
+                            updateFramework({
+                              milestones: {
+                                ...effectiveFramework.milestones,
+                                scope_signoff_weeks: [range[0], Number(e.target.value) || range[1]],
+                              },
+                            })
+                          }
+                          className={`${inputClass} max-w-[72px] tabular-nums text-center`}
+                        />
+                      </>
+                    );
+                  })()
+                )}
+                <span className="text-[10px] text-boost-muted">
+                  week{m.kind === "range" ? " range" : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <AdminPrompt
+            divider
+            question="Pilot rollout target?"
+            helper="Controlled-traffic band before full ramp. Risk-averse customers want narrower (e.g. 5–10%); bold ones go higher."
+          />
+          <div className="flex items-baseline gap-3">
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={effectiveFramework.pilot_traffic_pct[0]}
+              onChange={(e) =>
+                updateFramework({
+                  pilot_traffic_pct: [
+                    Number(e.target.value) || 0,
+                    effectiveFramework.pilot_traffic_pct[1],
+                  ],
+                })
+              }
+              className={`${inputClass} max-w-[72px] tabular-nums text-center`}
+            />
+            <span className="text-[11px] text-boost-muted/70">–</span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={effectiveFramework.pilot_traffic_pct[1]}
+              onChange={(e) =>
+                updateFramework({
+                  pilot_traffic_pct: [
+                    effectiveFramework.pilot_traffic_pct[0],
+                    Number(e.target.value) || effectiveFramework.pilot_traffic_pct[1],
+                  ],
+                })
+              }
+              className={`${inputClass} max-w-[72px] tabular-nums text-center`}
+            />
+            <span className="text-[10px] text-boost-muted">% of live traffic</span>
+          </div>
+
+          <p className="mt-6 text-[11px] text-boost-muted leading-relaxed max-w-prose">
+            More knobs (team commitments, hypercare durations, CSAT distribution) land in
+            follow-up commits as the four downstream sections wire through. For now this
+            section drives <span className="font-semibold text-boost-dark">Implementation
+            &amp; Rollout</span> directly.
+          </p>
         </CollapsibleSection>
         ) : null}
 
