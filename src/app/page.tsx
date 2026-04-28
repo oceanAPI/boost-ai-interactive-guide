@@ -121,6 +121,25 @@ const CARDS: LandingCard[] = [
     href: "#",
     comingSoon: true,
   },
+  /* Competetive Intel — sister project at ../competetive intel/.
+   * Static Next.js export deployed separately to GitHub Pages with
+   * its own basePath. Daily auto-fetched competitor briefing (Kore.ai
+   * / Cognigy / PolyAI / Sierra / SoundHound / Omilia / Salesforce
+   * Agentforce). Card href stays "#" until the deploy URL is
+   * confirmed — swap to the live GH Pages URL when ready. */
+  {
+    key: "competetive-intel",
+    label: "Competetive Intel",
+    tagline: "Daily competitor briefing — boost.ai vs the field",
+    icon: "global-search",
+    bullets: [
+      "Auto-fetched press, product, LinkedIn moves",
+      "7 tracked competitors, structured by category",
+      "Markdown archive + emailable daily roll-up",
+    ],
+    href: "#",
+    comingSoon: true,
+  },
 ];
 
 /** Analytics gets its own treatment — wider tile with inline
