@@ -5,7 +5,7 @@ import type { GuideData } from "@/lib/types";
 import { getAgentsForGuide } from "@/data/agents";
 import { INTEGRATION_CATEGORIES } from "@/data/integrations";
 import { ROADMAP_PHASES, ROADMAP_LANES } from "@/data/roadmap";
-import { calculateROI, resolveCurrency, formatWithCurrency } from "@/lib/roi-calculator";
+import { calculateROI, resolveCurrency, formatWithCurrency, parseConversationCost } from "@/lib/roi-calculator";
 import { getInvoiceContext } from "@/lib/pricing-calculator";
 import { SectionHeader, Badge } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -433,7 +433,7 @@ function IntegrationsROI({
   const vol = invoice?.expectedMonthlyChat
     ? invoice.expectedMonthlyChat
     : Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0) || 10000;
-  const costNum = parseFloat(guide.conversation_cost?.replace(/[^0-9.]/g, "") || "0") || 8;
+  const costNum = parseConversationCost(guide.conversation_cost, 8);
 
   const currency = resolveCurrency(guide.currency, guide.conversation_cost);
   const roi = useMemo(

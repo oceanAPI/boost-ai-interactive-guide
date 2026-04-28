@@ -8,7 +8,7 @@
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
 import type { GuideFormData } from "./types";
-import { calculateROI } from "./roi-calculator";
+import { calculateROI, parseConversationCost } from "./roi-calculator";
 import { getInvoiceContext, calculatePricing, pricingConfigHasContent } from "./pricing-calculator";
 import { getOrchestratorConfig, getAgentsForGuide } from "@/data/agents";
 import { ROADMAP_PHASES, ROADMAP_LANES } from "@/data/roadmap";
@@ -555,7 +555,11 @@ class SOWBuilder {
       : 70;
 
     const vols = form.channel_volumes;
-    const cost = parseFloat(form.conversation_cost) || 5;
+    // Previously `parseFloat(form.conversation_cost) || 5` — broken on
+    // any cost string with a leading currency symbol ("$8.50", "€6.20")
+    // because parseFloat returns NaN, falling back to 5 instead of
+    // the rep's real number. parseConversationCost strips the prefix.
+    const cost = parseConversationCost(form.conversation_cost, 5);
 
     // Invoice-first: if the 2026 pricing builder is populated, the
     // SoW quotes the same monthly + implementation numbers as the
@@ -584,13 +588,19 @@ class SOWBuilder {
       return;
     }
 
+    // BUG FIX: previously passed `form.conversation_cost` (a free-text
+    // price string like "$8.50, 55 NOK") into the `currency` slot, which
+    // expects a CurrencyCode. The Nordic services-floor heuristic in
+    // roi-calculator.ts reads /NOK|SEK|DKK/i.test(currency) — so the
+    // bug only worked accidentally when the price string happened to
+    // include those tokens. Now passing the explicit currency code.
     const roi = calculateROI({
       monthlyConversations: totalVol,
       costPerConversation: cost,
       pricingModel: form.pricing_model,
       automationRate: avgAutomation,
       markets: form.deployment_markets,
-      currency: form.conversation_cost,
+      currency: form.currency,
       fteCapacityPerMonth: form.fte_capacity_per_month,
       automationRampMonths: form.automation_ramp_months,
       invoiceMonthlyCostUSD: invoiceCtx?.monthlyUSD,

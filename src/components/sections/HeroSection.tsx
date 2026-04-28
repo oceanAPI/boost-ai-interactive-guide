@@ -5,6 +5,7 @@ import type { GuideData } from "@/lib/types";
 import { assetPath } from "@/lib/asset-path";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
+import { parseConversationCost } from "@/lib/roi-calculator";
 // useCompanyLogo available if needed for favicon — currently using company name typography instead
 
 function abbreviateNumber(n: number): { value: number; suffix: string } {
@@ -15,7 +16,7 @@ function abbreviateNumber(n: number): { value: number; suffix: string } {
 
 function computeDynamicStats(guide: GuideData) {
   const totalVolume = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0);
-  const costNum = parseFloat(guide.conversation_cost?.replace(/[^0-9.]/g, "") || "0");
+  const costNum = parseConversationCost(guide.conversation_cost);
 
   // Detect currency symbol
   const costStr = guide.conversation_cost || "";

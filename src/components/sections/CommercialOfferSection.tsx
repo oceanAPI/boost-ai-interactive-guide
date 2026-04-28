@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import type { GuideData } from "@/lib/types";
 import type { PricingModel } from "@/lib/types";
 import { getAgentsForGuide } from "@/data/agents";
-import { calculateROI, resolveCurrency, formatWithCurrency } from "@/lib/roi-calculator";
+import { calculateROI, resolveCurrency, formatWithCurrency, parseConversationCost } from "@/lib/roi-calculator";
 import { calculatePricing, calculateResourcePlan, formatUSD, pricingConfigHasContent } from "@/lib/pricing-calculator";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -303,7 +303,7 @@ export default function CommercialOfferSection({ guide, sectionNumber }: { guide
 
   // ROI context
   const totalVolume = Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0);
-  const costNum = parseFloat(guide.conversation_cost?.replace(/[^0-9.]/g, "") || "0");
+  const costNum = parseConversationCost(guide.conversation_cost);
   const agents = getAgentsForGuide(guide.areas_of_interest, guide.selected_variants);
   const avgRate = agents.length > 0
     ? Math.round(agents.reduce((s, a) => s + a.automationRate, 0) / agents.length)

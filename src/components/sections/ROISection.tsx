@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import type { GuideData } from "@/lib/types";
 import { getAgentsForGuide } from "@/data/agents";
-import { calculateROI, resolveCurrency, formatWithCurrency } from "@/lib/roi-calculator";
+import { calculateROI, resolveCurrency, formatWithCurrency, parseConversationCost } from "@/lib/roi-calculator";
 import { getInvoiceContext } from "@/lib/pricing-calculator";
 import { SectionHeader, StatCounter } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -37,7 +37,7 @@ export default function ROISection({
   const totalVolumeFromGuide = invoice?.expectedMonthlyChat
     ? invoice.expectedMonthlyChat
     : Object.values(guide.channel_volumes).reduce((s, v) => s + (v || 0), 0);
-  const costFromGuide = parseFloat(guide.conversation_cost?.replace(/[^0-9.]/g, "") || "0");
+  const costFromGuide = parseConversationCost(guide.conversation_cost);
 
   const agents = getAgentsForGuide(guide.areas_of_interest, guide.selected_variants);
   const avgRate = agents.length > 0

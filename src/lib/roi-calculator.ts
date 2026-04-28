@@ -220,6 +220,35 @@ export function calculateROI(inputs: ROIInputs): ROIResults {
 }
 
 /**
+ * Parse the numeric amount out of a free-text cost string.
+ *
+ * `conversation_cost` is captured as free text in admin so reps can
+ * type natural strings ("$8.50", "~55 NOK", "€6.20"). Every consumer
+ * of that number (Hero, ROI, Impact, Commercial, ScopeOfWork, SoW
+ * PDF) used to inline the same `parseFloat(cost.replace(/[^0-9.]/g,
+ * "") || "0")` snippet, with inconsistent fallbacks (some defaulted
+ * to 8 when the result was 0, others left it 0). This helper makes
+ * the parse a single source of truth.
+ *
+ * @param costStr  the raw `guide.conversation_cost` value
+ * @param fallback amount to return when the string is empty or
+ *                 yields 0 after parsing. Pass 0 if you want the
+ *                 caller to explicitly handle the empty case;
+ *                 pass 8 (the historical default) when you need
+ *                 a baseline cost for ROI math.
+ */
+export function parseConversationCost(
+  costStr: string | undefined,
+  fallback: number = 0,
+): number {
+  if (!costStr) return fallback;
+  const cleaned = costStr.replace(/[^0-9.]/g, "");
+  const parsed = parseFloat(cleaned);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return parsed;
+}
+
+/**
  * Extract currency symbol from a cost string like "~55 SEK", "$8.50", "€12".
  * Falls back to "$" if nothing recognised.
  */

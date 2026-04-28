@@ -71,6 +71,13 @@ function SlidesContent() {
     );
   }
 
+  // Mirror /guide/page.tsx field threading 1:1. Previously dropped
+  // five customer-provided fields (currency, fte_capacity_per_month,
+  // automation_ramp_months, pricing_config, market_volumes) so the
+  // slideshow rendered with defaults instead of the rep's inputs —
+  // ROI used 1500/FTE, ramp=0, no 2026 invoice, no per-market
+  // rollups. Now Generate \u2192 Presentation honors every customer
+  // field the same way /guide does.
   const guide: GuideData = {
     id: "slides",
     created_at: new Date().toISOString(),
@@ -83,11 +90,16 @@ function SlidesContent() {
     areas_of_interest: formData.areas_of_interest || [],
     specific_requirements: formData.specific_requirements || "",
     channel_volumes: formData.channel_volumes || {},
+    market_volumes: formData.market_volumes,
     conversation_cost: formData.conversation_cost || "",
+    currency: formData.currency,
     pricing_model: formData.pricing_model || "fixed",
+    fte_capacity_per_month: formData.fte_capacity_per_month,
+    automation_ramp_months: formData.automation_ramp_months,
     deployment_markets: formData.deployment_markets || 1,
     resources: formData.resources || {},
     integrations: formData.integrations || {},
+    pricing_config: formData.pricing_config,
     custom_notes: formData.custom_notes || "",
   };
 
