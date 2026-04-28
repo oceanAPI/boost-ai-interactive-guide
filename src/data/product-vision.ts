@@ -13,10 +13,10 @@
 
 import type { FocusArea } from "./product-roadmap-2026";
 
-/* ─── Company tagline — appears at the foot of every PDS slide ─── */
+/* ─── Company tagline — appears at the foot of every Product Roadmap 2026 deck slide ─── */
 export const COMPANY_TAGLINE = "Trust every conversation";
 
-/* ─── Vision opening — slide 2 of the PDS ─── */
+/* ─── Vision opening — slide 2 of the Product Roadmap 2026 deck ─── */
 export interface VisionOpening {
   paragraphs: string[];
   /** The italicised closing line — rendered with emphasis. */
@@ -32,7 +32,7 @@ export const VISION_OPENING: VisionOpening = {
     "The future isn't about automation — it's about conversations, and creating and guiding the operating layer of a more intuitive, human-centered digital world.",
 };
 
-/* ─── Three Product Strategy pillars — slide 3 of the PDS ─── *
+/* ─── Three Product Strategy pillars — slide 3 of the Product Roadmap 2026 deck ─── *
  * "Our future is built on meaningful outcomes — The boost.ai Product
  * Strategy." These pillars sit BEFORE the four focus areas: they're
  * the why; the focus areas are the where; the per-focus-area phases
@@ -66,7 +66,7 @@ export const STRATEGY_PILLARS: StrategyPillar[] = [
   },
 ];
 
-/* ─── Focus-areas closing line — slide 4 of the PDS ─── *
+/* ─── Focus-areas closing line — slide 4 of the Product Roadmap 2026 deck ─── *
  * The four focus areas (voice / agentic / adoption / scalability) sit
  * inside this framing question. */
 export const FOCUS_AREAS_OUTRO =

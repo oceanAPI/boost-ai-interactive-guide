@@ -11,7 +11,7 @@ import {
   FOCUS_AREAS_OUTRO,
 } from "@/data/product-vision";
 
-/* ─── Vision opening — PDS slide 2 ─── *
+/* ─── Vision opening — Product Roadmap 2026 deck slide 2 ─── *
  * Tagline + the "complete shift through conversations" framing. Sits
  * at the very top of the Vision tab, before any pillars or strategy.
  * Quiet typography — purple tagline above two body paragraphs and an
@@ -46,10 +46,10 @@ function VisionOpeningBlock({ visible }: { visible: boolean }) {
   );
 }
 
-/* ─── Strategy pillars — PDS slide 3 ─── *
+/* ─── Strategy pillars — Product Roadmap 2026 deck slide 3 ─── *
  * "Our future is built on meaningful outcomes." Three pillars laid
  * out as a 1/3 grid (single column on mobile). The two-tone title
- * mirrors the PDS slide where the second word renders in italic
+ * mirrors the Product Roadmap 2026 deck slide where the second word renders in italic
  * green. Body text is quiet, tight, descriptive. */
 function StrategyPillarsBlock({ visible }: { visible: boolean }) {
   return (
@@ -221,10 +221,10 @@ function PullQuote({
 export default function VisionTab({ visible }: { visible: boolean }) {
   return (
     <div className="space-y-12 sm:space-y-16">
-      {/* Vision opening — PDS slide 2 */}
+      {/* Vision opening — Product Roadmap 2026 deck slide 2 */}
       <VisionOpeningBlock visible={visible} />
 
-      {/* Strategy pillars — PDS slide 3 */}
+      {/* Strategy pillars — Product Roadmap 2026 deck slide 3 */}
       <StrategyPillarsBlock visible={visible} />
 
       {/* Pillar strip — light opening, no cards */}
@@ -233,7 +233,7 @@ export default function VisionTab({ visible }: { visible: boolean }) {
           Four focus areas
         </p>
         <PillarStrip visible={visible} />
-        {/* Closing question — PDS slide 4. Splits cleanly around the
+        {/* Closing question — Product Roadmap 2026 deck slide 4. Splits cleanly around the
             accented phrase so the surrounding copy stays in sync if
             FOCUS_AREAS_OUTRO is edited later. */}
         {(() => {
