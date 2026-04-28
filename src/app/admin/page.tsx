@@ -344,8 +344,15 @@ function Rail(props: {
   onAddNext?: () => void;
   nextLabel?: string;
   customer?: { name: string; logoUrl?: string | null; domain?: string; category?: string };
+  /** Engagement-scoped currency picker. Lives in the rail header
+   *  because it's a property of the deck being built, not of the
+   *  audience viewing it. CE/PS sessions still see it (they care
+   *  about money rendering too) but it's no longer noise on the
+   *  purple audience banner. Pass undefined to hide the picker. */
+  currency?: string;
+  onCurrencyChange?: (next: string | undefined) => void;
 }) {
-  const { items, active, onJump, onAddNext, nextLabel, customer } = props;
+  const { items, active, onJump, onAddNext, nextLabel, customer, currency, onCurrencyChange } = props;
   const filled = items.filter((i) => i.hasContent).length;
   return (
     <aside
@@ -362,9 +369,24 @@ function Rail(props: {
           />
         ) : null}
         <div className="px-4 py-3 border-b border-boost-border">
-          <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-boost-muted">
-            Build engagement
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-boost-muted">
+              Build engagement
+            </p>
+            {onCurrencyChange ? (
+              <select
+                aria-label="Currency"
+                value={currency ?? ""}
+                onChange={(e) => onCurrencyChange(e.target.value || undefined)}
+                className="-mr-1 text-[9px] font-bold uppercase tracking-[0.16em] text-boost-muted hover:text-boost-dark bg-transparent border-0 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-boost-purple/30 rounded px-1 py-0.5 transition-colors"
+              >
+                <option value="">Auto</option>
+                {CURRENCY_OPTIONS.map((opt) => (
+                  <option key={opt.code} value={opt.code}>{opt.label}</option>
+                ))}
+              </select>
+            ) : null}
+          </div>
           <p className="text-[12px] font-semibold text-boost-dark mt-0.5 tabular-nums">
             {filled}
             <span className="text-boost-muted/70 font-medium">
@@ -1803,31 +1825,10 @@ export default function AdminPage() {
               </p>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
-              {/* Global currency picker — drives every money display
-                  across ROI / Impact / Commercial / SoW. Separate
-                  from per-conversation cost so Nordic tenants get
-                  "kr" where they expect it. */}
-              <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80">
-                <span>Currency</span>
-                <select
-                  aria-label="Currency"
-                  value={form.currency ?? ""}
-                  onChange={(e) =>
-                    updateField(
-                      "currency",
-                      (e.target.value || undefined) as GuideFormData["currency"],
-                    )
-                  }
-                  className="bg-white/10 text-white text-[11px] font-semibold uppercase tracking-[0.14em] rounded-sm px-2 py-0.5 border border-white/20 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 focus-visible:ring-offset-boost-purple"
-                >
-                  <option value="" className="text-boost-dark">Auto</option>
-                  {CURRENCY_OPTIONS.map((opt) => (
-                    <option key={opt.code} value={opt.code} className="text-boost-dark">
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {/* Currency picker moved into the Rail header (see
+                  RailCustomerHeader callsite below) — it's a property
+                  of the engagement, not of the audience. CE/PS modes
+                  no longer carry that noise here. */}
               <Link
                 href="/"
                 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 focus-visible:ring-offset-boost-purple rounded-sm px-2 py-0.5 whitespace-nowrap"
@@ -1929,6 +1930,10 @@ export default function AdminPage() {
                 : undefined) ||
               undefined,
           }}
+          currency={form.currency}
+          onCurrencyChange={(next) =>
+            updateField("currency", next as GuideFormData["currency"])
+          }
         />
       <main className="flex-1 min-w-0 space-y-4">
         {/* Sections 1 + 2 are SHARED customer metadata \u2014 rendered
