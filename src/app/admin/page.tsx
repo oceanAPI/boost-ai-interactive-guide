@@ -1897,6 +1897,23 @@ export default function AdminPage() {
                   RailCustomerHeader callsite below) — it's a property
                   of the engagement, not of the audience. CE/PS modes
                   no longer carry that noise here. */}
+              {/* Competetive Intel — sister tool, sales-only. Daily
+                  auto-fetched competitor briefing (Kore.ai / Cognigy /
+                  PolyAI / Sierra / SoundHound / Omilia / Salesforce
+                  Agentforce). href is "#" until the deploy URL is
+                  confirmed — swap to the live GH Pages URL when ready. */}
+              {audience === "sales" ? (
+                <a
+                  href="#"
+                  aria-disabled="true"
+                  className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 focus-visible:ring-offset-boost-purple rounded-sm px-2 py-0.5 whitespace-nowrap inline-flex items-center gap-1 cursor-not-allowed opacity-80"
+                  onClick={(e) => e.preventDefault()}
+                  title="Coming soon — deploy URL not yet wired"
+                >
+                  <span>Competetive Intel</span>
+                  <span aria-hidden="true">↗</span>
+                </a>
+              ) : null}
               <Link
                 href="/"
                 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 focus-visible:ring-offset-boost-purple rounded-sm px-2 py-0.5 whitespace-nowrap"
