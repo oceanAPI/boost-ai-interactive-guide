@@ -114,6 +114,113 @@ function PillarStrip({ visible }: { visible: boolean }) {
   );
 }
 
+/* ─── Per-pillar delivery — Product Roadmap 2026 deck slides 15 / 22
+ *  / 29 / 38 ─── *
+ * One block per pillar. Above the fold: the pillar title, framing
+ * question, and the canonical product-vision paragraph already shown
+ * higher in the strip. Below: the 4-phase delivery on a connector
+ * timeline (mirrors the deck's dot-and-line treatment), then the
+ * "Value for your team and end users" 5-bullet list. */
+function PillarDeliveryBlock({
+  pillar,
+  visible,
+  delay,
+}: {
+  pillar: import("@/data/product-vision").VisionPillar;
+  visible: boolean;
+  delay: number;
+}) {
+  const accentColor =
+    pillar.colour === "purple"
+      ? "text-boost-purple"
+      : pillar.colour === "green-light"
+        ? "text-boost-green-light"
+        : pillar.colour === "gold"
+          ? "text-boost-gold"
+          : "text-boost-green";
+  const accentBg =
+    pillar.colour === "purple"
+      ? "bg-boost-purple"
+      : pillar.colour === "green-light"
+        ? "bg-boost-green-light"
+        : pillar.colour === "gold"
+          ? "bg-boost-gold"
+          : "bg-boost-green";
+  return (
+    <div
+      className="transition-all duration-700"
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(10px)",
+        transitionDelay: `${delay}ms`,
+      }}
+    >
+      {/* Header */}
+      <div className="mb-7">
+        <p
+          className={`text-[10px] font-bold uppercase tracking-[0.18em] mb-2 ${accentColor}`}
+        >
+          {pillar.title}
+        </p>
+        <h3 className="text-xl sm:text-2xl font-semibold text-boost-dark leading-snug max-w-[60ch]">
+          {pillar.question}
+        </h3>
+      </div>
+
+      {/* 4-phase timeline */}
+      <div className="relative mb-9">
+        {/* Connector line */}
+        <span
+          aria-hidden="true"
+          className={`absolute left-0 right-0 top-[6px] h-px ${accentBg} opacity-30`}
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-7 gap-y-6">
+          {pillar.phases.map((phase, i) => (
+            <div key={i} className="relative">
+              {/* Dot */}
+              <span
+                aria-hidden="true"
+                className={`absolute left-0 top-0 w-3 h-3 rounded-full ${accentBg} ring-4 ring-white`}
+              />
+              <div className="pl-6">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-muted mb-1.5">
+                  Phase {i + 1}
+                </p>
+                <p className="text-[13px] text-boost-text-secondary leading-relaxed">
+                  {phase}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Value bullets */}
+      <div>
+        <p
+          className={`text-[10px] font-bold uppercase tracking-[0.14em] mb-3 ${accentColor}`}
+        >
+          Value for your team and end users
+        </p>
+        <ul className="space-y-2">
+          {pillar.valueBullets.map((bullet, i) => (
+            <li
+              key={i}
+              className="flex items-start gap-2.5 text-[13px] text-boost-text-secondary leading-relaxed"
+            >
+              <span
+                aria-hidden="true"
+                className={`mt-[7px] w-1.5 h-1.5 rounded-full flex-shrink-0 ${accentBg} opacity-70`}
+              />
+              <span>{bullet}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Test Studio hero — centre-stage, the section's anchor ─── */
 function SpotlightHero({ visible }: { visible: boolean }) {
   return (
@@ -253,6 +360,37 @@ export default function VisionTab({ visible }: { visible: boolean }) {
             </p>
           );
         })()}
+      </div>
+
+      {/* Per-pillar 4-phase delivery — Product Roadmap 2026 deck
+          slides 15 / 22 / 29 / 38. Each pillar gets its connector
+          timeline + 5-bullet value list. Sleek vertical stack,
+          quiet dividers between pillars. */}
+      <div className="space-y-12 sm:space-y-14 pt-2">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-muted">
+            Per-pillar delivery
+          </p>
+          <h3 className="mt-2 text-2xl sm:text-3xl font-bold text-boost-dark leading-tight max-w-[28ch]">
+            Where each pillar lands across the year.
+          </h3>
+        </div>
+        {VISION_PILLARS.map((pillar, i) => (
+          <div
+            key={pillar.id}
+            className={
+              i > 0
+                ? "border-t border-boost-border/70 pt-12 sm:pt-14"
+                : ""
+            }
+          >
+            <PillarDeliveryBlock
+              pillar={pillar}
+              visible={visible}
+              delay={150 + i * 80}
+            />
+          </div>
+        ))}
       </div>
 
       {/* Test Studio — the centrepiece */}

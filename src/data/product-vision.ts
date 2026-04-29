@@ -78,6 +78,13 @@ export interface VisionPillar {
   question: string;
   productVision: string;
   colour: "purple" | "green-light" | "gold" | "green";
+  /** Per-pillar 4-phase delivery — Product Roadmap 2026 deck pages
+   *  15 (voice), 22 (agentic), 29 (adoption), 38 (scaling). Tuple of
+   *  exactly 4 strings; rendered as a horizontal connector timeline. */
+  phases: [string, string, string, string];
+  /** "Value for your team and end users" — 5 bullets per pillar from
+   *  the same source pages. */
+  valueBullets: string[];
 }
 
 export const VISION_PILLARS: VisionPillar[] = [
@@ -88,6 +95,19 @@ export const VISION_PILLARS: VisionPillar[] = [
     productVision:
       "Deliver best-in-class voice experiences and customer-facing tools for designing, deploying, optimising, and analysing voice agents. This includes hybrid architecture for enterprise-level control, seamless transitions between chat and voice, and multi-modal support that ranges from telephony to app-based interfaces such as avatars.",
     colour: "purple",
+    phases: [
+      "In-house voice offering with embedded analytics and configuration, and hybrid architecture. Beta version of voice test studio.",
+      "Multi-modal conversations, custom voices and sounds, and voice-specific design tools. Full version of voice test studio with automatic annotations.",
+      "Optimised experiences for avatars, in-app, and ubiquitous devices, informed by existing chat and CCaaS data.",
+      "End-to-end user engagement analytics and insights across channels, external agents, and conversations, driving user-specific recommendations.",
+    ],
+    valueBullets: [
+      "Natural voice experiences across telephony, apps, and avatars",
+      "Easy, AI-assisted creation and optimisation of voice-first flows",
+      "Seamless switching between voice and chat in the same conversation",
+      "Enterprise-grade control with flexible hybrid architecture",
+      "Continuous, AI-driven improvements for higher automation and quality",
+    ],
   },
   {
     id: "agentic",
@@ -96,6 +116,19 @@ export const VISION_PILLARS: VisionPillar[] = [
     productVision:
       "Build an agentic orchestration layer that replaces intent-based NLU by intelligently routing conversations to the right internal and external agents. The platform evolves from controlled internal routing with foundational analytics to automated intent-to-agent transformations, A2A support, and a high-agency control room that governs and improves agent behaviour. Over time, it becomes self-improving by adapting to both internal performance signals and external business changes.",
     colour: "green-light",
+    phases: [
+      "Beta version with internal agent routing, supported by MVP-level analytics and testing.",
+      "Full version with automated tooling for transitioning customers from intent-based models, and inclusion of external agents with A2A.",
+      "High-Agency control room that detects unwanted agent behaviour from the AI agent and provides improvement suggestions.",
+      "Self-improvement goes beyond internal behaviour to monitor and react to business changes outside of the system.",
+    ],
+    valueBullets: [
+      "Lower effort to set up, maintain, and expand",
+      "Built-in context, disambiguation, and conversation repair",
+      "Better customer experiences through more fluid, context-aware conversations",
+      "Secure framework for connecting external agents with visibility and control",
+      "Self-learning ensures tight fit with organisational change",
+    ],
   },
   {
     id: "adoption",
@@ -104,6 +137,19 @@ export const VISION_PILLARS: VisionPillar[] = [
     productVision:
       "Transform the platform into a conversationally driven, self-service environment where both technical and non-technical users can build, analyse, and extend automation through natural language. By embedding AI Companions across settings, flows, connectors, and analytics, we reduce friction and accelerate adoption. An integration service for custom channels and human handovers further unlocks accessibility and flexibility for enterprises.",
     colour: "gold",
+    phases: [
+      "Get Started Wizard and API Companion.",
+      "AI Companions for building flows and generating custom analytics. Get Started Wizard is agent-based with contextual awareness of the business. Integration service for custom channels and human handovers.",
+      "AI Companion generates advanced analytics views and executive summaries based on data within the system and in CCaaS and other external platforms.",
+      "90% of admin panel interface is covered by conversational experiences with the AI Companion, augmented with visuals.",
+    ],
+    valueBullets: [
+      "Faster onboarding with guided setup and conversational wizards",
+      "Self-service tools that empower both technical and non-technical users",
+      "AI Companions that help build flows, analytics, and integrations",
+      "Reduced friction through intuitive, conversational platform navigation",
+      "Increased adoption driven by clear insights into performance and business value",
+    ],
   },
   {
     id: "scalability",
@@ -112,6 +158,19 @@ export const VISION_PILLARS: VisionPillar[] = [
     productVision:
       "Enable enterprises to confidently scale conversational AI across multiple teams, business units, and geographies by providing advanced configuration tools and centralised administration and analytics. Empower customers and partners to spin up, configure, and manage multiple instances programmatically.",
     colour: "green",
+    phases: [
+      "Custom user roles with permission-based controls. Custom conversation analytics fields and tags.",
+      "New chat panel with UI-based configs, including inline and full-screen options. External spin-up, configuration, and management of instances by API.",
+      "Multi-instance administration dashboard and analytics, with improved options for sharing content across instances.",
+      "Marketplace for assets and external connections that lets customers quickly scale and share across instances.",
+    ],
+    valueBullets: [
+      "Faster configuration with a new chat panel and UI-based controls",
+      "Programmatic instance management through APIs",
+      "Fine-grained governance for user management and analytics fields",
+      "Centralised oversight with multi-instance administration and cross-instance sharing",
+      "Rapid expansion enabled by a marketplace for reusable assets and integrations",
+    ],
   },
 ];
 
