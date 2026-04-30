@@ -27,6 +27,7 @@ import TrustValidationSection from "@/components/sections/TrustValidationSection
 import CaseStudiesSection from "@/components/sections/CaseStudiesSection";
 import CommunitySection from "@/components/sections/CommunitySection";
 import BoostCampSection from "@/components/sections/BoostCampSection";
+import ResourcesSection from "@/components/sections/ResourcesSection";
 import CommercialOfferSection from "@/components/sections/CommercialOfferSection";
 import ROISection from "@/components/sections/ROISection";
 import ScopeOfWorkSection from "@/components/sections/ScopeOfWorkSection";
@@ -66,6 +67,7 @@ const SECTIONS = [
   { id: "case-studies", label: "Case Studies", icon: "★" },
   { id: "community", label: "Boost.ai Community", icon: "◎" },
   { id: "boost-camp", label: "Boost Camp", icon: "▸" },
+  { id: "resources", label: "Resources & Trust", icon: "⊙" },
   { id: "project-framing", label: "Project Framing", icon: "◆" },
   { id: "build-scope", label: "Build Scope", icon: "◫" },
   { id: "roles-and-responsibilities", label: "Roles & Responsibilities", icon: "◈" },
@@ -397,6 +399,13 @@ export default function GuideClient({
             <div id="boost-camp" ref={(el) => { sectionRefs.current["boost-camp"] = el; }}>
               <SectionReportPill sectionId="boost-camp" displayName="Boost Camp" />
               <BoostCampSection sectionNumber={sn("boost-camp")} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("resources")) && (
+            <div id="resources" ref={(el) => { sectionRefs.current["resources"] = el; }}>
+              <SectionReportPill sectionId="resources" displayName="Resources & Trust" />
+              <ResourcesSection />
             </div>
           )}
 

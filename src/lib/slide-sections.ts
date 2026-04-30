@@ -55,6 +55,7 @@ export const SLIDE_SECTIONS: SlideSection[] = [
   { id: "case-studies",             label: "Case Studies",              group: "proof",      minutes: 3,  hint: "Customer stories — AE-picks or auto-sorted" },
   { id: "community",                label: "Boost.ai Community",        group: "community",  minutes: 1,  hint: "Training + platform walkthrough video library" },
   { id: "boost-camp",               label: "Boost Camp",                group: "community",  minutes: 2,  hint: "Annual event with clickable map of past + upcoming" },
+  { id: "resources",                label: "Resources & Trust",         group: "community",  minutes: 2,  hint: "Academy · Help Center · Trust Center · Community — four external surfaces", defaultEnabled: false },
   { id: "commercial-offer",         label: "Commercial Offer",          group: "commercial", minutes: 2,  hint: "Pricing framing + proposal terms" },
   { id: "roi",                      label: "ROI Calculator",            group: "commercial", minutes: 2,  hint: "Interactive savings + break-even modelling" },
   { id: "scope-of-work",            label: "Scope of Work",             group: "commercial", minutes: 3,  hint: "Visual SOW — scope, team, timeline, integrations/ROI" },
