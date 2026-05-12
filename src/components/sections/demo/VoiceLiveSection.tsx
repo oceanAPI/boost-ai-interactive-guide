@@ -851,11 +851,12 @@ function DemoGlyphSvg({ glyph, className }: { glyph: DemoGlyph; className?: stri
   );
 }
 
-/* ─── Gallery — pick-a-demo grid ─── *
- * 2×3 grid (1-col on mobile). Each card carries label, tagline,
- * glyph, and the pillar accent stripe. Click → pre-flight panel.
- * The "Open a free chat instead" link below the gallery is a dev
- * escape hatch; AEs in front of customers will always pick a demo. */
+/* ─── Gallery — editorial-list pick-a-demo ─── *
+ * Six rows, each: large pillar-tinted icon left, title + tagline
+ * stacked right, animated arrow far right. Hairline divider between
+ * rows — no boxes, no card chrome. Staggered fade-in on mount via
+ * useScrollReveal. Hover state: subtle row-tint, icon scale, title
+ * accent flash, arrow translate. */
 function DemoGallery({
   onPick,
   onFreeChat,
@@ -863,72 +864,81 @@ function DemoGallery({
   onPick: (demo: VoiceDemo) => void;
   onFreeChat: () => void;
 }) {
+  const { ref, isVisible } = useScrollReveal({ once: true });
   return (
     <div data-testid="voice-demo-gallery">
       <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-boost-muted mb-2">
         Pick a demo
       </p>
-      <h3 className="text-2xl sm:text-3xl font-bold text-boost-dark leading-tight mb-6 max-w-[34ch]">
-        Six features, each three minutes long.
+      <h3 className="text-2xl sm:text-3xl font-bold text-boost-dark leading-tight mb-1 max-w-[34ch]">
+        Six features. Three minutes each.
       </h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {VOICE_DEMOS.map((demo) => (
-          <button
-            key={demo.id}
-            type="button"
-            onClick={() => onPick(demo)}
-            data-testid={`voice-demo-card-${demo.id}`}
-            className="group relative block text-left rounded-xl border border-boost-border bg-white shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-purple/40 focus-visible:ring-offset-2"
-          >
-            {/* Pillar accent stripe — left edge */}
-            <span
-              aria-hidden="true"
-              className={`absolute left-0 top-0 bottom-0 w-1 transition-all group-hover:w-1.5 ${
-                PILLAR_ACCENT_BG[demo.pillar]
-              }`}
-            />
-            <div className="p-5">
-              {/* Glyph circle */}
-              <span
-                className={`inline-flex items-center justify-center w-11 h-11 rounded-full mb-4 transition-all duration-300 group-hover:scale-[1.04] ${
-                  PILLAR_ACCENT_BG_SOFT[demo.pillar]
-                } ${PILLAR_ACCENT_TEXT[demo.pillar]}`}
-              >
-                <DemoGlyphSvg glyph={demo.glyph} className="w-6 h-6" />
-              </span>
+      <p className="text-sm text-boost-text-secondary leading-relaxed mb-7 max-w-[58ch]">
+        Pick one to hear the AI Agent demonstrate it live. Every demo
+        runs on the same live tenant, no setup.
+      </p>
 
-              {/* Demo ID — kicker */}
-              <p
-                className={`text-[10px] font-bold uppercase tracking-[0.18em] mb-1 ${
-                  PILLAR_ACCENT_TEXT[demo.pillar]
-                }`}
-              >
-                {demo.id}
-              </p>
-              <h4 className="text-base font-semibold text-boost-dark mb-1.5 tracking-tight">
-                {demo.label}
-              </h4>
-              <p className="text-[12px] text-boost-text-secondary leading-relaxed mb-3">
-                {demo.tagline}
-              </p>
-              <div className="pt-3 border-t border-boost-border/60 flex items-center justify-between">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-muted">
-                  Try it
+      <div ref={ref}>
+      <ul className="border-t border-boost-border/70">
+        {VOICE_DEMOS.map((demo, i) => (
+          <li
+            key={demo.id}
+            className="border-b border-boost-border/70 transition-all duration-500"
+            style={{
+              opacity: isVisible ? 1 : 0,
+              transform: isVisible ? "translateY(0)" : "translateY(8px)",
+              transitionDelay: `${80 + i * 70}ms`,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => onPick(demo)}
+              data-testid={`voice-demo-card-${demo.id}`}
+              className="group relative block w-full text-left px-2 sm:px-4 py-5 sm:py-6 transition-colors hover:bg-boost-surface/40 focus-visible:outline-none focus-visible:bg-boost-surface/40"
+            >
+              <div className="flex items-center gap-5 sm:gap-7">
+                {/* Pillar-tinted glyph — no surrounding card, just
+                    the circle on a soft tint. Scales on hover. */}
+                <span
+                  className={`flex-shrink-0 inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-all duration-300 group-hover:scale-[1.08] ${
+                    PILLAR_ACCENT_BG_SOFT[demo.pillar]
+                  } ${PILLAR_ACCENT_TEXT[demo.pillar]}`}
+                >
+                  <DemoGlyphSvg glyph={demo.glyph} className="w-7 h-7 sm:w-8 sm:h-8" />
                 </span>
+
+                {/* Title + tagline stack */}
+                <div className="flex-1 min-w-0">
+                  <h4
+                    className={`text-base sm:text-lg font-semibold tracking-tight transition-colors text-boost-dark group-hover:${
+                      PILLAR_ACCENT_TEXT[demo.pillar]
+                    }`}
+                  >
+                    {demo.label}
+                  </h4>
+                  <p className="text-[12px] sm:text-[13px] text-boost-text-secondary leading-snug mt-0.5 truncate">
+                    {demo.tagline}
+                  </p>
+                </div>
+
+                {/* Trailing arrow — translates right on hover */}
                 <span
                   aria-hidden="true"
-                  className="text-boost-muted group-hover:text-boost-purple group-hover:translate-x-0.5 transition-all"
+                  className={`flex-shrink-0 text-[18px] text-boost-muted/50 transition-all duration-300 group-hover:translate-x-1.5 ${
+                    PILLAR_ACCENT_TEXT[demo.pillar]
+                  } group-hover:opacity-100 opacity-60`}
                 >
                   →
                 </span>
               </div>
-            </div>
-          </button>
+            </button>
+          </li>
         ))}
+      </ul>
       </div>
 
-      {/* Dev / freeform escape hatch */}
-      <div className="mt-6 text-center">
+      {/* Freeform escape hatch */}
+      <div className="mt-7 text-center">
         <button
           type="button"
           onClick={onFreeChat}
