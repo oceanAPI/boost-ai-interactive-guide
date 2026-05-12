@@ -47,6 +47,7 @@ import {
   type DemoGlyph,
 } from "@/data/voice-demos";
 import {
+  AudioPresets,
   Room,
   RoomEvent,
   Track,
@@ -598,14 +599,41 @@ export default function VoiceLiveSection({
         );
 
         // Step 3: Create the Room and wire events. Lazy-init
-        // audio element so we can attach remote tracks to it.
+        // audio element with low-latency-friendly attrs.
+        //   - autoplay: start playback the moment a track attaches
+        //   - playsInline: required on iOS to play without entering
+        //     fullscreen, eliminates a UA gesture-handling delay
+        //   - preload="none": don't fetch ahead, stream what's
+        //     coming in directly through the WebRTC track
         if (!audioEl.current && typeof document !== "undefined") {
           audioEl.current = document.createElement("audio");
           audioEl.current.autoplay = true;
+          audioEl.current.setAttribute("playsinline", "");
+          audioEl.current.preload = "none";
         }
+        // Low-latency room config. Highlights:
+        //   - audioPreset.speech: 24kbps Opus tuned for voice, lower
+        //     latency than the music-quality default
+        //   - dtx: skip silent audio packets (frees bandwidth +
+        //     speeds up packet pacing on resumed speech)
+        //   - red: packet-loss redundancy without retransmit delay
+        //   - autoGainControl OFF: removes 10-30ms of pre-publish
+        //     processing in Chrome; echo cancellation + noise
+        //     suppression stay on (without them voice loops back
+        //     into the mic)
         const room = new Room({
           adaptiveStream: true,
           dynacast: true,
+          publishDefaults: {
+            audioPreset: AudioPresets.speech,
+            dtx: true,
+            red: true,
+          },
+          audioCaptureDefaults: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: false,
+          },
         });
         roomRef.current = room;
 
@@ -644,18 +672,63 @@ export default function VoiceLiveSection({
           },
         );
         room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
-          // The remote agent is one of the active speakers — when
-          // they're talking, we're in "speaking" phase. When the
-          // user speaks (local participant), back to "listening".
-          // Simple heuristic: any remote active speaker → speaking.
+          // Speaker-detection drives the perceived state. The
+          // 'thinking' transition is a UX trick: the moment the
+          // local participant stops being an active speaker AND no
+          // remote speaker has taken over yet, we flip to 'thinking'
+          // so the silent gap before the agent responds feels
+          // intentional (instead of broken).
+          const localIdentity = room.localParticipant.identity;
           const remoteSpeaking = speakers.some(
-            (p) => p.identity !== room.localParticipant.identity,
+            (p) => p.identity !== localIdentity,
+          );
+          const localSpeaking = speakers.some(
+            (p) => p.identity === localIdentity,
           );
           setPhase((p) => {
             if (p === "ended" || p === "error") return p;
-            return remoteSpeaking ? "speaking" : "listening";
+            if (remoteSpeaking) return "speaking";
+            if (localSpeaking) return "listening";
+            // No active speakers — user just finished, agent hasn't
+            // started yet. Show 'thinking' to mask the gap.
+            return "thinking";
           });
         });
+        // LiveKit Transcription API — agents that stream STT
+        // results publish them as transcription segments per
+        // participant. We render each final segment as a bubble
+        // in the transcript AND echo a short preview to the
+        // events panel. Interim (non-final) segments could feed
+        // a live caption, but we keep the panel quiet until the
+        // segment finalises. */
+        room.on(
+          RoomEvent.TranscriptionReceived,
+          (segments, participant) => {
+            const isLocal =
+              participant?.identity === room.localParticipant.identity;
+            for (const seg of segments) {
+              if (!seg.final || !seg.text?.trim()) continue;
+              const text = seg.text.trim();
+              const now = new Date().toISOString();
+              setMessages((prev) => [
+                ...prev,
+                {
+                  key: `${isLocal ? "user" : "bot"}-${seg.id ?? now}`,
+                  id: seg.id,
+                  source: isLocal ? "client" : "bot",
+                  elements: [{ type: "text", payload: { text } }],
+                  date_created: now,
+                  language: seg.language,
+                },
+              ]);
+              appendEvent(
+                isLocal ? "user" : "agent",
+                isLocal ? "You said" : "Agent said",
+                text.length > 80 ? text.slice(0, 77) + "…" : text,
+              );
+            }
+          },
+        );
         room.on(RoomEvent.DataReceived, (payload, participant) => {
           // Voice agents sometimes send transcripts / events as
           // LiveKit data messages. Surface them in the events
@@ -866,13 +939,6 @@ export default function VoiceLiveSection({
             />
           )}
 
-          {/* Honest framing — the real-voice escape hatch */}
-          <p className="mt-5 text-[12px] text-boost-muted leading-relaxed text-center max-w-3xl mx-auto">
-            Voice quality here is the browser's default TTS. Production Boost
-            Voice runs on ElevenLabs and Speechmatics with sub-second latency
-            — to hear the real thing, call the demo number provisioned during
-            your POC.
-          </p>
         </div>
       </div>
     </section>
@@ -1076,17 +1142,8 @@ function VoiceConsole(props: {
         <EventsPanel events={events} tenant={tenant} />
       </div>
 
-      {/* Powered-by callout — the managed voice stack story */}
-      <p className="mt-5 text-[11px] text-boost-muted leading-relaxed text-center max-w-3xl mx-auto">
-        <span className="font-semibold text-boost-dark">Powered by boost.ai's managed voice stack</span>
-        {" — "}
-        <span>LiveKit · ElevenLabs · Speechmatics</span>
-        {". "}
-        <span className="text-boost-muted/80">
-          One orchestration, one DPA, one vendor relationship. You don't
-          integrate four sub-processors — we do.
-        </span>
-      </p>
+      {/* Curiosity hooks — the follow-up-question generator */}
+      <CuriosityHooks />
     </div>
   );
 }
@@ -1324,6 +1381,122 @@ function MicWaveBars({ accent }: { accent: VoiceDemo["pillar"] }) {
  * Right-hand column. Empty state until first event arrives, then
  * events fade in from below one-by-one. Each event renders as a
  * compact row: kind glyph, label, optional detail, timestamp. */
+/* ─── CuriosityHooks — follow-up question chips ─── *
+ *
+ * Replaces the wall-of-text footer with five tappable chips. Each
+ * is a question a prospect is likely to have but might not ask
+ * unprompted — clicking opens a small inline panel with a sharp
+ * answer + a "talk to a specialist" hint.
+ *
+ * Sleek and quiet by default. The chips themselves are the value:
+ * even un-tapped they raise the questions the rep wants to be in
+ * the room when the prospect asks.
+ *
+ * Adding a chip is one new record below. Same data shape as the
+ * voice-demos list — table-friendly when a backend exists.
+ */
+interface CuriosityHook {
+  id: string;
+  label: string;
+  question: string;
+  answer: string;
+}
+
+const CURIOSITY_HOOKS: CuriosityHook[] = [
+  {
+    id: "brand-voice",
+    label: "Brand voice",
+    question: "Can it use our brand voice?",
+    answer:
+      "Yes — Voice Cloning lets you record a sample voice and assign it per agent. Powered by ElevenLabs, managed inside the boost.ai admin panel. No separate vendor contract on your side.",
+  },
+  {
+    id: "sub-processors",
+    label: "Sub-processors",
+    question: "Does our legal team need to vet ElevenLabs and Speechmatics?",
+    answer:
+      "No. boost.ai contracts with every sub-processor on your behalf and lists them on the Trust Center. You sign one DPA with us; we handle the rest.",
+  },
+  {
+    id: "latency",
+    label: "Latency",
+    question: "How fast is the agent in production?",
+    answer:
+      "End-to-end first-byte 600–1200ms depending on agent flow complexity. The demo here runs on the same WebRTC adaptive-streaming path your customers will use — what you hear is production-grade.",
+  },
+  {
+    id: "multimodal",
+    label: "Voice ↔ chat",
+    question: "Can it switch between voice and chat mid-conversation?",
+    answer:
+      "Yes — Multimodal Conversations let a customer start on a call, finish via SMS, and continue on web chat. Same conversation_id, same context, zero re-auth.",
+  },
+  {
+    id: "migration",
+    label: "Existing voice solution",
+    question: "What if we already have a voice solution?",
+    answer:
+      "Boost Voice migration runs an 8-phase playbook: Align → Assess → Enable → Test → Fix and plan → Ready → Go Live → Hypercare. Two-week Hypercare is the typical close. Net-new customers skip Align/Assess and start at Enable.",
+  },
+];
+
+function CuriosityHooks() {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = useMemo(
+    () => CURIOSITY_HOOKS.find((h) => h.id === openId) ?? null,
+    [openId],
+  );
+  return (
+    <div className="mt-7" data-testid="voice-curiosity-hooks">
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-boost-muted mb-3 text-center">
+        Curious about something?
+      </p>
+      <div className="flex flex-wrap justify-center gap-2">
+        {CURIOSITY_HOOKS.map((hook) => {
+          const isActive = hook.id === openId;
+          return (
+            <button
+              key={hook.id}
+              type="button"
+              onClick={() => setOpenId(isActive ? null : hook.id)}
+              data-testid={`voice-curiosity-${hook.id}`}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-semibold transition-all duration-200 ${
+                isActive
+                  ? "bg-boost-purple text-white shadow-sm"
+                  : "bg-boost-surface text-boost-dark border border-boost-border hover:border-boost-purple/40 hover:bg-white"
+              }`}
+            >
+              <span>{hook.label}</span>
+              <span
+                aria-hidden="true"
+                className={`transition-transform duration-200 ${
+                  isActive ? "rotate-180" : ""
+                }`}
+              >
+                ↓
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {open ? (
+        <div
+          key={open.id}
+          className="mt-4 mx-auto max-w-2xl rounded-xl border border-boost-border bg-white px-5 py-4 shadow-sm animate-voice-fade-in"
+          data-testid="voice-curiosity-answer"
+        >
+          <p className="text-[13px] font-semibold text-boost-dark mb-1.5 leading-snug">
+            {open.question}
+          </p>
+          <p className="text-[12px] text-boost-text-secondary leading-relaxed">
+            {open.answer}
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function EventsPanel({
   events,
   tenant,
