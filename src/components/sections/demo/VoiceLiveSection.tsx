@@ -704,23 +704,49 @@ export default function VoiceLiveSection({
         room.on(
           RoomEvent.TranscriptionReceived,
           (segments, participant) => {
+            // Stream-as-transcribed: both interim AND final segments
+            // become / update bubbles. Each segment ID maps to one
+            // bubble; interim updates refine the text in place,
+            // final locks it. Result: text appears character-by-
+            // character as STT delivers it — same UX as live
+            // captioning.
             const isLocal =
               participant?.identity === room.localParticipant.identity;
-            for (const seg of segments) {
-              if (!seg.final || !seg.text?.trim()) continue;
-              const text = seg.text.trim();
-              const now = new Date().toISOString();
-              setMessages((prev) => [
-                ...prev,
-                {
-                  key: `${isLocal ? "user" : "bot"}-${seg.id ?? now}`,
+            const now = new Date().toISOString();
+            setMessages((prev) => {
+              const next = [...prev];
+              for (const seg of segments) {
+                const text = seg.text?.trim() ?? "";
+                if (!text) continue;
+                const key = `${isLocal ? "user" : "bot"}-${seg.id}`;
+                const existingIdx = next.findIndex((m) => m.key === key);
+                const updated: ChatMessage = {
+                  key,
                   id: seg.id,
                   source: isLocal ? "client" : "bot",
                   elements: [{ type: "text", payload: { text } }],
                   date_created: now,
                   language: seg.language,
-                },
-              ]);
+                  // Stash final flag in extra prop the bubble reads
+                  // via avatar_url field repurposing? Cleaner to use
+                  // a separate state slot — but for now we surface
+                  // interim-ness via the ChatMessage.id presence and
+                  // a side ref. Simpler: just append/update text;
+                  // the bubble has no interim styling yet.
+                };
+                if (existingIdx >= 0) {
+                  next[existingIdx] = updated;
+                } else {
+                  next.push(updated);
+                }
+              }
+              return next;
+            });
+            // Surface only final segments to the events panel — we
+            // don't want a flood of interim updates in the side feed.
+            for (const seg of segments) {
+              if (!seg.final || !seg.text?.trim()) continue;
+              const text = seg.text.trim();
               appendEvent(
                 isLocal ? "user" : "agent",
                 isLocal ? "You said" : "Agent said",
@@ -1079,10 +1105,12 @@ function VoiceConsole(props: {
 
       {/* ─── Split panel — voice LEFT, events RIGHT ─── */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-        {/* LEFT — voice column */}
-        <div className="rounded-2xl border border-boost-border bg-white shadow-sm overflow-hidden flex flex-col">
-          {/* Header strip */}
-          <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-boost-border bg-boost-surface/40">
+        {/* LEFT — voice column. Mic lives in the header strip; the
+            body is pure transcript real estate (or a quiet empty
+            state). No more 200px of centred mic chrome. */}
+        <div className="rounded-2xl border border-boost-border bg-white shadow-sm overflow-hidden flex flex-col min-h-[360px]">
+          {/* Header strip — status pill, routing pill, compact mic */}
+          <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-boost-border bg-boost-surface/40">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <span
                 aria-hidden="true"
@@ -1094,20 +1122,16 @@ function VoiceConsole(props: {
               >
                 {statusLabel}
               </p>
+              {routedSkill ? (
+                <span
+                  className={`flex-shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-[0.14em] ${PILLAR_ACCENT_BG_SOFT[activeAccent]} ${PILLAR_ACCENT_TEXT[activeAccent]}`}
+                  data-testid="voice-routed-skill"
+                >
+                  <span aria-hidden="true">✓</span>
+                  <span className="truncate max-w-[120px]">{routedSkill}</span>
+                </span>
+              ) : null}
             </div>
-            {routedSkill ? (
-              <span
-                className={`flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-[0.14em] ${PILLAR_ACCENT_BG_SOFT[activeAccent]} ${PILLAR_ACCENT_TEXT[activeAccent]}`}
-                data-testid="voice-routed-skill"
-              >
-                <span aria-hidden="true">✓</span>
-                <span>{routedSkill}</span>
-              </span>
-            ) : null}
-          </div>
-
-          {/* Mic button + transcript */}
-          <div className="flex-1 px-5 py-6 flex flex-col items-center">
             <MicButton
               phase={phase}
               accent={activeAccent}
@@ -1115,16 +1139,28 @@ function VoiceConsole(props: {
               onEnd={onEnd}
               hasSelection={!!selectedDemo}
             />
+          </div>
 
-            {/* Transcript bubbles */}
-            <div
-              className="w-full mt-6 space-y-3 max-h-[300px] overflow-y-auto"
-              data-testid="voice-transcript"
-            >
-              {messages.map((msg) => (
-                <VoiceBubble key={msg.key} message={msg} />
-              ))}
-            </div>
+          {/* Body — transcript when messages exist, quiet hint when not */}
+          <div
+            className="flex-1 px-5 py-5 space-y-3 overflow-y-auto"
+            data-testid="voice-transcript"
+          >
+            {messages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center py-6">
+                <p className="text-[13px] text-boost-text-secondary/70 leading-relaxed max-w-[36ch]">
+                  {phase === "idle"
+                    ? selectedDemo
+                      ? "Transcripts stream in here as you and the agent talk."
+                      : "Pick a demo from the carousel to begin."
+                    : phase === "starting"
+                      ? "Opening the voice session…"
+                      : "Waiting for the first turn…"}
+                </p>
+              </div>
+            ) : (
+              messages.map((msg) => <VoiceBubble key={msg.key} message={msg} />)
+            )}
           </div>
 
           {/* Error banner */}
@@ -1284,18 +1320,26 @@ function MicButton({
   const disabled = isIdle && !hasSelection;
 
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="flex-shrink-0">
+      {/* Hidden label — accessible via screen reader + tooltip, no
+          visual duplication with the status pill which already
+          carries the phase label. */}
+      <span className="sr-only" data-testid="voice-mic-label">
+        {label}
+      </span>
       <button
         type="button"
         onClick={handleClick}
         disabled={disabled}
         data-testid="voice-mic-button"
-        className={`group relative inline-flex items-center justify-center w-24 h-24 sm:w-28 sm:h-28 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-4 ${
+        title={label}
+        aria-label={label}
+        className={`group relative inline-flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
           disabled
             ? "bg-boost-surface text-boost-muted/40 cursor-not-allowed"
             : inCall
-              ? `${PILLAR_ACCENT_BG_SOFT[accent]} ${PILLAR_ACCENT_TEXT[accent]} hover:scale-105 cursor-pointer`
-              : `${PILLAR_ACCENT_BG[accent]} text-white hover:scale-105 cursor-pointer shadow-lg`
+              ? `${PILLAR_ACCENT_BG_SOFT[accent]} ${PILLAR_ACCENT_TEXT[accent]} hover:scale-110 cursor-pointer`
+              : `${PILLAR_ACCENT_BG[accent]} text-white hover:scale-110 cursor-pointer shadow-md`
         }`}
         style={
           !disabled
@@ -1305,8 +1349,7 @@ function MicButton({
             : undefined
         }
       >
-        {/* Pulsing rings — listening / speaking. Three rings staggered
-            so the radial wave feels continuous. */}
+        {/* Pulsing rings — listening / speaking */}
         {phase === "listening" || phase === "speaking" ? (
           <>
             <span
@@ -1315,13 +1358,8 @@ function MicButton({
             />
             <span
               aria-hidden="true"
-              className={`absolute inset-[-8px] rounded-full ${PILLAR_ACCENT_BG[accent]} opacity-15 animate-ping`}
+              className={`absolute inset-[-4px] rounded-full ${PILLAR_ACCENT_BG[accent]} opacity-15 animate-ping`}
               style={{ animationDelay: "300ms" }}
-            />
-            <span
-              aria-hidden="true"
-              className={`absolute inset-[-16px] rounded-full ${PILLAR_ACCENT_BG[accent]} opacity-10 animate-ping`}
-              style={{ animationDelay: "600ms" }}
             />
           </>
         ) : null}
@@ -1334,23 +1372,17 @@ function MicButton({
           />
         ) : null}
 
-        {/* Glyph — mic for idle/listening, stop for in-call non-listening */}
+        {/* Glyph */}
         <span className="relative">
           {phase === "listening" ? (
             <MicWaveBars accent={accent} />
           ) : inCall ? (
-            <StopIcon className="w-7 h-7 sm:w-8 sm:h-8" />
+            <StopIcon className="w-4 h-4" />
           ) : (
-            <MicIcon className="w-8 h-8 sm:w-10 sm:h-10" />
+            <MicIcon className="w-5 h-5" />
           )}
         </span>
       </button>
-      <p
-        className="text-[11px] font-semibold uppercase tracking-[0.14em] text-boost-dark text-center"
-        data-testid="voice-mic-label"
-      >
-        {label}
-      </p>
     </div>
   );
 }
@@ -1896,22 +1928,45 @@ function PreFlightPanel({
   );
 }
 
-/* ─── Bubble — minimal subset of LiveChatSection's renderer ─── *
- * Voice transcripts only ever carry text / ssml / html elements in
- * practice; we render text + html literally, and SSML as the
- * extracted speakable string (since the audio has already played). */
+/* ─── Bubble — chat-flavoured boost styling ─── *
+ *
+ * Mirrors LiveChatSection's bubble vocabulary so the voice
+ * transcript reads like a chat conversation. Two visual flourishes
+ * tuned for stream-as-transcribed text:
+ *
+ *  1. Each bubble fades in + slides up on first mount via
+ *     animate-voice-fade-in. Subsequent text growth (interim
+ *     transcript updates) doesn't re-trigger the animation —
+ *     React reconciles the text in place.
+ *
+ *  2. A small tracked-uppercase eyebrow above the bubble carries
+ *     the speaker label (You / Agent) so the conversation reads
+ *     legibly even on screenshots where colour cues might fail.
+ *
+ * The combination produces the "watch the text appear as it's
+ * transcribed" effect the user asked for, driven by real STT
+ * interim segments — not a fake CSS typewriter. */
 function VoiceBubble({ message }: { message: ChatMessage }) {
   const isUser = message.source === "client";
-  const align = isUser ? "justify-end" : "justify-start";
+  const align = isUser ? "items-end" : "items-start";
   const bubble = isUser
     ? "bg-boost-purple text-white"
-    : "bg-boost-surface text-boost-dark border border-boost-border";
+    : "bg-white text-boost-dark border border-boost-border";
   const radius = isUser
     ? "rounded-2xl rounded-br-md"
     : "rounded-2xl rounded-bl-md";
+  const speakerLabel = isUser ? "You" : "Agent";
+  const speakerColor = isUser ? "text-boost-purple" : "text-boost-muted";
   return (
-    <div className={`flex ${align}`}>
-      <div className={`${bubble} ${radius} max-w-[80%] px-4 py-2.5 text-[13px] leading-relaxed`}>
+    <div className={`flex flex-col ${align} gap-1 animate-voice-fade-in`}>
+      <span
+        className={`text-[9px] font-bold uppercase tracking-[0.18em] ${speakerColor} px-1`}
+      >
+        {speakerLabel}
+      </span>
+      <div
+        className={`${bubble} ${radius} max-w-[88%] px-4 py-2.5 text-[13px] leading-relaxed shadow-sm`}
+      >
         {message.elements.map((el, i) => (
           <VoiceBubbleElement key={i} element={el} />
         ))}
