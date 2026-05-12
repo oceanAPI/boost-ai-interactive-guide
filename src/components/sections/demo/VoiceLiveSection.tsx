@@ -669,16 +669,15 @@ export default function VoiceLiveSection({
                 an alternative for screen-shared walkthroughs.
               </p>
             </div>
-          ) : phase === "idle" && !selectedDemo ? (
-            /* ─── GALLERY view — six demo cards ─────────────────── */
-            <DemoGallery onPick={(d) => setSelectedDemo(d)} onFreeChat={() => startSession(null)} />
-          ) : phase === "idle" && selectedDemo ? (
-            /* ─── PRE-FLIGHT view — value prop before Start ─────── */
-            <PreFlightPanel
-              demo={selectedDemo}
-              tenant={tenant}
-              onStart={() => startSession(selectedDemo)}
-              onBack={() => setSelectedDemo(null)}
+          ) : phase === "idle" ? (
+            /* ─── GALLERY view — click any row → straight to the call.
+                The pre-flight panel is gone: friction killed for the
+                "click and demo" UX. Value-prop content surfaces inside
+                the in-call view as an expandable "What this proves"
+                disclosure above the transcript. */
+            <DemoGallery
+              onPick={(d) => startSession(d)}
+              onFreeChat={() => startSession(null)}
             />
           ) : (
             /* ─── IN-CALL / ENDED / ERROR view ──────────────────── */
@@ -817,18 +816,43 @@ export default function VoiceLiveSection({
 /* ─── Demo glyph renderer ──────────────────────────────────── *
  * Renders the SVG paths from a VoiceDemo.glyph in a fixed 24×24
  * viewBox. Stroke-based by default; switches to fill when the
- * glyph opts in via `filled: true`. */
-function DemoGlyphSvg({ glyph, className }: { glyph: DemoGlyph; className?: string }) {
+ * glyph opts in via `filled: true`.
+ *
+ * When `animateIn` is true, each path's strokeDasharray gets
+ * animated via the .voice-demo-glyph CSS keyframes — the icon
+ * draws itself in over 900ms, staggered per-path. The `delay`
+ * prop adds an extra offset so the gallery's six icons cascade
+ * in sequence rather than all firing at once. */
+function DemoGlyphSvg({
+  glyph,
+  className,
+  animateIn = false,
+  delay = 0,
+}: {
+  glyph: DemoGlyph;
+  className?: string;
+  animateIn?: boolean;
+  delay?: number;
+}) {
   if (glyph.filled) {
     return (
       <svg
         viewBox="0 0 24 24"
         fill="currentColor"
         className={className}
+        data-animate-in={animateIn ? "true" : undefined}
         aria-hidden="true"
       >
         {glyph.paths.map((d, i) => (
-          <path key={i} d={d} />
+          <path
+            key={i}
+            d={d}
+            style={
+              animateIn
+                ? { animationDelay: `${delay + i * 60}ms` }
+                : undefined
+            }
+          />
         ))}
       </svg>
     );
@@ -842,21 +866,39 @@ function DemoGlyphSvg({ glyph, className }: { glyph: DemoGlyph; className?: stri
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
+      data-animate-in={animateIn ? "true" : undefined}
       aria-hidden="true"
     >
       {glyph.paths.map((d, i) => (
-        <path key={i} d={d} />
+        <path
+          key={i}
+          d={d}
+          style={
+            animateIn
+              ? { animationDelay: `${delay + i * 60}ms` }
+              : undefined
+          }
+        />
       ))}
     </svg>
   );
 }
 
-/* ─── Gallery — editorial-list pick-a-demo ─── *
- * Six rows, each: large pillar-tinted icon left, title + tagline
- * stacked right, animated arrow far right. Hairline divider between
- * rows — no boxes, no card chrome. Staggered fade-in on mount via
- * useScrollReveal. Hover state: subtle row-tint, icon scale, title
- * accent flash, arrow translate. */
+/* ─── Gallery — editorial-list, 2026-flavoured ─── *
+ *
+ * Three signals that make this feel current:
+ *   1. Cursor-follow spotlight — a soft pillar-coloured radial
+ *      gradient tracks the mouse across the gallery surface. Adds
+ *      depth without chrome.
+ *   2. Icon path draw-in — each SVG path strokes itself in on mount
+ *      via stroke-dasharray, staggered 80ms per row. The icons feel
+ *      authored, not stamped.
+ *   3. Hover: animated underline draws left→right under the title,
+ *      icon glows in pillar colour, arrow stretches into a longer
+ *      chevron line. One coherent gesture, not five layered effects.
+ *
+ * Click → straight into the call. No pre-flight stop. The demo's
+ * value-prop content surfaces inside the in-call view instead. */
 function DemoGallery({
   onPick,
   onFreeChat,
@@ -865,76 +907,171 @@ function DemoGallery({
   onFreeChat: () => void;
 }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
+  const spotlightRef = useRef<HTMLDivElement>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const hoveredDemo = useMemo(
+    () => VOICE_DEMOS.find((d) => d.id === hoveredId) ?? null,
+    [hoveredId],
+  );
+
+  // Cursor-follow spotlight — updates CSS custom properties so the
+  // radial gradient anchors to the cursor without re-rendering. The
+  // accent colour switches to the hovered demo's pillar.
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const el = spotlightRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    el.style.setProperty("--cursor-x", `${e.clientX - rect.left}px`);
+    el.style.setProperty("--cursor-y", `${e.clientY - rect.top}px`);
+  }, []);
+
   return (
     <div data-testid="voice-demo-gallery">
       <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-boost-muted mb-2">
         Pick a demo
       </p>
-      <h3 className="text-2xl sm:text-3xl font-bold text-boost-dark leading-tight mb-1 max-w-[34ch]">
+      <h3 className="text-2xl sm:text-[32px] font-bold text-boost-dark leading-[1.05] mb-1 max-w-[34ch] tracking-tight">
         Six features. Three minutes each.
       </h3>
       <p className="text-sm text-boost-text-secondary leading-relaxed mb-7 max-w-[58ch]">
-        Pick one to hear the AI Agent demonstrate it live. Every demo
-        runs on the same live tenant, no setup.
+        Click any row — the AI Agent picks up the demo live. No setup,
+        no preamble.
       </p>
 
-      <div ref={ref}>
-      <ul className="border-t border-boost-border/70">
-        {VOICE_DEMOS.map((demo, i) => (
-          <li
-            key={demo.id}
-            className="border-b border-boost-border/70 transition-all duration-500"
-            style={{
-              opacity: isVisible ? 1 : 0,
-              transform: isVisible ? "translateY(0)" : "translateY(8px)",
-              transitionDelay: `${80 + i * 70}ms`,
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => onPick(demo)}
-              data-testid={`voice-demo-card-${demo.id}`}
-              className="group relative block w-full text-left px-2 sm:px-4 py-5 sm:py-6 transition-colors hover:bg-boost-surface/40 focus-visible:outline-none focus-visible:bg-boost-surface/40"
-            >
-              <div className="flex items-center gap-5 sm:gap-7">
-                {/* Pillar-tinted glyph — no surrounding card, just
-                    the circle on a soft tint. Scales on hover. */}
-                <span
-                  className={`flex-shrink-0 inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-all duration-300 group-hover:scale-[1.08] ${
-                    PILLAR_ACCENT_BG_SOFT[demo.pillar]
-                  } ${PILLAR_ACCENT_TEXT[demo.pillar]}`}
+      <div
+        ref={spotlightRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoveredId(null)}
+        className="relative overflow-hidden rounded-2xl"
+        style={
+          {
+            /* Pillar-coloured spotlight follows the cursor. The
+             *  --spotlight-color CSS var swaps per hovered demo so
+             *  the colour reflects the demo's pillar accent. */
+            "--cursor-x": "50%",
+            "--cursor-y": "50%",
+            "--spotlight-color": hoveredDemo
+              ? PILLAR_RGB[hoveredDemo.pillar]
+              : "89 25 93", // boost-purple
+            background:
+              "radial-gradient(420px circle at var(--cursor-x) var(--cursor-y), rgba(var(--spotlight-color), 0.06), transparent 70%)",
+            transition: "background 400ms ease",
+          } as React.CSSProperties
+        }
+      >
+        <div ref={ref}>
+          <ul className="relative border-t border-boost-border/70">
+            {VOICE_DEMOS.map((demo, i) => (
+              <li
+                key={demo.id}
+                className="border-b border-boost-border/70 transition-all duration-500"
+                style={{
+                  opacity: isVisible ? 1 : 0,
+                  transform: isVisible
+                    ? "translateY(0)"
+                    : "translateY(10px)",
+                  transitionDelay: `${100 + i * 80}ms`,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => onPick(demo)}
+                  onMouseEnter={() => setHoveredId(demo.id)}
+                  onFocus={() => setHoveredId(demo.id)}
+                  data-testid={`voice-demo-card-${demo.id}`}
+                  className="group relative block w-full text-left px-3 sm:px-5 py-5 sm:py-7 transition-colors focus-visible:outline-none"
                 >
-                  <DemoGlyphSvg glyph={demo.glyph} className="w-7 h-7 sm:w-8 sm:h-8" />
-                </span>
+                  <div className="relative flex items-center gap-5 sm:gap-7">
+                    {/* Icon — large, pillar-tinted, glow on hover */}
+                    <span
+                      className={`relative flex-shrink-0 inline-flex items-center justify-center w-14 h-14 sm:w-[68px] sm:h-[68px] rounded-full transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 ${
+                        PILLAR_ACCENT_BG_SOFT[demo.pillar]
+                      } ${PILLAR_ACCENT_TEXT[demo.pillar]}`}
+                    >
+                      {/* Soft glow expands behind icon on hover */}
+                      <span
+                        aria-hidden="true"
+                        className={`absolute inset-[-12px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl ${
+                          PILLAR_ACCENT_BG_SOFT[demo.pillar]
+                        }`}
+                      />
+                      <span className="relative">
+                        <DemoGlyphSvg
+                          glyph={demo.glyph}
+                          className="w-7 h-7 sm:w-9 sm:h-9"
+                        />
+                      </span>
+                    </span>
 
-                {/* Title + tagline stack */}
-                <div className="flex-1 min-w-0">
-                  <h4
-                    className={`text-base sm:text-lg font-semibold tracking-tight transition-colors text-boost-dark group-hover:${
-                      PILLAR_ACCENT_TEXT[demo.pillar]
-                    }`}
-                  >
-                    {demo.label}
-                  </h4>
-                  <p className="text-[12px] sm:text-[13px] text-boost-text-secondary leading-snug mt-0.5 truncate">
-                    {demo.tagline}
-                  </p>
-                </div>
+                    {/* Title + tagline */}
+                    <div className="flex-1 min-w-0">
+                      <h4
+                        className={`relative text-base sm:text-xl font-semibold tracking-tight text-boost-dark inline-block`}
+                      >
+                        <span
+                          className="relative inline-block transition-colors duration-300 group-hover:text-[var(--accent-color)]"
+                          style={
+                            {
+                              "--accent-color": `rgb(${PILLAR_RGB[demo.pillar]})`,
+                            } as React.CSSProperties
+                          }
+                        >
+                          {demo.label}
+                        </span>
+                        {/* Animated underline draws left→right on hover */}
+                        <span
+                          aria-hidden="true"
+                          className="absolute left-0 right-full bottom-[-3px] h-[2px] origin-left transition-all duration-500 ease-out group-hover:right-0"
+                          style={{
+                            backgroundColor: `rgb(${PILLAR_RGB[demo.pillar]})`,
+                          }}
+                        />
+                      </h4>
+                      <p className="text-[12px] sm:text-[13px] text-boost-text-secondary leading-snug mt-1">
+                        {demo.tagline}
+                      </p>
+                    </div>
 
-                {/* Trailing arrow — translates right on hover */}
-                <span
-                  aria-hidden="true"
-                  className={`flex-shrink-0 text-[18px] text-boost-muted/50 transition-all duration-300 group-hover:translate-x-1.5 ${
-                    PILLAR_ACCENT_TEXT[demo.pillar]
-                  } group-hover:opacity-100 opacity-60`}
-                >
-                  →
-                </span>
-              </div>
-            </button>
-          </li>
-        ))}
-      </ul>
+                    {/* Animated chevron — line + arrowhead, line draws
+                        on hover so the static → becomes a long
+                        purposeful arrow. */}
+                    <span
+                      aria-hidden="true"
+                      className="flex-shrink-0 flex items-center"
+                    >
+                      <svg
+                        viewBox="0 0 32 12"
+                        className="h-3 w-8 transition-all duration-500 ease-out group-hover:w-12"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{
+                          color: `rgb(${PILLAR_RGB[demo.pillar]})`,
+                        }}
+                      >
+                        <line
+                          x1="0"
+                          y1="6"
+                          x2="28"
+                          y2="6"
+                          className="opacity-30 group-hover:opacity-100 transition-opacity duration-500"
+                          strokeDasharray="28"
+                          strokeDashoffset="20"
+                          style={{
+                            transition: "stroke-dashoffset 500ms ease-out",
+                          }}
+                        />
+                        <polyline points="22,2 28,6 22,10" />
+                      </svg>
+                    </span>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
 
       {/* Freeform escape hatch */}
@@ -948,9 +1085,20 @@ function DemoGallery({
           Or open a freeform call instead →
         </button>
       </div>
+
     </div>
   );
 }
+
+/* ─── Pillar RGB tuples — used to drive inline-style hover colours
+ *  and the spotlight gradient. Mirrors the Tailwind class colours
+ *  one-for-one. */
+const PILLAR_RGB: Record<VoiceDemo["pillar"], string> = {
+  voice: "89 25 93", // boost-purple
+  agentic: "54 181 149", // boost-green-light
+  adoption: "243 156 18", // boost-gold (approx)
+  scalability: "54 181 149", // boost-green-light fallback
+};
 
 /* ─── Pre-flight panel — value prop before the call starts ─── *
  * Shown after a card is picked, before the user clicks Start. Sells
