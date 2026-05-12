@@ -768,17 +768,28 @@ export default function VoiceLiveSection({
               statusLabel={statusLabel}
               statusDotClass={statusDotClass}
               onSelectDemo={(d) => {
-                // Switching demos mid-call: tear down then restart.
-                // If idle/ended, just start.
-                if (phase === "idle" || phase === "ended" || phase === "error") {
-                  startSession(d);
-                } else {
+                // Two-click intent: carousel just selects, mic
+                // button starts. If a call is in flight when the
+                // user switches demos, tear it down — they're
+                // signalling "not this demo, the other one" — and
+                // wait for them to click mic to start the new one.
+                if (
+                  phase === "listening" ||
+                  phase === "thinking" ||
+                  phase === "speaking" ||
+                  phase === "starting"
+                ) {
                   endSession();
-                  // The endSession transition is synchronous (phase
-                  // → "ended"); kick off the new session right after
-                  // so React processes both in one paint cycle.
-                  setTimeout(() => startSession(d), 80);
                 }
+                setSelectedDemo(d);
+                // Clear any prior transcript / events from the
+                // last demo so the events panel starts fresh when
+                // the user clicks mic.
+                setMessages([]);
+                setEvents([]);
+                setRoutedSkill(null);
+                setErrorMessage(null);
+                setPhase("idle");
               }}
               onStart={() => startSession(selectedDemo)}
               onEnd={endSession}
