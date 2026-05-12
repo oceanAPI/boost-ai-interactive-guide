@@ -420,19 +420,30 @@ function TrustTab({ active, href }: { active: boolean; href: string }) {
  * library count anchor the scale. */
 function CommunityTab({ active, href }: { active: boolean; href: string }) {
   const { nextEvent, pastCount } = useMemo(() => {
+    // BoostCampLocation has `city + country`, not a single `location`
+    // field. BoostCampEvent.date is optional (some events have no
+    // publicly disclosed date) — filter those out of the upcoming
+    // candidates so the sort comparator never receives undefined.
     const allEvents = BOOST_CAMP_LOCATIONS.flatMap((loc) =>
-      loc.events.map((e) => ({ ...e, location: loc.location })),
+      loc.events.map((e) => ({
+        ...e,
+        location: `${loc.city}, ${loc.country}`,
+      })),
     );
     const upcoming = allEvents
-      .filter((e) => e.status === "upcoming")
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .filter((e) => e.status === "upcoming" && !!e.date)
+      .sort(
+        (a, b) =>
+          new Date(a.date as string).getTime() -
+          new Date(b.date as string).getTime(),
+      );
     const past = allEvents.filter((e) => e.status === "past");
     return { nextEvent: upcoming[0] ?? null, pastCount: past.length };
   }, []);
 
   const [countdown, setCountdown] = useState<string>("");
   useEffect(() => {
-    if (!active || !nextEvent) return;
+    if (!active || !nextEvent?.date) return;
     const target = new Date(nextEvent.date).getTime();
     const tick = () => {
       const now = Date.now();
@@ -483,15 +494,20 @@ function CommunityTab({ active, href }: { active: boolean; href: string }) {
             </p>
           </div>
           <h4 className="text-lg font-bold text-boost-dark mb-1">
-            {nextEvent.name}
+            {nextEvent.theme || `Boost Camp ${nextEvent.year}`}
           </h4>
           <p className="text-[13px] text-boost-text-secondary">
-            {nextEvent.location} ·{" "}
-            {new Date(nextEvent.date).toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
+            {nextEvent.location}
+            {nextEvent.date ? (
+              <>
+                {" · "}
+                {new Date(nextEvent.date).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </>
+            ) : null}
           </p>
         </div>
       ) : null}

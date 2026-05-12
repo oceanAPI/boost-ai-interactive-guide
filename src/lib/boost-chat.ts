@@ -138,6 +138,22 @@ export interface PostResponse {
   posted_id?: number;
   is_human_agent?: boolean;
   response?: ChatResponse;
+  /** Voice-only response flags. Present when the request was sent
+   *  with `voice: true` AND the tenant has voice settings enabled.
+   *
+   *  - `end_call: true` → the AI Agent has decided this is the
+   *    end of the call. The client should tear down the audio
+   *    session and stop the TTS playback.
+   *  - `barge_in: true` → the user may interrupt the agent's TTS
+   *    by starting to speak. Clients implementing barge-in should
+   *    cancel any in-flight SpeechSynthesis utterance the moment
+   *    the SpeechRecognition engine reports `speechstart`.
+   *
+   *  Both fields are absent on non-voice responses (chat-only
+   *  conversations stay backwards-compatible).
+   */
+  end_call?: boolean;
+  barge_in?: boolean;
   [key: string]: unknown;
 }
 
@@ -206,6 +222,11 @@ interface StartOptions {
   client_timezone?: string;
   skip_welcome_message?: boolean;
   disable_gdpr_consent?: boolean;
+  /** When true, opens the conversation in voice mode. Tenant must
+   *  have voice settings enabled in admin or this flag is silently
+   *  ignored. Voice mode unlocks `ssml` element types in responses
+   *  and surfaces `end_call` / `barge_in` flags on PostResponse. */
+  voice?: boolean;
 }
 
 export function startConversation(
@@ -225,11 +246,22 @@ export function postText(
   conversation_id: string,
   value: string,
   signal?: AbortSignal,
+  /** Opt-in voice mode. When true, the request carries `voice: true`
+   *  and the response is allowed to include SSML elements, `end_call`,
+   *  and `barge_in` flags. Defaults to false so existing chat-only
+   *  callers stay unchanged. */
+  voice?: boolean,
 ): Promise<PostResponse> {
   return postCommand<PostResponse>({
     tenant,
     signal,
-    body: { command: "POST", conversation_id, type: "text", value },
+    body: {
+      command: "POST",
+      conversation_id,
+      type: "text",
+      value,
+      ...(voice ? { voice: true } : null),
+    },
   });
 }
 

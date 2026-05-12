@@ -21,7 +21,7 @@ import TopicHubSection from "@/components/sections/TopicHubSection";
 import TopicSection from "@/components/sections/topics/TopicSection";
 import DemoPreviewSection from "@/components/sections/DemoPreviewSection";
 import PlatformVisionSection from "@/components/sections/PlatformVisionSection";
-import VoiceSection from "@/components/sections/VoiceSection";
+import VoicePreviewSection from "@/components/sections/VoicePreviewSection";
 import ImpactSection from "@/components/sections/ImpactSection";
 import TrustValidationSection from "@/components/sections/TrustValidationSection";
 import CaseStudiesSection from "@/components/sections/CaseStudiesSection";
@@ -321,7 +321,7 @@ export default function GuideClient({
           {(!activeSectionSet || activeSectionSet.has("voice")) && (
             <div id="voice" ref={(el) => { sectionRefs.current["voice"] = el; }}>
               <SectionReportPill sectionId="voice" displayName="Voice" />
-              <VoiceSection guide={guide} sectionNumber={sn("voice")} />
+              <VoicePreviewSection guide={guide} customer={customer} sectionNumber={sn("voice")} />
             </div>
           )}
 
