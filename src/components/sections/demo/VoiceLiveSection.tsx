@@ -34,6 +34,14 @@ import {
 } from "@/lib/boost-chat";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import {
+  VOICE_DEMOS,
+  PILLAR_ACCENT_TEXT,
+  PILLAR_ACCENT_BG,
+  PILLAR_ACCENT_BG_SOFT,
+  type VoiceDemo,
+  type DemoGlyph,
+} from "@/data/voice-demos";
 
 interface VoiceLiveSectionProps {
   /** Tenant domain, e.g. `"financewizard.boost.ai"`. No protocol. */
@@ -148,16 +156,37 @@ export default function VoiceLiveSection({
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  /** The demo selected from the gallery. When non-null AND phase is
+   *  idle, the pre-flight panel renders the value-prop + Start CTA.
+   *  When the session is running, the chosen demo drives the header
+   *  strip and the routing-inspector accent colour. */
+  const [selectedDemo, setSelectedDemo] = useState<VoiceDemo | null>(null);
+  /** Skill / specialist agent name surfaced from the tenant's
+   *  response. Updated after every successful agent turn. Shown
+   *  as a small pill above the transcript to make the orchestrator's
+   *  routing decisions visible to the prospect. */
+  const [routedSkill, setRoutedSkill] = useState<string | null>(null);
 
   /* ── Refs ──────────────────────────────────────────────── */
   /** Live recognition instance. Held in a ref so the unmount cleanup
    *  can abort it without React re-renders. */
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  /** Active synthesis utterance. Cleared when speech ends so Phase 2
-   *  barge-in can cancel it from another event handler. */
+  /** Active synthesis utterance. Cleared when speech ends so the
+   *  barge-in handler can cancel it from another event handler. */
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   /** AbortController for in-flight /chat/v2 requests. */
   const fetchAbortRef = useRef<AbortController | null>(null);
+  /** Mirrors the last response's barge_in flag. When true, the
+   *  speech-recognition onspeechstart handler will cancel the
+   *  in-flight TTS — the agent yields the floor the moment the
+   *  user starts talking. Held in a ref so the recognition event
+   *  handler reads the freshest value without a closure-stale
+   *  re-render. */
+  const bargeInActiveRef = useRef<boolean>(false);
+  /** True when the agent has signalled end_call on the last
+   *  response. After the closing TTS finishes, the session tears
+   *  down. Ref-based for the same reason as bargeInActiveRef. */
+  const endCallPendingRef = useRef<boolean>(false);
 
   /* ── Feature detection (memoised so the support-check banner
    *     doesn't flicker on each render) ─────────────────── */
@@ -217,9 +246,30 @@ export default function VoiceLiveSection({
 
   /** Speak a string via the browser's SpeechSynthesis. Sets phase to
    *  "speaking" while audio plays, drops back to "listening" once
-   *  done so the user can respond. */
+   *  done so the user can respond.
+   *
+   *  Two voice-flavoured branches in the lifecycle:
+   *   - If endCallPendingRef is set when the utterance ends, run
+   *     the session-teardown path instead of returning to listening.
+   *     This is how the agent's farewell line plays out fully
+   *     before the recognition + connection are torn down.
+   *   - If the utterance is cancelled (barge-in), the onend handler
+   *     still fires and we honour the resulting phase via the
+   *     `cancelled` flag carried in onerror. */
   const speak = useCallback((text: string) => {
     if (!text.trim()) {
+      // No speakable content — handle end_call here too, since
+      // an end_call with empty text should still tear down.
+      if (endCallPendingRef.current) {
+        endCallPendingRef.current = false;
+        recognitionRef.current?.abort();
+        recognitionRef.current = null;
+        if (typeof window !== "undefined") {
+          window.speechSynthesis?.cancel();
+        }
+        setPhase("ended");
+        return;
+      }
       setPhase("listening");
       return;
     }
@@ -229,6 +279,13 @@ export default function VoiceLiveSection({
     utt.onstart = () => setPhase("speaking");
     utt.onend = () => {
       utteranceRef.current = null;
+      if (endCallPendingRef.current) {
+        endCallPendingRef.current = false;
+        recognitionRef.current?.abort();
+        recognitionRef.current = null;
+        setPhase("ended");
+        return;
+      }
       setPhase((p) => (p === "speaking" ? "listening" : p));
     };
     utt.onerror = () => {
@@ -240,7 +297,18 @@ export default function VoiceLiveSection({
   }, []);
 
   /** Send a user transcript to /chat/v2 with voice: true, then speak
-   *  whatever the agent replies with. */
+   *  whatever the agent replies with.
+   *
+   *  Reads three voice-flavoured response signals:
+   *   - response.elements + ssml → speak via SpeechSynthesis
+   *   - res.end_call → defer session teardown until the closing
+   *     line finishes playing (handled inside speak())
+   *   - res.barge_in → if true, mark the utterance as interruptible
+   *     so the recognition onspeechstart can cancel it
+   *
+   *  Also surfaces the orchestrator's routing decision via
+   *  conversation.state.skill — that's what powers the routing-
+   *  inspector pill above the transcript. */
   const sendUserTurn = useCallback(
     async (transcript: string) => {
       if (!conversationId) return;
@@ -256,14 +324,34 @@ export default function VoiceLiveSection({
           /* voice */ true,
         );
         if (ctrl.signal.aborted) return;
+
+        // Surface routing for the inspector pill. Tenants without
+        // a configured skill name just leave the previous value
+        // standing — no flicker.
+        const skill = res.conversation?.state?.skill;
+        if (typeof skill === "string" && skill.trim()) {
+          setRoutedSkill(skill.trim());
+        }
+
+        // Carry the voice flags into refs the lifecycle handlers
+        // read. Reset before each turn so a previous barge_in
+        // doesn't bleed into the next response.
+        bargeInActiveRef.current = !!res.barge_in;
+        endCallPendingRef.current = !!res.end_call;
+
         if (res.response) {
           appendBotMessage(res.response);
           const speakable = extractSpeakableText(res.response);
           speak(speakable);
+        } else if (endCallPendingRef.current) {
+          // No closing line, but end_call set → tear down now.
+          endCallPendingRef.current = false;
+          recognitionRef.current?.abort();
+          recognitionRef.current = null;
+          setPhase("ended");
         } else {
           setPhase("listening");
         }
-        // Phase 2 will branch here on res.end_call / res.barge_in.
       } catch (err) {
         if (ctrl.signal.aborted) return;
         const msg =
@@ -312,6 +400,19 @@ export default function VoiceLiveSection({
       // result. We'll restart it from the phase-transition effect
       // below when we're back in listening state.
     };
+    /** Barge-in: when the user starts speaking AND the last response
+     *  was marked barge_in: true, cancel the in-flight TTS so the
+     *  agent yields the floor immediately. Without barge_in the
+     *  utterance plays through and the user has to wait. */
+    rec.onspeechstart = () => {
+      if (!bargeInActiveRef.current) return;
+      if (typeof window === "undefined") return;
+      window.speechSynthesis?.cancel();
+      utteranceRef.current = null;
+      // Don't change phase here — the recognition onresult will
+      // fire shortly and post the user's turn, which transitions
+      // through thinking → speaking → listening normally.
+    };
     return rec;
   }, [appendUserMessage, sendUserTurn]);
 
@@ -346,51 +447,121 @@ export default function VoiceLiveSection({
 
   /* ── Handlers ──────────────────────────────────────────── */
 
-  /** Kick off the voice session: START conversation, render the bot's
-   *  greeting (if any), then drop into listening for the first user
-   *  turn. */
-  const startSession = useCallback(async () => {
-    if (!supportStatus.ok) return;
-    setErrorMessage(null);
-    setMessages([]);
-    setPhase("starting");
-    const ctrl = new AbortController();
-    fetchAbortRef.current = ctrl;
-    try {
-      const res = await startConversation(
-        tenant,
-        {
-          language: "en-US",
-          page_url:
-            typeof window !== "undefined" ? window.location.href : undefined,
-          voice: true,
-        },
-        ctrl.signal,
-      );
-      if (ctrl.signal.aborted) return;
-      const newId = res.conversation?.id ?? null;
-      if (!newId) {
-        setErrorMessage(
-          "No conversation ID returned by the tenant. Voice may not be enabled.",
+  /** Kick off the voice session.
+   *
+   *  When `demo` is provided, the primer (demo.id, e.g. "demo1") is
+   *  posted as the user's first text turn the moment the START
+   *  conversation succeeds. The primer is sent on the wire but NOT
+   *  appended to the visual transcript — that's why
+   *  `appendUserMessage` is skipped here. The agent's response to
+   *  the primer becomes the first bubble the prospect sees, which
+   *  reads as if the agent opened the demo itself.
+   *
+   *  When `demo` is null (the "open free chat" path, useful for dev
+   *  testing), the session starts with whatever greeting the tenant
+   *  configures, and the user drives the conversation from turn 1. */
+  const startSession = useCallback(
+    async (demo: VoiceDemo | null) => {
+      if (!supportStatus.ok) return;
+      setErrorMessage(null);
+      setMessages([]);
+      setRoutedSkill(null);
+      bargeInActiveRef.current = false;
+      endCallPendingRef.current = false;
+      setSelectedDemo(demo);
+      setPhase("starting");
+      const ctrl = new AbortController();
+      fetchAbortRef.current = ctrl;
+      try {
+        const res = await startConversation(
+          tenant,
+          {
+            language: "en-US",
+            page_url:
+              typeof window !== "undefined"
+                ? window.location.href
+                : undefined,
+            voice: true,
+          },
+          ctrl.signal,
         );
+        if (ctrl.signal.aborted) return;
+        const newId = res.conversation?.id ?? null;
+        if (!newId) {
+          setErrorMessage(
+            "No conversation ID returned by the tenant. Voice may not be enabled.",
+          );
+          setPhase("error");
+          return;
+        }
+        setConversationId(newId);
+
+        // If a demo is selected, fire its primer (e.g. "demo1")
+        // RIGHT NOW so the tenant routes to the demo agent before
+        // any greeting plays. The agent's response to the primer
+        // becomes the opening bubble. We do NOT append the primer
+        // to the transcript — the header strip indicates what's
+        // running.
+        if (demo) {
+          // Post the primer using the same machinery the user's
+          // mid-call turns use. Inline-flight a small POST since
+          // sendUserTurn is gated by `conversationId` from React
+          // state which hasn't updated yet.
+          const primerCtrl = new AbortController();
+          fetchAbortRef.current = primerCtrl;
+          setPhase("thinking");
+          try {
+            const primerRes = await postText(
+              tenant,
+              newId,
+              demo.id,
+              primerCtrl.signal,
+              /* voice */ true,
+            );
+            if (primerCtrl.signal.aborted) return;
+            const skill = primerRes.conversation?.state?.skill;
+            if (typeof skill === "string" && skill.trim()) {
+              setRoutedSkill(skill.trim());
+            }
+            bargeInActiveRef.current = !!primerRes.barge_in;
+            endCallPendingRef.current = !!primerRes.end_call;
+            if (primerRes.response) {
+              appendBotMessage(primerRes.response);
+              const speakable = extractSpeakableText(primerRes.response);
+              speak(speakable);
+            } else {
+              setPhase("listening");
+            }
+          } catch (err) {
+            if (primerCtrl.signal.aborted) return;
+            const msg =
+              err instanceof Error
+                ? err.message
+                : "Demo primer failed to send";
+            setErrorMessage(msg);
+            setPhase("error");
+          }
+          return;
+        }
+
+        // No demo — render any greeting the tenant sends and drop
+        // straight into listening.
+        if (res.response) {
+          appendBotMessage(res.response);
+          const speakable = extractSpeakableText(res.response);
+          speak(speakable);
+        } else {
+          setPhase("listening");
+        }
+      } catch (err) {
+        if (ctrl.signal.aborted) return;
+        const msg = err instanceof Error ? err.message : "Failed to start";
+        setErrorMessage(msg);
         setPhase("error");
-        return;
       }
-      setConversationId(newId);
-      if (res.response) {
-        appendBotMessage(res.response);
-        const speakable = extractSpeakableText(res.response);
-        speak(speakable); // speak() will transition to "speaking" then "listening"
-      } else {
-        setPhase("listening");
-      }
-    } catch (err) {
-      if (ctrl.signal.aborted) return;
-      const msg = err instanceof Error ? err.message : "Failed to start";
-      setErrorMessage(msg);
-      setPhase("error");
-    }
-  }, [tenant, supportStatus.ok, appendBotMessage, speak]);
+    },
+    [tenant, supportStatus.ok, appendBotMessage, speak],
+  );
 
   const endSession = useCallback(() => {
     recognitionRef.current?.abort();
@@ -399,7 +570,21 @@ export default function VoiceLiveSection({
       window.speechSynthesis?.cancel();
     }
     fetchAbortRef.current?.abort();
+    bargeInActiveRef.current = false;
+    endCallPendingRef.current = false;
     setPhase("ended");
+  }, []);
+
+  /** Return to the gallery from any post-call state. Clears the
+   *  transcript, the routing inspector, and the demo selection so
+   *  the user sees the full gallery again. Doesn't touch the
+   *  conversationId — a fresh START fires on next selection. */
+  const resetToGallery = useCallback(() => {
+    setSelectedDemo(null);
+    setMessages([]);
+    setRoutedSkill(null);
+    setErrorMessage(null);
+    setPhase("idle");
   }, []);
 
   /* ── Status copy ────────────────────────────────────────── */
@@ -484,11 +669,23 @@ export default function VoiceLiveSection({
                 an alternative for screen-shared walkthroughs.
               </p>
             </div>
+          ) : phase === "idle" && !selectedDemo ? (
+            /* ─── GALLERY view — six demo cards ─────────────────── */
+            <DemoGallery onPick={(d) => setSelectedDemo(d)} onFreeChat={() => startSession(null)} />
+          ) : phase === "idle" && selectedDemo ? (
+            /* ─── PRE-FLIGHT view — value prop before Start ─────── */
+            <PreFlightPanel
+              demo={selectedDemo}
+              tenant={tenant}
+              onStart={() => startSession(selectedDemo)}
+              onBack={() => setSelectedDemo(null)}
+            />
           ) : (
+            /* ─── IN-CALL / ENDED / ERROR view ──────────────────── */
             <div className="rounded-2xl border border-boost-border bg-white shadow-sm overflow-hidden">
-              {/* Header strip — status + tenant */}
-              <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-boost-border bg-boost-surface/40">
-                <div className="flex items-center gap-2.5 min-w-0">
+              {/* Header strip — status + demo label + routing + tenant */}
+              <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-boost-border bg-boost-surface/40 flex-wrap">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <span
                     aria-hidden="true"
                     className={`flex-shrink-0 w-2 h-2 rounded-full ${statusDotClass}`}
@@ -499,26 +696,52 @@ export default function VoiceLiveSection({
                   >
                     {statusLabel}
                   </p>
+                  {selectedDemo ? (
+                    <>
+                      <span aria-hidden="true" className="text-boost-muted/40 text-[10px]">
+                        ▸
+                      </span>
+                      <p
+                        className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${
+                          PILLAR_ACCENT_TEXT[selectedDemo.pillar]
+                        } truncate`}
+                        data-testid="voice-demo-label"
+                      >
+                        {selectedDemo.id} · {selectedDemo.label}
+                      </p>
+                    </>
+                  ) : null}
                 </div>
-                <p className="text-[10px] text-boost-muted tabular-nums truncate">
+                {/* Routing inspector pill — surfaces tenant's specialist
+                    agent skill name. Only renders when present. */}
+                {routedSkill ? (
+                  <span
+                    className="flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-boost-purple/10 text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-purple"
+                    data-testid="voice-routed-skill"
+                  >
+                    <span aria-hidden="true">✓</span>
+                    <span>{routedSkill}</span>
+                  </span>
+                ) : null}
+                <p className="text-[10px] text-boost-muted tabular-nums truncate flex-shrink-0">
                   {tenant}
                 </p>
               </div>
 
               {/* Transcript bubbles */}
               <div
-                className="px-5 py-6 min-h-[280px] max-h-[420px] overflow-y-auto space-y-3"
+                className="px-5 py-6 min-h-[280px] max-h-[480px] overflow-y-auto space-y-3"
                 data-testid="voice-transcript"
               >
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center py-10">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-boost-muted mb-2">
-                      How this works
+                      {phase === "starting" ? "Opening" : "Waiting"}
                     </p>
                     <p className="text-sm text-boost-text-secondary leading-relaxed max-w-[48ch]">
-                      Tap the mic to start. Your speech is transcribed by the
-                      browser and sent to the live AI Agent — the response
-                      plays back through your speakers.
+                      {selectedDemo
+                        ? `Routing to the ${selectedDemo.label.toLowerCase()} demo…`
+                        : "Waiting for the agent to open the call…"}
                     </p>
                   </div>
                 ) : (
@@ -529,19 +752,30 @@ export default function VoiceLiveSection({
               </div>
 
               {/* Controls */}
-              <div className="px-5 py-4 border-t border-boost-border bg-boost-surface/30 flex items-center justify-center gap-3">
-                {phase === "idle" || phase === "ended" || phase === "error" ? (
-                  <button
-                    type="button"
-                    onClick={startSession}
-                    data-testid="voice-start-button"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-boost-purple text-white text-[12px] font-bold uppercase tracking-[0.14em] hover:bg-boost-purple/90 transition-colors shadow-sm"
-                  >
-                    <MicIcon className="w-4 h-4" />
-                    <span>
-                      {phase === "idle" ? "Start voice call" : "Call again"}
-                    </span>
-                  </button>
+              <div className="px-5 py-4 border-t border-boost-border bg-boost-surface/30 flex items-center justify-center gap-3 flex-wrap">
+                {phase === "ended" || phase === "error" ? (
+                  <>
+                    {selectedDemo ? (
+                      <button
+                        type="button"
+                        onClick={() => startSession(selectedDemo)}
+                        data-testid="voice-restart-button"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-boost-purple text-white text-[12px] font-bold uppercase tracking-[0.14em] hover:bg-boost-purple/90 transition-colors shadow-sm"
+                      >
+                        <MicIcon className="w-4 h-4" />
+                        <span>Restart this demo</span>
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={resetToGallery}
+                      data-testid="voice-back-to-gallery"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-boost-border bg-white text-boost-dark text-[12px] font-bold uppercase tracking-[0.14em] hover:bg-boost-surface transition-colors"
+                    >
+                      <span aria-hidden="true">←</span>
+                      <span>Try another demo</span>
+                    </button>
+                  </>
                 ) : (
                   <button
                     type="button"
@@ -577,6 +811,236 @@ export default function VoiceLiveSection({
         </div>
       </div>
     </section>
+  );
+}
+
+/* ─── Demo glyph renderer ──────────────────────────────────── *
+ * Renders the SVG paths from a VoiceDemo.glyph in a fixed 24×24
+ * viewBox. Stroke-based by default; switches to fill when the
+ * glyph opts in via `filled: true`. */
+function DemoGlyphSvg({ glyph, className }: { glyph: DemoGlyph; className?: string }) {
+  if (glyph.filled) {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        className={className}
+        aria-hidden="true"
+      >
+        {glyph.paths.map((d, i) => (
+          <path key={i} d={d} />
+        ))}
+      </svg>
+    );
+  }
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {glyph.paths.map((d, i) => (
+        <path key={i} d={d} />
+      ))}
+    </svg>
+  );
+}
+
+/* ─── Gallery — pick-a-demo grid ─── *
+ * 2×3 grid (1-col on mobile). Each card carries label, tagline,
+ * glyph, and the pillar accent stripe. Click → pre-flight panel.
+ * The "Open a free chat instead" link below the gallery is a dev
+ * escape hatch; AEs in front of customers will always pick a demo. */
+function DemoGallery({
+  onPick,
+  onFreeChat,
+}: {
+  onPick: (demo: VoiceDemo) => void;
+  onFreeChat: () => void;
+}) {
+  return (
+    <div data-testid="voice-demo-gallery">
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-boost-muted mb-2">
+        Pick a demo
+      </p>
+      <h3 className="text-2xl sm:text-3xl font-bold text-boost-dark leading-tight mb-6 max-w-[34ch]">
+        Six features, each three minutes long.
+      </h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {VOICE_DEMOS.map((demo) => (
+          <button
+            key={demo.id}
+            type="button"
+            onClick={() => onPick(demo)}
+            data-testid={`voice-demo-card-${demo.id}`}
+            className="group relative block text-left rounded-xl border border-boost-border bg-white shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-purple/40 focus-visible:ring-offset-2"
+          >
+            {/* Pillar accent stripe — left edge */}
+            <span
+              aria-hidden="true"
+              className={`absolute left-0 top-0 bottom-0 w-1 transition-all group-hover:w-1.5 ${
+                PILLAR_ACCENT_BG[demo.pillar]
+              }`}
+            />
+            <div className="p-5">
+              {/* Glyph circle */}
+              <span
+                className={`inline-flex items-center justify-center w-11 h-11 rounded-full mb-4 transition-all duration-300 group-hover:scale-[1.04] ${
+                  PILLAR_ACCENT_BG_SOFT[demo.pillar]
+                } ${PILLAR_ACCENT_TEXT[demo.pillar]}`}
+              >
+                <DemoGlyphSvg glyph={demo.glyph} className="w-6 h-6" />
+              </span>
+
+              {/* Demo ID — kicker */}
+              <p
+                className={`text-[10px] font-bold uppercase tracking-[0.18em] mb-1 ${
+                  PILLAR_ACCENT_TEXT[demo.pillar]
+                }`}
+              >
+                {demo.id}
+              </p>
+              <h4 className="text-base font-semibold text-boost-dark mb-1.5 tracking-tight">
+                {demo.label}
+              </h4>
+              <p className="text-[12px] text-boost-text-secondary leading-relaxed mb-3">
+                {demo.tagline}
+              </p>
+              <div className="pt-3 border-t border-boost-border/60 flex items-center justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-muted">
+                  Try it
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="text-boost-muted group-hover:text-boost-purple group-hover:translate-x-0.5 transition-all"
+                >
+                  →
+                </span>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Dev / freeform escape hatch */}
+      <div className="mt-6 text-center">
+        <button
+          type="button"
+          onClick={onFreeChat}
+          data-testid="voice-free-chat"
+          className="text-[11px] font-semibold uppercase tracking-[0.14em] text-boost-muted hover:text-boost-purple transition-colors"
+        >
+          Or open a freeform call instead →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Pre-flight panel — value prop before the call starts ─── *
+ * Shown after a card is picked, before the user clicks Start. Sells
+ * the value prop, explains the tech, sets expectation for what
+ * they'll hear. */
+function PreFlightPanel({
+  demo,
+  tenant,
+  onStart,
+  onBack,
+}: {
+  demo: VoiceDemo;
+  tenant: string;
+  onStart: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <div
+      className="rounded-2xl border border-boost-border bg-white shadow-sm overflow-hidden"
+      data-testid="voice-preflight"
+    >
+      {/* Header */}
+      <div
+        className={`px-6 py-4 border-b border-boost-border ${PILLAR_ACCENT_BG_SOFT[demo.pillar]}`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <span
+              className={`flex-shrink-0 inline-flex items-center justify-center w-11 h-11 rounded-full bg-white ${PILLAR_ACCENT_TEXT[demo.pillar]}`}
+            >
+              <DemoGlyphSvg glyph={demo.glyph} className="w-6 h-6" />
+            </span>
+            <div className="min-w-0">
+              <p
+                className={`text-[10px] font-bold uppercase tracking-[0.18em] mb-1 ${PILLAR_ACCENT_TEXT[demo.pillar]}`}
+              >
+                {demo.id} · About to start
+              </p>
+              <h3 className="text-xl font-bold text-boost-dark leading-tight">
+                {demo.label}
+              </h3>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onBack}
+            data-testid="voice-preflight-back"
+            className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-muted hover:text-boost-dark transition-colors"
+          >
+            ← Back
+          </button>
+        </div>
+      </div>
+
+      {/* Body — value prop + tech explanation + expected behavior */}
+      <div className="px-6 py-5 space-y-5">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-boost-muted mb-2">
+            Why it matters
+          </p>
+          <p className="text-sm text-boost-text-secondary leading-relaxed max-w-[62ch]">
+            {demo.valueProp}
+          </p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-boost-muted mb-2">
+            What's happening under the hood
+          </p>
+          <p className="text-sm text-boost-text-secondary leading-relaxed max-w-[62ch]">
+            {demo.techExplanation}
+          </p>
+        </div>
+        <div
+          className={`px-4 py-3 rounded-lg border ${PILLAR_ACCENT_BG_SOFT[demo.pillar]} border-boost-border`}
+        >
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-boost-muted mb-1">
+            What to listen for
+          </p>
+          <p className="text-[13px] text-boost-dark leading-relaxed">
+            {demo.expectedBehavior}
+          </p>
+        </div>
+      </div>
+
+      {/* Start CTA */}
+      <div className="px-6 py-4 border-t border-boost-border bg-boost-surface/30 flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-[10px] text-boost-muted tabular-nums">
+          {tenant}
+        </p>
+        <button
+          type="button"
+          onClick={onStart}
+          data-testid="voice-preflight-start"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-boost-purple text-white text-[12px] font-bold uppercase tracking-[0.14em] hover:bg-boost-purple/90 transition-colors shadow-sm"
+        >
+          <MicIcon className="w-4 h-4" />
+          <span>Start the demo</span>
+        </button>
+      </div>
+    </div>
   );
 }
 
