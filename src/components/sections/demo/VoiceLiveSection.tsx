@@ -32,6 +32,10 @@ import {
   type ChatMessage,
   type ChatResponse,
 } from "@/lib/boost-chat";
+import {
+  createVoiceSession,
+  DEFAULT_VOICE_EXTERNAL_ID,
+} from "@/lib/boost-voice";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import {
@@ -42,6 +46,14 @@ import {
   type VoiceDemo,
   type DemoGlyph,
 } from "@/data/voice-demos";
+import {
+  Room,
+  RoomEvent,
+  Track,
+  type RemoteTrack,
+  type RemoteTrackPublication,
+  type RemoteParticipant,
+} from "livekit-client";
 
 interface VoiceLiveSectionProps {
   /** Tenant domain, e.g. `"financewizard.boost.ai"`. No protocol. */
@@ -201,6 +213,14 @@ export default function VoiceLiveSection({
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   /** AbortController for in-flight /chat/v2 requests. */
   const fetchAbortRef = useRef<AbortController | null>(null);
+  /** Active LiveKit Room when in production-voice mode. Held in a
+   *  ref so the unmount cleanup + endSession can disconnect
+   *  without re-renders. */
+  const roomRef = useRef<Room | null>(null);
+  /** Audio element used to play the agent's remote audio track.
+   *  Created once, attached to / detached from tracks as they
+   *  publish + unpublish. */
+  const audioEl = useRef<HTMLAudioElement | null>(null);
   /** Mirrors the last response's barge_in flag. When true, the
    *  speech-recognition onspeechstart handler will cancel the
    *  in-flight TTS — the agent yields the floor the moment the
@@ -213,24 +233,29 @@ export default function VoiceLiveSection({
    *  down. Ref-based for the same reason as bargeInActiveRef. */
   const endCallPendingRef = useRef<boolean>(false);
 
-  /* ── Feature detection (memoised so the support-check banner
-   *     doesn't flicker on each render) ─────────────────── */
+  /* ── Feature detection — WebRTC + getUserMedia capability ──
+   *  LiveKit needs the browser to support RTCPeerConnection +
+   *  navigator.mediaDevices.getUserMedia. Both are standard on
+   *  Chrome / Edge / Firefox / Safari since 2017+. The check is
+   *  memoised so the banner doesn't flicker on each render. */
   const supportStatus = useMemo(() => {
     if (typeof window === "undefined") return { ok: false, reason: "ssr" };
-    const hasRecognition = !!resolveSpeechRecognition();
-    const hasSynthesis = "speechSynthesis" in window;
-    if (!hasRecognition) {
+    const hasPeerConnection = typeof RTCPeerConnection !== "undefined";
+    const hasGetUserMedia = !!(
+      navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+    );
+    if (!hasPeerConnection) {
       return {
         ok: false as const,
         reason:
-          "This browser doesn't support Web Speech recognition. Try Chrome or Edge on desktop.",
+          "This browser doesn't support WebRTC. Try Chrome, Edge, Firefox, or Safari.",
       };
     }
-    if (!hasSynthesis) {
+    if (!hasGetUserMedia) {
       return {
         ok: false as const,
         reason:
-          "This browser doesn't support speech synthesis. Try Chrome or Edge.",
+          "This browser doesn't support microphone capture. Try Chrome, Edge, Firefox, or Safari.",
       };
     }
     return { ok: true as const, reason: null };
@@ -487,21 +512,12 @@ export default function VoiceLiveSection({
     return rec;
   }, [appendUserMessage, sendUserTurn, appendEvent]);
 
-  /* ── Effect: when phase enters "listening", start a fresh
-   *     recognition round so the user can speak again. ──── */
-  useEffect(() => {
-    if (phase !== "listening") return;
-    if (!recognitionRef.current) {
-      recognitionRef.current = buildRecognition();
-    }
-    const rec = recognitionRef.current;
-    if (!rec) return;
-    try {
-      rec.start();
-    } catch {
-      // Already started — ignore.
-    }
-  }, [phase, buildRecognition]);
+  /* ── Effect: SpeechRecognition restart is now disabled. LiveKit's
+   *     localParticipant.setMicrophoneEnabled(true) owns the
+   *     microphone for the whole session — Web Speech API would
+   *     conflict for the audio stream. The buildRecognition helper
+   *     is kept around for a possible future fallback path. */
+  void buildRecognition;
 
   /* ── Effect: cleanup on unmount or phase change away ──── */
   useEffect(() => {
@@ -513,24 +529,39 @@ export default function VoiceLiveSection({
         window.speechSynthesis?.cancel();
       }
       fetchAbortRef.current?.abort();
+      // Disconnect the LiveKit Room on unmount so nothing leaks
+      // — e.g. user navigates away mid-call.
+      const room = roomRef.current;
+      if (room) {
+        void room.disconnect();
+        roomRef.current = null;
+      }
     };
   }, []);
 
   /* ── Handlers ──────────────────────────────────────────── */
 
-  /** Kick off the voice session.
+  /** Kick off the voice session against boost.ai's WebRTC (LiveKit)
+   *  voice gateway.
    *
-   *  When `demo` is provided, the primer (demo.id, e.g. "demo1") is
-   *  posted as the user's first text turn the moment the START
-   *  conversation succeeds. The primer is sent on the wire but NOT
-   *  appended to the visual transcript — that's why
-   *  `appendUserMessage` is skipped here. The agent's response to
-   *  the primer becomes the first bubble the prospect sees, which
-   *  reads as if the agent opened the demo itself.
+   *  Flow:
+   *    1. POST /api/voice/v1/session with the demo's external_id
+   *    2. Receive { url, access_token } from LiveKit
+   *    3. Create a Room, wire its events to our event stream
+   *    4. Connect to the room
+   *    5. Enable microphone capture (browser asks for permission)
+   *    6. Subscribe to the agent's audio track and play it through
+   *       a hidden <audio> element
    *
-   *  When `demo` is null (the "open free chat" path, useful for dev
-   *  testing), the session starts with whatever greeting the tenant
-   *  configures, and the user drives the conversation from turn 1. */
+   *  The voice agent on the tenant side is already configured to
+   *  pick up calls on this external_id and run its flow. We don't
+   *  need to send a "demoN" primer — the external_id is the
+   *  entrypoint mapping.
+   *
+   *  Today's external_id is shared across all six demos (one
+   *  voice agent demonstrates the full flow). When per-demo
+   *  entrypoints are provisioned tenant-side, we read them from
+   *  the demo record and pass the right one here. */
   const startSession = useCallback(
     async (demo: VoiceDemo | null) => {
       if (!supportStatus.ok) return;
@@ -544,102 +575,135 @@ export default function VoiceLiveSection({
       setPhase("starting");
       appendEvent(
         "system",
-        "Opening session",
-        demo ? `Primer: ${demo.id}` : "Freeform call",
+        "Opening voice session",
+        demo ? `Entrypoint: ${demo.id}` : "Freeform call",
       );
+
       const ctrl = new AbortController();
       fetchAbortRef.current = ctrl;
+
       try {
-        const res = await startConversation(
+        // Step 1+2: POST /api/voice/v1/session and receive LiveKit
+        // connection params.
+        const session = await createVoiceSession(
           tenant,
-          {
-            language: "en-US",
-            page_url:
-              typeof window !== "undefined"
-                ? window.location.href
-                : undefined,
-            voice: true,
-          },
+          DEFAULT_VOICE_EXTERNAL_ID,
           ctrl.signal,
         );
         if (ctrl.signal.aborted) return;
-        const newId = res.conversation?.id ?? null;
-        if (!newId) {
-          const msg =
-            "No conversation ID returned by the tenant. Voice may not be enabled.";
-          appendEvent("error", "Session failed", msg);
-          setErrorMessage(msg);
-          setPhase("error");
-          return;
-        }
-        appendEvent("system", "Session opened", newId.slice(0, 12) + "…");
-        setConversationId(newId);
+        appendEvent(
+          "system",
+          "LiveKit credentials issued",
+          new URL(session.url).host,
+        );
 
-        // If a demo is selected, fire its primer (e.g. "demo1")
-        // RIGHT NOW so the tenant routes to the demo agent before
-        // any greeting plays. The agent's response to the primer
-        // becomes the opening bubble. We do NOT append the primer
-        // to the transcript — the header strip indicates what's
-        // running.
-        if (demo) {
-          // Post the primer using the same machinery the user's
-          // mid-call turns use. Inline-flight a small POST since
-          // sendUserTurn is gated by `conversationId` from React
-          // state which hasn't updated yet.
-          const primerCtrl = new AbortController();
-          fetchAbortRef.current = primerCtrl;
-          setPhase("thinking");
-          try {
-            const primerRes = await postText(
-              tenant,
-              newId,
-              demo.id,
-              primerCtrl.signal,
-              /* voice */ true,
-            );
-            if (primerCtrl.signal.aborted) return;
-            const skill = primerRes.conversation?.state?.skill;
-            if (typeof skill === "string" && skill.trim()) {
-              setRoutedSkill(skill.trim());
-            }
-            bargeInActiveRef.current = !!primerRes.barge_in;
-            endCallPendingRef.current = !!primerRes.end_call;
-            if (primerRes.response) {
-              appendBotMessage(primerRes.response);
-              const speakable = extractSpeakableText(primerRes.response);
-              speak(speakable);
-            } else {
-              setPhase("listening");
-            }
-          } catch (err) {
-            if (primerCtrl.signal.aborted) return;
-            const msg =
-              err instanceof Error
-                ? err.message
-                : "Demo primer failed to send";
-            setErrorMessage(msg);
-            setPhase("error");
-          }
-          return;
+        // Step 3: Create the Room and wire events. Lazy-init
+        // audio element so we can attach remote tracks to it.
+        if (!audioEl.current && typeof document !== "undefined") {
+          audioEl.current = document.createElement("audio");
+          audioEl.current.autoplay = true;
         }
+        const room = new Room({
+          adaptiveStream: true,
+          dynacast: true,
+        });
+        roomRef.current = room;
 
-        // No demo — render any greeting the tenant sends and drop
-        // straight into listening.
-        if (res.response) {
-          appendBotMessage(res.response);
-          const speakable = extractSpeakableText(res.response);
-          speak(speakable);
-        } else {
+        room.on(RoomEvent.Connected, () => {
+          appendEvent("system", "Connected to room", room.name);
           setPhase("listening");
+        });
+        room.on(RoomEvent.Disconnected, (reason) => {
+          appendEvent(
+            "system",
+            "Disconnected",
+            typeof reason === "string" ? reason : String(reason ?? ""),
+          );
+        });
+        room.on(
+          RoomEvent.TrackSubscribed,
+          (
+            track: RemoteTrack,
+            publication: RemoteTrackPublication,
+            participant: RemoteParticipant,
+          ) => {
+            if (track.kind === Track.Kind.Audio) {
+              appendEvent("agent", "Agent audio connected", participant.identity);
+              if (audioEl.current) {
+                track.attach(audioEl.current);
+              }
+            }
+          },
+        );
+        room.on(
+          RoomEvent.TrackUnsubscribed,
+          (track: RemoteTrack) => {
+            if (track.kind === Track.Kind.Audio && audioEl.current) {
+              track.detach(audioEl.current);
+            }
+          },
+        );
+        room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
+          // The remote agent is one of the active speakers — when
+          // they're talking, we're in "speaking" phase. When the
+          // user speaks (local participant), back to "listening".
+          // Simple heuristic: any remote active speaker → speaking.
+          const remoteSpeaking = speakers.some(
+            (p) => p.identity !== room.localParticipant.identity,
+          );
+          setPhase((p) => {
+            if (p === "ended" || p === "error") return p;
+            return remoteSpeaking ? "speaking" : "listening";
+          });
+        });
+        room.on(RoomEvent.DataReceived, (payload, participant) => {
+          // Voice agents sometimes send transcripts / events as
+          // LiveKit data messages. Surface them in the events
+          // panel without trying to parse strictly.
+          try {
+            const text = new TextDecoder().decode(payload);
+            appendEvent(
+              "agent",
+              "Agent data",
+              text.length > 80 ? text.slice(0, 77) + "…" : text,
+            );
+          } catch {
+            // Binary or undecodable — ignore.
+          }
+          void participant;
+        });
+
+        // Step 4: Connect to LiveKit.
+        await room.connect(session.url, session.access_token);
+        if (ctrl.signal.aborted) {
+          await room.disconnect();
+          return;
+        }
+
+        // Step 5: Enable microphone. Browser asks for permission
+        // here. LiveKit handles publishing the local audio track
+        // to the room.
+        try {
+          await room.localParticipant.setMicrophoneEnabled(true);
+          appendEvent("system", "Microphone published");
+        } catch (err) {
+          const msg =
+            err instanceof Error ? err.message : "Microphone denied";
+          appendEvent("error", "Microphone failed", msg);
+          setErrorMessage(`Microphone error: ${msg}`);
+          // Don't tear down the connection — the user may still
+          // hear the agent even without a working mic.
         }
       } catch (err) {
         if (ctrl.signal.aborted) return;
-        const msg = err instanceof Error ? err.message : "Failed to start";
+        const msg =
+          err instanceof Error ? err.message : "Voice session failed";
+        appendEvent("error", "Voice session failed", msg);
         setErrorMessage(msg);
         setPhase("error");
       }
     },
-    [tenant, supportStatus.ok, appendBotMessage, speak, appendEvent, routedSkill],
+    [tenant, supportStatus.ok, appendEvent],
   );
 
   const endSession = useCallback(() => {
@@ -649,6 +713,12 @@ export default function VoiceLiveSection({
       window.speechSynthesis?.cancel();
     }
     fetchAbortRef.current?.abort();
+    // Tear down the LiveKit room. disconnect() is idempotent.
+    const room = roomRef.current;
+    if (room) {
+      void room.disconnect();
+      roomRef.current = null;
+    }
     bargeInActiveRef.current = false;
     endCallPendingRef.current = false;
     appendEvent("system", "Call ended");
@@ -720,8 +790,8 @@ export default function VoiceLiveSection({
           title="Voice Preview"
           subtitle={
             mode === "custom_live"
-              ? "Talk to a live AI Agent on your tenant. Voice quality uses your browser's TTS; production Boost Voice with ElevenLabs sounds smoother."
-              : "Talk to a live AI Agent. Voice quality uses your browser's TTS; production Boost Voice with ElevenLabs sounds smoother."
+              ? "Talk to a live AI Agent on your tenant. Real voice — boost.ai's managed WebRTC stack with ElevenLabs + Speechmatics, end-to-end."
+              : "Talk to a live AI Agent. Real voice — boost.ai's managed WebRTC stack with ElevenLabs + Speechmatics, end-to-end."
           }
         />
 
@@ -1006,10 +1076,16 @@ function VoiceConsole(props: {
         <EventsPanel events={events} tenant={tenant} />
       </div>
 
-      {/* Honest framing footer — voice quality story */}
-      <p className="mt-5 text-[12px] text-boost-muted leading-relaxed text-center max-w-3xl mx-auto">
-        Voice quality here is the browser's default TTS. Production Boost
-        Voice runs on ElevenLabs and Speechmatics with sub-second latency.
+      {/* Powered-by callout — the managed voice stack story */}
+      <p className="mt-5 text-[11px] text-boost-muted leading-relaxed text-center max-w-3xl mx-auto">
+        <span className="font-semibold text-boost-dark">Powered by boost.ai's managed voice stack</span>
+        {" — "}
+        <span>LiveKit · ElevenLabs · Speechmatics</span>
+        {". "}
+        <span className="text-boost-muted/80">
+          One orchestration, one DPA, one vendor relationship. You don't
+          integrate four sub-processors — we do.
+        </span>
       </p>
     </div>
   );
