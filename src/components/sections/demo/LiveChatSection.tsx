@@ -449,8 +449,7 @@ export default function LiveChatSection({
         >
         {/* Chat frame — same width always; only its neighbours change. */}
         <div
-          className="flex-1 min-w-0 md:flex-none md:basis-[58%] rounded-2xl border-2 border-boost-purple/25 bg-white overflow-hidden flex flex-col transition-all duration-700 ease-out shadow-[0_6px_24px_-8px_rgba(89,25,93,0.18)]"
-          style={{ height: "600px", maxHeight: "80vh" }}
+          className="flex-1 min-w-0 md:flex-none md:basis-[58%] h-[78vh] md:h-[600px] md:max-h-[80vh] rounded-2xl border-2 border-boost-purple/25 bg-white overflow-hidden flex flex-col transition-all duration-700 ease-out shadow-[0_6px_24px_-8px_rgba(89,25,93,0.18)]"
         >
           {/* Messages area */}
           <div

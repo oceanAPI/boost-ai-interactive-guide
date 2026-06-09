@@ -120,13 +120,11 @@ export default function DemoPreviewSection({
   customer?: Customer;
   sectionNumber?: string;
 }) {
-  // Chat defaults to scripted: the shared demo tenant
-  // (financewizard.boost.ai) is configured for the voice demo triggers
-  // and has no general chat flow, so chat-live returns "unknown
-  // trigger". Voice defaults to live (VoicePreviewSection) since the
-  // production WebRTC path works. An explicit demo_mode override still
-  // applies to both channels.
-  const mode = customer?.demo_mode ?? "simulated";
+  // Default to live (matches the admin demo-mode setting default).
+  // Note: the shared demo tenant (financewizard) is lightly trained, so
+  // off-topic questions hit its fallback — point at a trained tenant via
+  // NEXT_PUBLIC_BOOST_DEMO_TENANT for a richer live chat.
+  const mode = customer?.demo_mode ?? "live";
 
   if (mode === "live") {
     const tenant = resolveDemoTenant();

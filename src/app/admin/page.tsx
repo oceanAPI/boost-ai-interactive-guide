@@ -14,7 +14,13 @@ import {
   listMyEngagements,
   getEngagement,
   deleteEngagement,
+  addCollaborator,
+  removeCollaborator,
+  listCollaborators,
+  listComments,
   type EngagementSummary,
+  type CollaboratorRow,
+  type CommentRow,
 } from "@/app/actions/engagements";
 import { CURRENCY_OPTIONS } from "@/lib/roi-calculator";
 import {
@@ -344,6 +350,180 @@ function RailLogoTile(props: { src?: string | null; initials: string; alt: strin
         </span>
       )}
     </span>
+  );
+}
+
+/* ─── Engagement detail panel (inside My Engagements modal) ───
+ *  Clicking a saved engagement opens this instead of loading straight
+ *  into the builder: logo + meta, an Open-in-builder action, the
+ *  collaborator manager (add/remove @boost.ai editors), and the
+ *  comments-so-far (read-only foundation; capture lands with sharing). */
+function EngagementDetail(props: {
+  engagement: EngagementSummary;
+  isOwner: boolean;
+  loading: boolean;
+  collaborators: CollaboratorRow[];
+  comments: CommentRow[];
+  newCollabEmail: string;
+  onNewCollabEmailChange: (v: string) => void;
+  collabError: string | null;
+  onAddCollaborator: () => void;
+  onRemoveCollaborator: (email: string) => void;
+  onBack: () => void;
+  onOpen: () => void;
+  onDelete: () => void;
+  isOpenEngagement: boolean;
+}) {
+  const {
+    engagement: e,
+    isOwner,
+    loading,
+    collaborators,
+    comments,
+    newCollabEmail,
+    onNewCollabEmailChange,
+    collabError,
+    onAddCollaborator,
+    onRemoveCollaborator,
+    onBack,
+    onOpen,
+    onDelete,
+    isOpenEngagement,
+  } = props;
+
+  const dom = (e.company_url || "")
+    .replace(/^https?:\/\//, "")
+    .replace(/\/.*$/, "")
+    .trim();
+  const src = dom ? `https://cdn.brandfetch.io/${dom}` : null;
+  const label = e.company_name || e.title || "Untitled engagement";
+  const initials = label.trim()[0]?.toUpperCase() ?? "?";
+
+  return (
+    <>
+      {/* Header */}
+      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-boost-border">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="Back to list"
+          className="flex-shrink-0 -ml-1 p-1.5 rounded-md text-boost-muted hover:text-boost-dark hover:bg-boost-surface transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
+        <RailLogoTile src={src} initials={initials} alt={label} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-semibold text-boost-dark truncate leading-tight">{label}</p>
+          <p className="text-[10px] text-boost-muted mt-0.5">
+            {isOwner ? "Owner" : "Collaborator"}
+            {dom ? <><span className="mx-1.5">·</span>{dom}</> : null}
+            {isOpenEngagement ? <span className="ml-1.5 text-boost-green font-semibold">· open now</span> : null}
+          </p>
+        </div>
+      </div>
+
+      <div className="max-h-[64vh] overflow-y-auto px-5 py-4 space-y-5">
+        {/* Open in builder */}
+        <button
+          type="button"
+          onClick={onOpen}
+          className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-boost-purple px-4 py-2.5 text-[12px] font-bold uppercase tracking-[0.14em] text-white hover:bg-boost-purple/90 transition-colors"
+        >
+          Open in builder <span aria-hidden="true">→</span>
+        </button>
+
+        {/* Collaborators */}
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-boost-muted mb-2">
+            Collaborators
+          </p>
+          {loading ? (
+            <p className="text-[12px] text-boost-muted">Loading…</p>
+          ) : collaborators.length === 0 ? (
+            <p className="text-[12px] text-boost-muted/80">
+              No collaborators yet. Add a boost.ai teammate to let them edit.
+            </p>
+          ) : (
+            <ul className="space-y-1 mb-2">
+              {collaborators.map((c) => (
+                <li key={c.email} className="group flex items-center gap-2 text-[12px] text-boost-dark">
+                  <span className="flex-1 truncate">{c.email}</span>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveCollaborator(c.email)}
+                    aria-label={`Remove ${c.email}`}
+                    className="opacity-0 group-hover:opacity-100 text-boost-muted hover:text-boost-gold transition-all text-[11px] font-semibold uppercase tracking-[0.12em]"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {/* Add collaborator */}
+          <div className="flex items-center gap-2 mt-1">
+            <input
+              type="email"
+              value={newCollabEmail}
+              onChange={(ev) => onNewCollabEmailChange(ev.target.value)}
+              onKeyDown={(ev) => { if (ev.key === "Enter") onAddCollaborator(); }}
+              placeholder="teammate@boost.ai"
+              className="flex-1 px-3 py-2 bg-white border border-boost-border rounded-lg text-[12px] text-boost-dark placeholder-boost-lavender focus:outline-none focus:ring-2 focus:ring-boost-green-light focus:border-transparent"
+            />
+            <button
+              type="button"
+              onClick={onAddCollaborator}
+              className="flex-shrink-0 rounded-lg border border-boost-border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-boost-dark hover:bg-boost-surface transition-colors"
+            >
+              Add
+            </button>
+          </div>
+          {collabError ? (
+            <p className="text-[11px] text-boost-gold mt-1.5">{collabError}</p>
+          ) : null}
+        </div>
+
+        {/* Comments */}
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-boost-muted mb-2">
+            Comments
+          </p>
+          {loading ? (
+            <p className="text-[12px] text-boost-muted">Loading…</p>
+          ) : comments.length === 0 ? (
+            <p className="text-[12px] text-boost-muted/80">
+              No comments yet. Comments from people you share this with will
+              appear here.
+            </p>
+          ) : (
+            <ul className="space-y-2.5">
+              {comments.map((c) => (
+                <li key={c.id} className="rounded-lg border border-boost-border bg-boost-surface/40 px-3 py-2">
+                  <p className="text-[11px] text-boost-dark">{c.body}</p>
+                  <p className="text-[9px] text-boost-muted mt-1">
+                    {c.author_email}
+                    <span className="mx-1.5">·</span>
+                    {new Date(c.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                    {c.resolved ? <span className="ml-1.5 text-boost-green">· resolved</span> : null}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Delete */}
+        {isOwner ? (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="text-[11px] font-semibold uppercase tracking-[0.12em] text-boost-muted hover:text-boost-gold transition-colors"
+          >
+            Delete engagement
+          </button>
+        ) : null}
+      </div>
+    </>
   );
 }
 
@@ -1694,6 +1874,48 @@ export default function AdminPage() {
       return;
     }
     setEngagementsList((prev) => prev.filter((e) => e.id !== id));
+    if (detailEngagement?.id === id) setDetailEngagement(null);
+  };
+
+  /* ─── Engagement detail (collaborators + comments) ─── */
+  const [detailEngagement, setDetailEngagement] = useState<EngagementSummary | null>(null);
+  const [detailCollaborators, setDetailCollaborators] = useState<CollaboratorRow[]>([]);
+  const [detailComments, setDetailComments] = useState<CommentRow[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [newCollabEmail, setNewCollabEmail] = useState("");
+  const [collabError, setCollabError] = useState<string | null>(null);
+
+  const openDetail = async (e: EngagementSummary) => {
+    setDetailEngagement(e);
+    setDetailLoading(true);
+    setCollabError(null);
+    const [collabs, comments] = await Promise.all([
+      listCollaborators(e.id),
+      listComments(e.id),
+    ]);
+    setDetailCollaborators(collabs.ok ? collabs.data : []);
+    setDetailComments(comments.ok ? comments.data : []);
+    setDetailLoading(false);
+  };
+
+  const handleAddCollaborator = async () => {
+    if (!detailEngagement) return;
+    setCollabError(null);
+    const res = await addCollaborator(detailEngagement.id, newCollabEmail);
+    if (!res.ok) {
+      setCollabError(res.error);
+      return;
+    }
+    setNewCollabEmail("");
+    const refreshed = await listCollaborators(detailEngagement.id);
+    setDetailCollaborators(refreshed.ok ? refreshed.data : []);
+  };
+
+  const handleRemoveCollaborator = async (email: string) => {
+    if (!detailEngagement) return;
+    const res = await removeCollaborator(detailEngagement.id, email);
+    if (!res.ok) return;
+    setDetailCollaborators((prev) => prev.filter((c) => c.email !== email));
   };
 
   /* ─── SOW PDF download ─── */
@@ -4162,7 +4384,7 @@ export default function AdminPage() {
                 desc: "Real chat against the customer's own boost.ai tenant — enter the domain below.",
               },
             ] as const).map((opt) => {
-              const active = (form.demo_mode ?? "simulated") === opt.key;
+              const active = (form.demo_mode ?? "live") === opt.key;
               return (
                 <button
                   key={opt.key}
@@ -4219,7 +4441,7 @@ export default function AdminPage() {
               </p>
             </div>
           )}
-          {form.demo_mode === "live" && (
+          {(!form.demo_mode || form.demo_mode === "live") && (
             <div className="mt-5 rounded-xl border border-boost-green-light/30 bg-boost-green-light/5 p-4">
               <p className="text-xs text-boost-dark leading-relaxed">
                 Points at <code className="font-mono text-boost-purple">financewizard.boost.ai</code>.
@@ -4228,7 +4450,7 @@ export default function AdminPage() {
               </p>
             </div>
           )}
-          {(!form.demo_mode || form.demo_mode === "simulated") && (
+          {form.demo_mode === "simulated" && (
             <div className="mt-5 rounded-xl border border-boost-border bg-white/70 p-4">
               <p className="text-xs text-boost-muted leading-relaxed">
                 Simulated mode is the safest default — the chat plays a
@@ -4271,82 +4493,102 @@ export default function AdminPage() {
         <div
           className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-8 bg-boost-dark/30 backdrop-blur-sm overflow-y-auto"
           role="presentation"
-          onClick={() => setShowEngagements(false)}
+          onClick={() => { setShowEngagements(false); setDetailEngagement(null); }}
         >
           <div
             className="w-full max-w-lg rounded-2xl border border-boost-border bg-white shadow-xl animate-modal-in mt-8"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-boost-border">
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-boost-muted">
-                  Your work
-                </p>
-                <h2 className="text-base font-semibold text-boost-dark">My engagements</h2>
-              </div>
-              <button
-                type="button"
-                onClick={handleNewEngagement}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-boost-purple px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white hover:bg-boost-purple/90 transition-colors"
-              >
-                <span aria-hidden="true">+</span> New
-              </button>
-            </div>
+            {detailEngagement ? (
+              /* ─── Detail view: logo, meta, collaborators, comments ─── */
+              <EngagementDetail
+                engagement={detailEngagement}
+                isOwner={detailEngagement.role === "owner"}
+                loading={detailLoading}
+                collaborators={detailCollaborators}
+                comments={detailComments}
+                newCollabEmail={newCollabEmail}
+                onNewCollabEmailChange={setNewCollabEmail}
+                collabError={collabError}
+                onAddCollaborator={handleAddCollaborator}
+                onRemoveCollaborator={handleRemoveCollaborator}
+                onBack={() => setDetailEngagement(null)}
+                onOpen={() => handleLoadEngagement(detailEngagement.id)}
+                onDelete={() => handleDeleteEngagement(detailEngagement.id)}
+                isOpenEngagement={detailEngagement.id === engagementId}
+              />
+            ) : (
+              <>
+                <div className="flex items-center justify-between px-5 py-4 border-b border-boost-border">
+                  <div>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-boost-muted">
+                      Your work
+                    </p>
+                    <h2 className="text-base font-semibold text-boost-dark">My engagements</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleNewEngagement}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-boost-purple px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white hover:bg-boost-purple/90 transition-colors"
+                  >
+                    <span aria-hidden="true">+</span> New
+                  </button>
+                </div>
 
-            <div className="max-h-[60vh] overflow-y-auto p-2">
-              {listLoading ? (
-                <p className="px-4 py-8 text-center text-[13px] text-boost-muted">Loading…</p>
-              ) : engagementsList.length === 0 ? (
-                <p className="px-4 py-8 text-center text-[13px] text-boost-muted">
-                  No saved engagements yet. Start typing a company name and it
-                  auto-saves here.
-                </p>
-              ) : (
-                <ul className="space-y-1">
-                  {engagementsList.map((e) => (
-                    <li
-                      key={e.id}
-                      className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors ${
-                        e.id === engagementId ? "bg-boost-surface" : "hover:bg-boost-surface/60"
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handleLoadEngagement(e.id)}
-                        className="flex-1 min-w-0 text-left"
-                      >
-                        <span className="block text-[13px] font-semibold text-boost-dark truncate">
-                          {e.company_name || e.title || "Untitled engagement"}
-                        </span>
-                        <span className="block text-[10px] text-boost-muted mt-0.5">
-                          {e.role === "owner" ? "Owner" : "Collaborator"}
-                          <span className="mx-1.5">·</span>
-                          {new Date(e.updated_at).toLocaleDateString(undefined, {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                          {e.id === engagementId ? (
-                            <span className="ml-1.5 text-boost-green font-semibold">· open</span>
-                          ) : null}
-                        </span>
-                      </button>
-                      {e.role === "owner" ? (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteEngagement(e.id)}
-                          aria-label={`Delete ${e.company_name || "engagement"}`}
-                          className="flex-shrink-0 opacity-0 group-hover:opacity-100 text-boost-muted hover:text-boost-gold transition-all p-1.5 rounded-md hover:bg-white"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          </svg>
-                        </button>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                <div className="max-h-[60vh] overflow-y-auto p-2">
+                  {listLoading ? (
+                    <p className="px-4 py-8 text-center text-[13px] text-boost-muted">Loading…</p>
+                  ) : engagementsList.length === 0 ? (
+                    <p className="px-4 py-8 text-center text-[13px] text-boost-muted">
+                      No saved engagements yet. Start typing a company name and it
+                      auto-saves here.
+                    </p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {engagementsList.map((e) => {
+                        const dom = (e.company_url || "")
+                          .replace(/^https?:\/\//, "")
+                          .replace(/\/.*$/, "")
+                          .trim();
+                        const src = dom ? `https://cdn.brandfetch.io/${dom}` : null;
+                        const label = e.company_name || e.title || "Untitled engagement";
+                        const initials = label.trim()[0]?.toUpperCase() ?? "?";
+                        return (
+                          <li key={e.id}>
+                            <button
+                              type="button"
+                              onClick={() => openDetail(e)}
+                              className={`group w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${
+                                e.id === engagementId ? "bg-boost-surface" : "hover:bg-boost-surface/60"
+                              }`}
+                            >
+                              <RailLogoTile src={src} initials={initials} alt={label} />
+                              <span className="flex-1 min-w-0">
+                                <span className="block text-[13px] font-semibold text-boost-dark truncate">
+                                  {label}
+                                </span>
+                                <span className="block text-[10px] text-boost-muted mt-0.5">
+                                  {e.role === "owner" ? "Owner" : "Collaborator"}
+                                  <span className="mx-1.5">·</span>
+                                  {new Date(e.updated_at).toLocaleDateString(undefined, {
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                  {e.id === engagementId ? (
+                                    <span className="ml-1.5 text-boost-green font-semibold">· open</span>
+                                  ) : null}
+                                </span>
+                              </span>
+                              <span aria-hidden="true" className="text-boost-muted/50 group-hover:text-boost-purple transition-colors">→</span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       ) : null}
@@ -4420,7 +4662,13 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => {
                   setShowPresetNudge(false);
-                  // Force Guide Sections open, then scroll it into view
+                  // Journey renders only the active section, so make Guide
+                  // Sections active (adding it to the rail if needed) before
+                  // opening + scrolling — otherwise the editor isn't mounted.
+                  setAddedSections((prev) =>
+                    prev.includes("sections") ? prev : [...prev, "sections"],
+                  );
+                  setActiveSection("sections");
                   setGuideSectionsOpenSignal((n) => n + 1);
                   requestAnimationFrame(() => {
                     guideSectionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });

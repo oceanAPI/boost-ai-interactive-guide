@@ -33,10 +33,28 @@ export interface EngagementSummary {
   id: string;
   title: string | null;
   company_name: string | null;
+  company_url: string | null;
   audience: string | null;
   owner_email: string;
   updated_at: string;
   role: "owner" | "collaborator";
+}
+
+export interface CollaboratorRow {
+  email: string;
+  added_by: string | null;
+  created_at: string;
+}
+
+export interface CommentRow {
+  id: string;
+  author_email: string;
+  author_kind: string;
+  section_id: string | null;
+  body: string;
+  parent_id: string | null;
+  resolved: boolean;
+  created_at: string;
 }
 
 type Result<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -201,7 +219,10 @@ export async function listMyEngagements(): Promise<Result<EngagementSummary[]>> 
   if (!email) return { ok: false, error: "Not signed in." };
 
   const db = getServiceClient();
-  const cols = "id,title,company_name,audience,owner_email,updated_at";
+  // company_url is pulled from the data JSONB (no dedicated column) so
+  // the saved-engagements list can render a Brandfetch logo.
+  const cols =
+    "id,title,company_name,audience,owner_email,updated_at,company_url:data->>company_url";
 
   const { data: owned, error: ownedErr } = await db
     .from("engagements")
@@ -231,4 +252,94 @@ export async function listMyEngagements(): Promise<Result<EngagementSummary[]>> 
     ...collabEngagements.map((e) => ({ ...e, role: "collaborator" as const })),
   ];
   return { ok: true, data: summaries };
+}
+
+/* ─── Collaborators (boost-domain editors) ───
+ *  Boost collaborators sign in with Google and then see the engagement
+ *  in their own My Engagements list (listMyEngagements joins them in).
+ *  No magic link needed — that's only for external (non-boost) people.
+ */
+
+/** Add a @boost.ai collaborator. Owner or existing collaborator may add. */
+export async function addCollaborator(
+  engagementId: string,
+  rawEmail: string,
+): Promise<Result<{ email: string }>> {
+  const caller = await sessionEmail();
+  if (!caller) return { ok: false, error: "Not signed in." };
+  if (!(await canEdit(engagementId, caller))) return { ok: false, error: "No access." };
+
+  const email = rawEmail.trim().toLowerCase();
+  if (!email) return { ok: false, error: "Enter an email." };
+  if (!isBoost(email)) {
+    return { ok: false, error: "Collaborators must be @boost.ai. External people are invited separately." };
+  }
+
+  const db = getServiceClient();
+  const { error } = await db
+    .from("engagement_collaborators")
+    .upsert(
+      { engagement_id: engagementId, email, added_by: caller },
+      { onConflict: "engagement_id,email" },
+    );
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: { email } };
+}
+
+/** Remove a collaborator. Owner or collaborator may remove. */
+export async function removeCollaborator(
+  engagementId: string,
+  rawEmail: string,
+): Promise<Result<{ email: string }>> {
+  const caller = await sessionEmail();
+  if (!caller) return { ok: false, error: "Not signed in." };
+  if (!(await canEdit(engagementId, caller))) return { ok: false, error: "No access." };
+
+  const email = rawEmail.trim().toLowerCase();
+  const db = getServiceClient();
+  const { error } = await db
+    .from("engagement_collaborators")
+    .delete()
+    .eq("engagement_id", engagementId)
+    .ilike("email", email);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: { email } };
+}
+
+/** List collaborators on an engagement. Owner/collaborator only. */
+export async function listCollaborators(
+  engagementId: string,
+): Promise<Result<CollaboratorRow[]>> {
+  const caller = await sessionEmail();
+  if (!caller) return { ok: false, error: "Not signed in." };
+  if (!(await canEdit(engagementId, caller))) return { ok: false, error: "No access." };
+
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("engagement_collaborators")
+    .select("email,added_by,created_at")
+    .eq("engagement_id", engagementId)
+    .order("created_at", { ascending: true });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: (data ?? []) as CollaboratorRow[] };
+}
+
+/* ─── Comments (read-only foundation) ───
+ *  Display now; capture (external viewers commenting via /e/[id])
+ *  lands with the sharing sub-phase. Owner/collaborator can read. */
+export async function listComments(
+  engagementId: string,
+): Promise<Result<CommentRow[]>> {
+  const caller = await sessionEmail();
+  if (!caller) return { ok: false, error: "Not signed in." };
+  if (!(await canEdit(engagementId, caller))) return { ok: false, error: "No access." };
+
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("engagement_comments")
+    .select("id,author_email,author_kind,section_id,body,parent_id,resolved,created_at")
+    .eq("engagement_id", engagementId)
+    .order("created_at", { ascending: true });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: (data ?? []) as CommentRow[] };
 }
