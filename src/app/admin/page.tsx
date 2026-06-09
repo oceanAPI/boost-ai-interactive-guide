@@ -2225,11 +2225,9 @@ export default function AdminPage() {
           onCurrencyChange={(next) =>
             updateField("currency", next as GuideFormData["currency"])
           }
-          competitiveIntelHref={
-            audience === "sales"
-              ? "https://oceanapi.github.io/competitive-intel/"
-              : undefined
-          }
+          // Competetive Intel rail link hidden for now — restore by
+          // passing the href when audience === "sales".
+          competitiveIntelHref={undefined}
         />
       <main className="flex-1 min-w-0 space-y-4">
         {/* Sections 1 + 2 are SHARED customer metadata \u2014 rendered
@@ -4164,7 +4162,7 @@ export default function AdminPage() {
                 desc: "Real chat against the customer's own boost.ai tenant — enter the domain below.",
               },
             ] as const).map((opt) => {
-              const active = (form.demo_mode ?? "live") === opt.key;
+              const active = (form.demo_mode ?? "simulated") === opt.key;
               return (
                 <button
                   key={opt.key}
@@ -4221,7 +4219,7 @@ export default function AdminPage() {
               </p>
             </div>
           )}
-          {(!form.demo_mode || form.demo_mode === "live") && (
+          {form.demo_mode === "live" && (
             <div className="mt-5 rounded-xl border border-boost-green-light/30 bg-boost-green-light/5 p-4">
               <p className="text-xs text-boost-dark leading-relaxed">
                 Points at <code className="font-mono text-boost-purple">financewizard.boost.ai</code>.
@@ -4230,7 +4228,7 @@ export default function AdminPage() {
               </p>
             </div>
           )}
-          {form.demo_mode === "simulated" && (
+          {(!form.demo_mode || form.demo_mode === "simulated") && (
             <div className="mt-5 rounded-xl border border-boost-border bg-white/70 p-4">
               <p className="text-xs text-boost-muted leading-relaxed">
                 Simulated mode is the safest default — the chat plays a
@@ -4377,35 +4375,10 @@ export default function AdminPage() {
               glyph: "▷",
               onPick: handleStartPresentation,
             },
-            {
-              id: "sow-pdf",
-              title: "SoW PDF",
-              hint: "Procurement-friendly downloadable scope.",
-              status: "ready",
-              glyph: "↓",
-              onPick: handleDownloadSOW,
-            },
-            {
-              id: "push-salesforce",
-              title: "Push to Salesforce",
-              hint: "Sync engagement back into the opportunity record.",
-              status: "soon-orange",
-              glyph: "◆",
-            },
-            {
-              id: "push-hubspot",
-              title: "Push to HubSpot",
-              hint: "Sync engagement back into the deal pipeline.",
-              status: "soon-orange",
-              glyph: "◆",
-            },
-            {
-              id: "save",
-              title: "Save engagement",
-              hint: "Stash a draft you can return to or share with a teammate.",
-              status: "soon-grey",
-              glyph: "✓",
-            },
+            // SoW PDF + Push-to-CRM + Save are hidden for now. SoW PDF
+            // returns when the doc is ready; CRM push + Save land with
+            // the integrations / persistence work. Auto-save already
+            // covers "save" implicitly.
           ]}
         />
       ) : null}

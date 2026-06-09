@@ -103,6 +103,7 @@ function SlidesContent() {
     engagement_framework: formData.engagement_framework,
     channels: formData.channels,
     custom_notes: formData.custom_notes || "",
+    selected_case_studies: formData.selected_case_studies,
   };
 
   // Backwards-compat shim: old URLs reference "core-components" — rewrite to new id.

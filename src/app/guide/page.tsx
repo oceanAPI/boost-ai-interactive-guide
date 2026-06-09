@@ -104,6 +104,9 @@ function GuideContent() {
     engagement_framework: formData.engagement_framework,
     channels: formData.channels,
     custom_notes: formData.custom_notes || "",
+    // Carry the AE's explicit case-study picks so CaseStudiesSection
+    // filters to them instead of showing all (was dropped here).
+    selected_case_studies: formData.selected_case_studies,
   };
 
   const sectionsParam = urlParams.get("sections");
