@@ -123,6 +123,12 @@ const CARDS: LandingCard[] = [
   },
 ];
 
+/** Sales-only scope-down. The tool ships as the Sales workflow first
+ *  (feedback: the full multi-workspace surface was too massive). Flip
+ *  this to `false` to bring back CE/PS/People/Eng/Ops + the Analytics
+ *  showcase tile — nothing is deleted, just hidden. */
+const SALES_ONLY = true;
+
 /** Analytics gets its own treatment — wider tile with inline
  *  mini-stats so the vision (cross-engagement signal once DB + auth
  *  are in place) reads at a glance. Numbers are plausibly funny
@@ -148,13 +154,15 @@ const ANALYTICS_STATS: Array<{ stat: string; caption: string }> = [
 ];
 
 export default function WorkspaceLanding() {
+  const visibleCards = SALES_ONLY ? CARDS.filter((c) => !c.comingSoon) : CARDS;
+  const singleCard = visibleCards.length === 1;
   return (
     <div className="min-h-screen bg-boost-bg flex flex-col">
       {/* Header — minimal, just the brand + an eyebrow. */}
       <header className="px-6 sm:px-10 pt-8 pb-4 flex items-center justify-between">
         <BoostLogo className="h-7 w-auto text-boost-purple" />
         <p className="text-[10px] font-semibold text-boost-muted uppercase tracking-[0.18em]">
-          Workspace
+          {SALES_ONLY ? "Sales workspace" : "Workspace"}
         </p>
       </header>
 
@@ -162,21 +170,29 @@ export default function WorkspaceLanding() {
         <div className="w-full max-w-5xl">
           <div className="text-center mb-10 sm:mb-14">
             <p className="text-[11px] font-semibold text-boost-muted uppercase tracking-[0.18em] mb-3">
-              Your workspace
+              {SALES_ONLY ? "Sales" : "Your workspace"}
             </p>
             <h1 className="text-3xl sm:text-4xl font-semibold text-boost-dark tracking-tight">
-              One interactive platform. Everything at work.
+              {SALES_ONLY
+                ? "One interactive guide, from first pitch to handover."
+                : "One interactive platform. Everything at work."}
             </h1>
             <p className="text-sm sm:text-base text-boost-muted mt-3 max-w-xl mx-auto">
-              Re-use is the rule. One-off content stays elsewhere — what you build
-              here is for the whole team. Admin lives behind auth; the engagements
-              themselves stay shareable.
+              {SALES_ONLY
+                ? "Pick your sections, present and share a live link, and iterate until the deal closes — then hand the same customer data to delivery. The builder lives behind sign-in; the guides you share stay open."
+                : "Re-use is the rule. One-off content stays elsewhere — what you build here is for the whole team. Admin lives behind auth; the engagements themselves stay shareable."}
             </p>
           </div>
 
           {/* Role grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {CARDS.map((card) => {
+          <div
+            className={
+              singleCard
+                ? "max-w-md mx-auto"
+                : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
+            }
+          >
+            {visibleCards.map((card) => {
               const isPlaceholder = card.href === "#";
               const Wrapper = isPlaceholder
                 ? ({ children, ...rest }: { children: React.ReactNode; className?: string; [k: string]: unknown }) => (
@@ -265,11 +281,13 @@ export default function WorkspaceLanding() {
 
           {/* Analytics — wide showcase tile. Lives below the role grid
               because it's cross-cutting (not a role itself) and because
-              the inline mini-stats need horizontal room. */}
+              the inline mini-stats need horizontal room. Hidden in
+              Sales-only mode to keep the entry narrow. */}
           <div
             role="button"
             aria-disabled="true"
             aria-label="Analytics — coming soon"
+            hidden={SALES_ONLY}
             className="mt-5 group relative block rounded-xl border border-boost-border bg-boost-card shadow-sm overflow-hidden cursor-not-allowed opacity-80"
           >
             <span
@@ -329,9 +347,15 @@ export default function WorkspaceLanding() {
           {/* Footnote — quietly explains the routing so power users know
               audience is a URL param, not session state. */}
           <p className="text-center text-[11px] text-boost-muted/70 mt-10">
-            Live cards carry the role through the URL (
-            <code className="text-boost-muted">?audience=…</code>). Preview cards
-            unlock once DB + auth are in place.
+            {SALES_ONLY ? (
+              "Other workspaces unlock as the platform expands."
+            ) : (
+              <>
+                Live cards carry the role through the URL (
+                <code className="text-boost-muted">?audience=…</code>). Preview
+                cards unlock once DB + auth are in place.
+              </>
+            )}
           </p>
         </div>
       </main>

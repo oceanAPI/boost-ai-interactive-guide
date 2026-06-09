@@ -1,14 +1,17 @@
 /**
- * Prepend the basePath to static asset URLs so they work
- * both in dev (no basePath) and on GitHub Pages (with basePath).
+ * Resolve a static asset URL.
  *
- * next/image with `unoptimized` does NOT auto-prepend basePath,
- * so every src must go through this helper.
+ * The app moved from GitHub Pages (basePath `/boost-ai-interactive-guide`)
+ * to Vercel, which serves at the domain root — so the prefix is now empty
+ * and this is effectively a passthrough. The helper is kept (and every
+ * asset still routes through it) so reintroducing a basePath later is a
+ * one-line change here, not an 18-file edit.
+ *
+ * next/image with `unoptimized` does NOT auto-prepend a basePath, so
+ * keeping every src behind this helper preserves that guarantee.
  */
 
-const basePath = process.env.NODE_ENV === "production"
-  ? "/boost-ai-interactive-guide"
-  : "";
+const basePath = "";
 
 export function assetPath(path: string): string {
   if (path.startsWith("http")) return path;

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SessionProvider } from "next-auth/react";
 import { FeedbackProvider } from "@/components/FeedbackBacklog";
 import "./globals.css";
 
@@ -30,7 +31,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <FeedbackProvider>{children}</FeedbackProvider>
+        <SessionProvider>
+          <FeedbackProvider>{children}</FeedbackProvider>
+        </SessionProvider>
       </body>
     </html>
   );

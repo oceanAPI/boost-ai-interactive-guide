@@ -1,8 +1,12 @@
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages (DISABLED — moved to Vercel)
 
+# Hosting moved to Vercel when auth landed: the app is no longer a
+# static export, so `npm run build` produces a server build (no `out/`
+# directory) and this Pages pipeline would fail. Trigger is manual-only
+# (`workflow_dispatch`) so it stops auto-running on push but stays
+# recoverable if we ever revert to static hosting.
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read

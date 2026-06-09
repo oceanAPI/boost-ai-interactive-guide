@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { assetPath } from "@/lib/asset-path";
 import { INTEGRATION_CATEGORIES } from "@/data/integrations";
@@ -1079,7 +1080,14 @@ export default function AdminPage() {
    *  Lifted from the URL on mount. Null until read so the banner never
    *  flashes during SSR hydration. `"sales"` and `null` both render the
    *  existing Sales admin with zero visual change. */
-  const [audience, setAudience] = useState<Audience | null>(null);
+  // Signed-in identity (for the sign-out control in the banner).
+  const { data: session } = useSession();
+
+  /* Sales-only scope-down: the tool ships as the Sales workflow today
+     (CE/PS hidden, returning later). Default to "sales" so a bare
+     /admin behaves as Sales mode. CE/PS still resolve if their param
+     is explicitly present — keeps the code reversible. */
+  const [audience, setAudience] = useState<Audience | null>("sales");
   useEffect(() => {
     if (typeof window === "undefined") return;
     const raw = new URLSearchParams(window.location.search).get("audience");
@@ -1953,12 +1961,21 @@ export default function AdminPage() {
                   RailCustomerHeader callsite below) — it's a property
                   of the engagement, not of the audience. CE/PS modes
                   no longer carry that noise here. */}
-              <Link
-                href="/"
+              {/* Sales-only: the "Change mode" link is gone (nothing to
+                  switch to). Replaced with the signed-in identity +
+                  sign-out, since /admin is now gated. */}
+              {session?.user?.email ? (
+                <span className="hidden sm:inline text-[10px] font-medium tracking-[0.04em] text-white/60 truncate max-w-[180px]">
+                  {session.user.email}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/signin" })}
                 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 focus-visible:ring-offset-boost-purple rounded-sm px-2 py-0.5 whitespace-nowrap"
               >
-                ← Change mode
-              </Link>
+                Sign out
+              </button>
             </div>
           </div>
         </div>
