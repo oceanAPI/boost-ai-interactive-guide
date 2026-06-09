@@ -353,8 +353,12 @@ function Rail(props: {
    *  purple audience banner. Pass undefined to hide the picker. */
   currency?: string;
   onCurrencyChange?: (next: string | undefined) => void;
+  /** Competetive Intel sister-tool link. Sales-only — pass undefined to
+   *  hide. Lives in the rail footer now that the engagement chooser
+   *  (its old home) is skipped on entry. Opens in a new tab. */
+  competitiveIntelHref?: string;
 }) {
-  const { items, active, onJump, onAddNext, nextLabel, customer, currency, onCurrencyChange } = props;
+  const { items, active, onJump, onAddNext, nextLabel, customer, currency, onCurrencyChange, competitiveIntelHref } = props;
   const filled = items.filter((i) => i.hasContent).length;
   return (
     <aside
@@ -431,6 +435,29 @@ function Rail(props: {
             </button>
           ) : null}
         </nav>
+        {competitiveIntelHref ? (
+          <a
+            href={competitiveIntelHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 px-4 py-2.5 border-t border-boost-border text-boost-muted hover:text-boost-purple hover:bg-boost-surface/60 transition-colors group"
+          >
+            <span
+              aria-hidden="true"
+              className="flex-shrink-0 flex items-center justify-center w-[18px] h-[18px]"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5">
+                <circle cx="12" cy="12" r="9" />
+                <circle cx="12" cy="12" r="5" />
+                <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+              </svg>
+            </span>
+            <span className="flex-1 text-[11px] font-semibold uppercase tracking-[0.14em]">
+              Competetive Intel
+            </span>
+            <span aria-hidden="true" className="text-[11px] opacity-60 group-hover:opacity-100">↗</span>
+          </a>
+        ) : null}
       </div>
     </aside>
   );
@@ -1785,11 +1812,13 @@ export default function AdminPage() {
    *  start in editing stage (bookmark continuation). Otherwise default
    *  to choose so empty /admin lands on the journey entry. SSR-safe via
    *  typeof window guard. */
-  const [stage, setStage] = useState<Stage>(() => {
-    if (typeof window === "undefined") return "choose";
-    const m = window.location.hash.match(/data=([^&]+)/);
-    return m ? "editing" : "choose";
-  });
+  /* Land straight in the builder. Per AE preference the "New
+     engagement" chooser is skipped — sign-in drops you into editing at
+     Company Information, where the prefill search sits at the top and
+     the blank form (start-from-scratch) is right below. The choose /
+     custom-entry stages are preserved (reachable via setStage) but no
+     longer the entry. A hydrated ?#data= link also opens in editing. */
+  const [stage, setStage] = useState<Stage>("editing");
   /** Recommended order for progressive add. Sequence aligns with the
    *  AE's natural authoring path: identity → industry framing → which
    *  slides → pricing → packaging → delivery → narrative bits. The
@@ -2075,6 +2104,11 @@ export default function AdminPage() {
           currency={form.currency}
           onCurrencyChange={(next) =>
             updateField("currency", next as GuideFormData["currency"])
+          }
+          competitiveIntelHref={
+            audience === "sales"
+              ? "https://oceanapi.github.io/competitive-intel/"
+              : undefined
           }
         />
       <main className="flex-1 min-w-0 space-y-4">
