@@ -120,7 +120,7 @@ export default function DemoPreviewSection({
   customer?: Customer;
   sectionNumber?: string;
 }) {
-  const mode = customer?.demo_mode ?? "simulated";
+  const mode = customer?.demo_mode ?? "live";
 
   if (mode === "live") {
     const tenant = resolveDemoTenant();

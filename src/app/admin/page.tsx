@@ -370,7 +370,7 @@ function Rail(props: {
   const filled = items.filter((i) => i.hasContent).length;
   return (
     <aside
-      className="flex w-full lg:w-[252px] shrink-0 flex-col lg:sticky lg:self-start lg:top-[76px] lg:max-h-[calc(100vh-92px)]"
+      className="order-last lg:order-none flex w-full lg:w-[252px] shrink-0 flex-col lg:sticky lg:self-start lg:top-[76px] lg:max-h-[calc(100vh-92px)]"
     >
       <div className="flex flex-col flex-1 min-h-0 rounded-2xl border border-boost-border bg-boost-card shadow-sm overflow-hidden">
         {customer ? (
@@ -4164,7 +4164,7 @@ export default function AdminPage() {
                 desc: "Real chat against the customer's own boost.ai tenant — enter the domain below.",
               },
             ] as const).map((opt) => {
-              const active = (form.demo_mode ?? "simulated") === opt.key;
+              const active = (form.demo_mode ?? "live") === opt.key;
               return (
                 <button
                   key={opt.key}
@@ -4221,7 +4221,7 @@ export default function AdminPage() {
               </p>
             </div>
           )}
-          {form.demo_mode === "live" && (
+          {(!form.demo_mode || form.demo_mode === "live") && (
             <div className="mt-5 rounded-xl border border-boost-green-light/30 bg-boost-green-light/5 p-4">
               <p className="text-xs text-boost-dark leading-relaxed">
                 Points at <code className="font-mono text-boost-purple">financewizard.boost.ai</code>.
@@ -4230,7 +4230,7 @@ export default function AdminPage() {
               </p>
             </div>
           )}
-          {(!form.demo_mode || form.demo_mode === "simulated") && (
+          {form.demo_mode === "simulated" && (
             <div className="mt-5 rounded-xl border border-boost-border bg-white/70 p-4">
               <p className="text-xs text-boost-muted leading-relaxed">
                 Simulated mode is the safest default — the chat plays a

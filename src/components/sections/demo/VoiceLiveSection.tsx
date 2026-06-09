@@ -164,7 +164,10 @@ function extractSpeakableText(response: ChatResponse): string {
     if (el.type === "ssml") {
       parts.push(ssmlToText(el.payload.ssml));
     } else if (el.type === "text") {
-      parts.push(el.payload.text);
+      // Strip SSML if the tenant embedded markup in a text element so
+      // the TTS engine speaks words, not tag names.
+      const t = el.payload.text;
+      parts.push(/<[^>]+>/.test(t) ? ssmlToText(t) : t);
     } else if (el.type === "html") {
       // Strip HTML tags as a last-ditch fallback. Plain text is
       // preferable, but sometimes a tenant only returns html.
@@ -1977,7 +1980,11 @@ function VoiceBubble({ message }: { message: ChatMessage }) {
 
 function VoiceBubbleElement({ element }: { element: ChatElement }) {
   if (element.type === "text") {
-    return <p>{element.payload.text}</p>;
+    // Defensive: some voice tenants embed SSML markup inside a plain
+    // text element. Strip tags so the transcript never shows raw
+    // <speak>/<prosody> markup.
+    const t = element.payload.text;
+    return <p>{/<[^>]+>/.test(t) ? ssmlToText(t) : t}</p>;
   }
   if (element.type === "ssml") {
     return <p>{ssmlToText(element.payload.ssml)}</p>;
