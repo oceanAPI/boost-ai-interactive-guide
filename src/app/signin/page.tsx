@@ -1,15 +1,22 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { signIn, useSession } from "next-auth/react";
 import { assetPath } from "@/lib/asset-path";
 
 function SignInCard() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { status } = useSession();
   const callbackUrl = searchParams.get("callbackUrl") || "/admin?audience=sales";
   const error = searchParams.get("error");
   const [pending, setPending] = useState(false);
+
+  // Already signed in? Don't show the login box — forward to the builder.
+  useEffect(() => {
+    if (status === "authenticated") router.replace(callbackUrl);
+  }, [status, callbackUrl, router]);
 
   return (
     <div className="w-full max-w-sm">
