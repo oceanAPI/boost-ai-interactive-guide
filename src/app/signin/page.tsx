@@ -62,10 +62,18 @@ function SignInCard() {
           {pending ? "Redirecting…" : "Continue with Google"}
         </button>
 
-        <p className="mt-6 text-[11px] leading-relaxed text-boost-muted">
-          Prospect-facing guide links open without sign-in. Only the
-          builder is protected.
-        </p>
+        {/* Dev-only local sign-in. process.env.NODE_ENV is inlined by
+            Next at build time, so this button is stripped from the
+            production bundle entirely. */}
+        {process.env.NODE_ENV === "development" ? (
+          <button
+            type="button"
+            onClick={() => signIn("dev", { callbackUrl })}
+            className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-lg border border-dashed border-boost-border bg-boost-surface/40 px-4 py-2 text-[12px] font-medium text-boost-muted hover:text-boost-dark hover:bg-boost-surface transition-colors"
+          >
+            Continue as dev@boost.ai (local only)
+          </button>
+        ) : null}
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import Credentials from "next-auth/providers/credentials";
 
 /**
  * Auth.js v5 — Google sign-in gating the /admin authoring surface.
@@ -26,6 +27,29 @@ import Google from "next-auth/providers/google";
 
 const ALLOWED_DOMAIN = "boost.ai";
 
+/* Dev-only local sign-in. The localhost Google redirect URI isn't
+ * registered, so real Google sign-in can't complete on dev. This
+ * Credentials provider lets local testing reach /admin as a fixed
+ * boost.ai dev identity. It is added ONLY when NODE_ENV is
+ * "development" — Vercel sets NODE_ENV=production, so it is physically
+ * absent from production builds and can never be used there. */
+const IS_DEV = process.env.NODE_ENV === "development";
+
+const devProviders = IS_DEV
+  ? [
+      Credentials({
+        id: "dev",
+        name: "Local dev",
+        credentials: {},
+        authorize: () => ({
+          id: "dev",
+          email: "dev@boost.ai",
+          name: "Dev (local)",
+        }),
+      }),
+    ]
+  : [];
+
 function externalAllowList(): string[] {
   return (process.env.ALLOWED_EXTERNAL_EMAILS ?? "")
     .split(",")
@@ -34,12 +58,15 @@ function externalAllowList(): string[] {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [Google],
+  providers: [Google, ...devProviders],
   pages: {
     signIn: "/signin",
   },
   callbacks: {
     async signIn({ account, profile }) {
+      // Dev-only local bypass — never present in production builds.
+      if (IS_DEV && account?.provider === "dev") return true;
+
       if (account?.provider !== "google") return false;
 
       const email = profile?.email?.toLowerCase();

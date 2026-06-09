@@ -8,6 +8,14 @@ import { assetPath } from "@/lib/asset-path";
 import { INTEGRATION_CATEGORIES } from "@/data/integrations";
 import { INDUSTRIES, INDUSTRY_CATEGORIES, HIDDEN_INDUSTRIES, SUPPORTING_DEPARTMENTS, INDUSTRY_VARIANTS } from "@/data/agents";
 import { encodeGuideData, decodeGuideData } from "@/lib/url-encoding";
+import {
+  createEngagement,
+  updateEngagement,
+  listMyEngagements,
+  getEngagement,
+  deleteEngagement,
+  type EngagementSummary,
+} from "@/app/actions/engagements";
 import { CURRENCY_OPTIONS } from "@/lib/roi-calculator";
 import {
   ENVIRONMENT_ADDONS,
@@ -362,8 +370,7 @@ function Rail(props: {
   const filled = items.filter((i) => i.hasContent).length;
   return (
     <aside
-      className="hidden lg:flex w-[252px] shrink-0 flex-col sticky self-start"
-      style={{ top: "76px", maxHeight: "calc(100vh - 92px)" }}
+      className="flex w-full lg:w-[252px] shrink-0 flex-col lg:sticky lg:self-start lg:top-[76px] lg:max-h-[calc(100vh-92px)]"
     >
       <div className="flex flex-col flex-1 min-h-0 rounded-2xl border border-boost-border bg-boost-card shadow-sm overflow-hidden">
         {customer ? (
@@ -478,6 +485,11 @@ function FieldLabel({
     </label>
   );
 }
+
+/** CRM import (Salesforce / HubSpot) is hidden until the real
+ *  integrations are built. Flip to true to restore the buttons in
+ *  Company Information. */
+const SHOW_CRM_IMPORT = false;
 
 const inputClass =
   "w-full px-3 py-2 bg-white border border-boost-border rounded-lg text-boost-dark placeholder-boost-lavender focus:outline-none focus:ring-2 focus:ring-boost-green-light focus:border-transparent transition-colors";
@@ -1578,6 +1590,112 @@ export default function AdminPage() {
   // auto-add the Guide Sections row to the rail.
   const hasSectionChanges = hasTouchedSections || lastAppliedPresetKey !== null;
 
+  /* ─── Engagement persistence (auto-save) ───
+   *  The engagement is stored in Supabase via server actions. First
+   *  meaningful edit creates the row (returns an id we hold); every
+   *  subsequent change debounces a 1.2s update. We only START persisting
+   *  once there's identity content (company name or an industry) so we
+   *  never create empty junk rows. engagementId is also set when loading
+   *  an existing engagement from the My Engagements list. */
+  const [engagementId, setEngagementId] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const creatingRef = useRef(false);
+  const engagementIdRef = useRef<string | null>(null);
+  useEffect(() => { engagementIdRef.current = engagementId; }, [engagementId]);
+
+  const hasIdentity = Boolean(
+    form.company_name?.trim() || (form.areas_of_interest?.length ?? 0) > 0,
+  );
+
+  useEffect(() => {
+    // Don't persist until there's something worth saving.
+    if (!hasIdentity) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        setSaveStatus("saving");
+        const existing = engagementIdRef.current;
+        if (existing) {
+          const res = await updateEngagement({
+            id: existing,
+            data: form,
+            sections: selectedSectionIds,
+            audience,
+          });
+          setSaveStatus(res.ok ? "saved" : "error");
+        } else {
+          // Guard against double-create while the first insert is in flight.
+          if (creatingRef.current) return;
+          creatingRef.current = true;
+          const res = await createEngagement({
+            data: form,
+            sections: selectedSectionIds,
+            audience,
+          });
+          creatingRef.current = false;
+          if (res.ok) {
+            setEngagementId(res.data.id);
+            setSaveStatus("saved");
+          } else {
+            setSaveStatus("error");
+          }
+        }
+      } catch {
+        creatingRef.current = false;
+        setSaveStatus("error");
+      }
+    }, 1200);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, selectedSectionIds.join(","), audience, hasIdentity]);
+
+  /* ─── My Engagements (load / new / delete) ─── */
+  const [showEngagements, setShowEngagements] = useState(false);
+  const [engagementsList, setEngagementsList] = useState<EngagementSummary[]>([]);
+  const [listLoading, setListLoading] = useState(false);
+
+  const handleOpenEngagements = async () => {
+    setShowEngagements(true);
+    setListLoading(true);
+    const res = await listMyEngagements();
+    setEngagementsList(res.ok ? res.data : []);
+    setListLoading(false);
+  };
+
+  const handleLoadEngagement = async (id: string) => {
+    const res = await getEngagement(id);
+    if (!res.ok) return;
+    setForm(res.data.data);
+    setEngagementId(id);
+    const stored = res.data.sections ?? [];
+    if (stored.length > 0) {
+      setSectionItems((prev) => prev.map((it) => ({ ...it, enabled: stored.includes(it.id) })));
+      setHasTouchedSections(true);
+    }
+    setSaveStatus("saved");
+    setShowEngagements(false);
+    setStage("editing");
+  };
+
+  const handleNewEngagement = () => {
+    // Full reset to a clean builder. Auto-save means current work is
+    // already persisted, so a reload is a safe "start fresh".
+    window.location.href = "/admin?audience=sales";
+  };
+
+  const handleDeleteEngagement = async (id: string) => {
+    const res = await deleteEngagement(id);
+    if (!res.ok) return;
+    if (id === engagementIdRef.current) {
+      handleNewEngagement();
+      return;
+    }
+    setEngagementsList((prev) => prev.filter((e) => e.id !== id));
+  };
+
   /* ─── SOW PDF download ─── */
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
@@ -1963,38 +2081,40 @@ export default function AdminPage() {
           scrolling back to top or re-visiting /. */}
       {audience ? (
         <div className="bg-boost-purple text-white">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <span
-                aria-hidden="true"
-                className="w-1.5 h-1.5 rounded-full bg-boost-green-light flex-shrink-0"
-              />
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] truncate">
-                {audience === "sales"
-                  ? "Sales mode"
-                  : audience === "customer-excellence"
-                  ? "Customer Excellence mode"
-                  : "Professional Services mode"}
-                <span className="text-white/50 mx-2">·</span>
-                <span className="text-white/70 normal-case tracking-normal font-normal">
-                  {audience === "sales"
-                    ? "Prospect-facing guide assembly."
-                    : audience === "customer-excellence"
-                    ? "Post-sale reviews, success planning, inspiration."
-                    : "Scoping, architecture, delivery."}
-                </span>
-              </p>
-            </div>
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-end gap-3">
             <div className="flex items-center gap-3 flex-shrink-0">
-              {/* Currency picker moved into the Rail header (see
-                  RailCustomerHeader callsite below) — it's a property
-                  of the engagement, not of the audience. CE/PS modes
-                  no longer carry that noise here. */}
+              {/* Auto-save status — reflects the debounced Supabase save. */}
+              {saveStatus !== "idle" ? (
+                <span
+                  className={`hidden sm:inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                    saveStatus === "error" ? "text-boost-gold" : "text-white/70"
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      saveStatus === "saving"
+                        ? "bg-white/50 animate-pulse"
+                        : saveStatus === "saved"
+                          ? "bg-boost-green-light"
+                          : "bg-boost-gold"
+                    }`}
+                  />
+                  {saveStatus === "saving" ? "Saving" : saveStatus === "saved" ? "Saved" : "Save failed"}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={handleOpenEngagements}
+                className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light focus-visible:ring-offset-2 focus-visible:ring-offset-boost-purple rounded-sm px-2 py-0.5 whitespace-nowrap"
+              >
+                My engagements
+              </button>
               {/* Sales-only: the "Change mode" link is gone (nothing to
                   switch to). Replaced with the signed-in identity +
                   sign-out, since /admin is now gated. */}
               {session?.user?.email ? (
-                <span className="hidden sm:inline text-[10px] font-medium tracking-[0.04em] text-white/60 truncate max-w-[180px]">
+                <span className="hidden md:inline text-[10px] font-medium tracking-[0.04em] text-white/60 truncate max-w-[160px]">
                   {session.user.email}
                 </span>
               ) : null}
@@ -2080,7 +2200,7 @@ export default function AdminPage() {
       ) : null}
 
       {stage === "editing" ? (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex gap-6 items-start">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col lg:flex-row gap-4 lg:gap-6 items-stretch lg:items-start">
         <Rail
           items={railItems}
           active={activeSection}
@@ -2152,6 +2272,9 @@ export default function AdminPage() {
                 HubSpot into the form. Push (export back to CRM) lives
                 in the Generate menu. Two-way split is intentional:
                 pull-from is metadata-stage, push-to is delivery-stage. */}
+            {/* CRM import (Salesforce / HubSpot) hidden until the real
+                integrations land. Flip SHOW_CRM_IMPORT to restore. */}
+            {SHOW_CRM_IMPORT ? (
             <div className="flex items-center gap-2 flex-wrap mt-3">
               <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-boost-muted/80">
                 Import from
@@ -2173,6 +2296,7 @@ export default function AdminPage() {
                 HubSpot
               </button>
             </div>
+            ) : null}
           </div>
 
           {/* Customer Dossier — visual brief that builds itself from prefill or manual entry */}
@@ -4143,6 +4267,91 @@ export default function AdminPage() {
         open={showSearchLog}
         onClose={() => setShowSearchLog(false)}
       />
+
+      {/* My Engagements — load / new / delete stored engagements */}
+      {showEngagements ? (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-8 bg-boost-dark/30 backdrop-blur-sm overflow-y-auto"
+          role="presentation"
+          onClick={() => setShowEngagements(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl border border-boost-border bg-white shadow-xl animate-modal-in mt-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-boost-border">
+              <div>
+                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-boost-muted">
+                  Your work
+                </p>
+                <h2 className="text-base font-semibold text-boost-dark">My engagements</h2>
+              </div>
+              <button
+                type="button"
+                onClick={handleNewEngagement}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-boost-purple px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white hover:bg-boost-purple/90 transition-colors"
+              >
+                <span aria-hidden="true">+</span> New
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] overflow-y-auto p-2">
+              {listLoading ? (
+                <p className="px-4 py-8 text-center text-[13px] text-boost-muted">Loading…</p>
+              ) : engagementsList.length === 0 ? (
+                <p className="px-4 py-8 text-center text-[13px] text-boost-muted">
+                  No saved engagements yet. Start typing a company name and it
+                  auto-saves here.
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {engagementsList.map((e) => (
+                    <li
+                      key={e.id}
+                      className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors ${
+                        e.id === engagementId ? "bg-boost-surface" : "hover:bg-boost-surface/60"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleLoadEngagement(e.id)}
+                        className="flex-1 min-w-0 text-left"
+                      >
+                        <span className="block text-[13px] font-semibold text-boost-dark truncate">
+                          {e.company_name || e.title || "Untitled engagement"}
+                        </span>
+                        <span className="block text-[10px] text-boost-muted mt-0.5">
+                          {e.role === "owner" ? "Owner" : "Collaborator"}
+                          <span className="mx-1.5">·</span>
+                          {new Date(e.updated_at).toLocaleDateString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                          {e.id === engagementId ? (
+                            <span className="ml-1.5 text-boost-green font-semibold">· open</span>
+                          ) : null}
+                        </span>
+                      </button>
+                      {e.role === "owner" ? (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteEngagement(e.id)}
+                          aria-label={`Delete ${e.company_name || "engagement"}`}
+                          className="flex-shrink-0 opacity-0 group-hover:opacity-100 text-boost-muted hover:text-boost-gold transition-all p-1.5 rounded-md hover:bg-white"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Feedback backlog modal is mounted globally by <FeedbackProvider /> in root layout. */}
 
