@@ -1,3 +1,9 @@
+// EXTENSION-POINTER: Adding a new industry with its own agents?
+// Author under src/data/extensions/agents/<industry>/ first, then
+// splice the barrel import + ORCHESTRATOR_BY_INDUSTRY entry + SPECIALIST_AGENTS spread here.
+// Recipe: src/data/extensions/integration-guide.md
+// Verify: npx tsx src/data/extensions/_wiring-check.ts
+
 /* ─────────────────────────────────────────────
  *  Agent data barrel — public API
  *

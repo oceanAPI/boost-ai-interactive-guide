@@ -1,3 +1,8 @@
+// EXTENSION-POINTER: Adding a new industry or variant?
+// Author in src/data/extensions/ first, then splice here.
+// Recipe: src/data/extensions/integration-guide.md
+// Verify: npx tsx src/data/extensions/_wiring-check.ts
+
 /* ─────────────────────────────────────────────
  *  Shared types and constants for agent data
  * ───────────────────────────────────────────── */

@@ -1,3 +1,10 @@
+// EXTENSION-POINTER: Adding a new company pattern?
+// Author one file per pattern under src/data/extensions/patterns/ first,
+// then register in src/data/extensions/patterns/index.ts. This file
+// picks them up via the EXTENSION_COMPANY_PATTERNS spread below.
+// Recipe: src/data/extensions/integration-guide.md
+// Verify: npx tsx src/data/extensions/_wiring-check.ts
+
 /* ─────────────────────────────────────────────
  *  Company pattern library
  *
