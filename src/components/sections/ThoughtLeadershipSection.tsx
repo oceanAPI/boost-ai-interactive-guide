@@ -29,6 +29,9 @@ import {
   type StoryChapter,
   type ChapterIcon,
   type ChapterUseCase,
+  type UseCaseTranscript,
+  type ChapterBenchmark,
+  type ChannelProfile,
 } from "@/data/thought-leadership";
 
 interface ThoughtLeadershipSectionProps {
@@ -126,7 +129,47 @@ function HeroRing({ stat }: { stat: string }) {
   );
 }
 
-/* ─── Use-case chat mockup ("see it in action") ───────────────── */
+/* ─── Use-case chat before/after ("see it in action") ─────────────
+ *  The same request, handled today vs going forward — side by side. */
+function ChatColumn({
+  variant, transcript,
+}: { variant: "today" | "future"; transcript: UseCaseTranscript }) {
+  const future = variant === "future";
+  return (
+    <div className={`flex flex-col overflow-hidden rounded-2xl border ${future ? "border-boost-green/30" : "border-boost-border"}`}>
+      <div className={`px-4 py-2 ${future ? "bg-boost-green/8" : "bg-boost-surface"}`}>
+        <p className={`text-[11px] font-bold uppercase tracking-[0.12em] ${future ? "text-boost-green" : "text-boost-muted"}`}>
+          {future ? "Going forward" : "Today"}
+        </p>
+      </div>
+      <div className="flex-1 space-y-2.5 bg-boost-card p-3.5">
+        {transcript.messages.map((m, i) =>
+          m.from === "agent" ? (
+            <div key={i} className="flex gap-2">
+              <span className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-bold ${future ? "bg-boost-purple/10 text-boost-purple" : "bg-boost-muted/15 text-boost-muted"}`}>AI</span>
+              <p className={`max-w-[85%] rounded-2xl rounded-tl-sm px-3 py-1.5 text-[12.5px] leading-relaxed ${future ? "bg-boost-surface text-boost-dark" : "bg-boost-surface text-boost-text-secondary"}`}>{m.text}</p>
+            </div>
+          ) : (
+            <div key={i} className="flex justify-end">
+              <p className={`max-w-[85%] rounded-2xl rounded-tr-sm px-3 py-1.5 text-[12.5px] leading-relaxed ${future ? "bg-boost-green text-white" : "bg-boost-lavender/40 text-boost-dark"}`}>{m.text}</p>
+            </div>
+          ),
+        )}
+      </div>
+      {transcript.outcome && (
+        <div className={`flex items-start gap-2 border-t px-3.5 py-2.5 ${future ? "border-boost-green/20 bg-boost-green/5" : "border-boost-border bg-boost-surface"}`}>
+          {future ? (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#208269" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 flex-shrink-0"><path d="M20 6L9 17l-5-5" /></svg>
+          ) : (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7a6b80" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 flex-shrink-0"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          )}
+          <p className={`text-[12.5px] leading-snug ${future ? "font-medium text-boost-dark" : "text-boost-muted"}`}>{transcript.outcome}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UseCaseDemo({ useCase }: { useCase: ChapterUseCase }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-boost-border">
@@ -134,38 +177,213 @@ function UseCaseDemo({ useCase }: { useCase: ChapterUseCase }) {
         <p className="text-[13px] font-semibold text-boost-dark">{useCase.label}</p>
         <p className="text-xs text-boost-muted mt-0.5 leading-snug">{useCase.scenario}</p>
       </div>
-      <div className="space-y-2.5 bg-boost-card p-4">
-        {useCase.messages.map((m, i) =>
-          m.from === "agent" ? (
-            <div key={i} className="flex gap-2.5">
-              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-boost-purple/10 text-[10px] font-bold text-boost-purple">AI</span>
-              <p className="max-w-[82%] rounded-2xl rounded-tl-sm bg-boost-surface px-3.5 py-2 text-[13px] leading-relaxed text-boost-dark">{m.text}</p>
-            </div>
-          ) : (
-            <div key={i} className="flex justify-end">
-              <p className="max-w-[82%] rounded-2xl rounded-tr-sm bg-boost-green px-3.5 py-2 text-[13px] leading-relaxed text-white">{m.text}</p>
-            </div>
-          ),
-        )}
+      <div className="grid gap-3 p-3.5 sm:grid-cols-2">
+        <ChatColumn variant="today" transcript={useCase.today} />
+        <ChatColumn variant="future" transcript={useCase.future} />
       </div>
-      {useCase.outcome && (
-        <div className="flex items-start gap-2 border-t border-boost-green/20 bg-boost-green/5 px-4 py-2.5">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#208269" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 flex-shrink-0"><path d="M20 6L9 17l-5-5" /></svg>
-          <p className="text-[13px] font-medium text-boost-dark leading-snug">{useCase.outcome}</p>
+    </div>
+  );
+}
+
+/* ─── Live benchmark bars (deck slides 12 / 35) ───────────────────
+ *  Reuses the BenchmarkingSection visual language — horizontal bars
+ *  scaled 0–100%, you (green) vs peers (purple) vs leaders (muted) —
+ *  but inline inside a chapter so the comparison lives next to the
+ *  story instead of a separate section. The dataset chip is the
+ *  placeholder for the future dataset-filter. */
+const TONE_FILL: Record<"you" | "peer" | "industry", string> = {
+  you: "bg-boost-green-light",
+  peer: "bg-boost-purple",
+  industry: "bg-boost-muted/55",
+};
+
+function FilterChip({ dataset }: { dataset: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-boost-purple/20 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-boost-purple">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 4h18l-7 9v6l-4 2v-8z" /></svg>
+      {dataset}
+    </span>
+  );
+}
+
+function SimpleBar({ label, value, tone, unit }: { label: string; value: number; tone: "you" | "peer" | "industry"; unit: string }) {
+  const { ref, isVisible } = useScrollReveal({ once: true });
+  const pct = Math.max(0, Math.min(100, value));
+  return (
+    <div ref={ref} className="grid grid-cols-[8rem_1fr_2.75rem] items-center gap-3">
+      <span className={`truncate text-xs ${tone === "you" ? "font-semibold text-boost-dark" : "text-boost-muted"}`}>{label}</span>
+      <div className="h-2.5 overflow-hidden rounded-full bg-boost-surface">
+        <div className={`h-full rounded-full ${TONE_FILL[tone]}`} style={{ width: isVisible ? `${pct}%` : 0, transition: "width 1s ease-out" }} />
+      </div>
+      <span className="text-right text-xs font-bold tabular-nums text-boost-dark">{value}{unit}</span>
+    </div>
+  );
+}
+
+function ChannelGroup({ channel, you, peer, unit }: { channel: string; you: number; peer: number; unit: string }) {
+  const { ref, isVisible } = useScrollReveal({ once: true });
+  return (
+    <div ref={ref}>
+      <div className="flex items-baseline justify-between">
+        <span className="text-xs font-semibold text-boost-dark">{channel}</span>
+        <span className="text-[11px] tabular-nums text-boost-muted">you {you}{unit} · peers {peer}{unit}</span>
+      </div>
+      <div className="mt-1.5 space-y-1">
+        <div className="h-2.5 overflow-hidden rounded-full bg-boost-surface">
+          <div className="h-full rounded-full bg-boost-green-light" style={{ width: isVisible ? `${Math.min(100, you)}%` : 0, transition: "width 1s ease-out" }} />
+        </div>
+        <div className="h-2.5 overflow-hidden rounded-full bg-boost-surface">
+          <div className="h-full rounded-full bg-boost-purple" style={{ width: isVisible ? `${Math.min(100, peer)}%` : 0, transition: "width 1s ease-out 120ms" }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChapterBenchmarkViz({ benchmark, customer }: { benchmark: ChapterBenchmark; customer?: Customer }) {
+  const unit = benchmark.unit ?? "%";
+  const live = benchmark.youFromPerformance ? customer?.performance?.[benchmark.youFromPerformance] : undefined;
+
+  return (
+    <div className="rounded-2xl border border-boost-purple/15 bg-boost-purple/5 p-4 sm:p-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-boost-muted">Where you stand</p>
+          <p className="text-sm font-semibold text-boost-dark mt-0.5">{benchmark.title}</p>
+        </div>
+        {benchmark.dataset && <FilterChip dataset={benchmark.dataset} />}
+      </div>
+
+      {benchmark.channels ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {benchmark.channels.map((c) => (
+            <ChannelGroup
+              key={c.channel}
+              channel={c.channel}
+              you={c.channel === "Total" && typeof live === "number" ? live : c.you}
+              peer={c.peer}
+              unit={unit}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {(benchmark.bars ?? []).map((b) => (
+            <SimpleBar
+              key={b.label}
+              label={b.label}
+              value={b.tone === "you" && typeof live === "number" ? live : b.value}
+              tone={b.tone}
+              unit={unit}
+            />
+          ))}
         </div>
       )}
+
+      {benchmark.channels && (
+        <div className="mt-3 flex items-center gap-4 text-[10px] font-semibold uppercase tracking-[0.1em] text-boost-muted">
+          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-boost-green-light" />You</span>
+          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-boost-purple" />Peer avg</span>
+        </div>
+      )}
+
+      {benchmark.note && <p className="mt-3 text-xs leading-relaxed text-boost-muted">{benchmark.note}</p>}
+    </div>
+  );
+}
+
+/* ─── Channel-mix profile ("our story", deck slide 40) ────────────
+ *  The customer's inquiry mix told as a single living picture: a
+ *  proportional segmented bar of where traffic sits, per-channel
+ *  automation read-outs, and a today→target automation gauge. Less
+ *  text, one glanceable shape. */
+const CHANNEL_FILL = ["bg-boost-purple", "bg-boost-green-light", "bg-boost-lavender"];
+const CHANNEL_DOT = ["#59195d", "#36b595", "#b7a3c9"];
+
+function ChannelProfileViz({ profile, customer }: { profile: ChannelProfile; customer?: Customer }) {
+  const { ref, isVisible } = useScrollReveal({ once: true });
+  const liveTotal = profile.totalFromPerformance ? customer?.performance?.[profile.totalFromPerformance] : undefined;
+  const total = typeof liveTotal === "number" ? liveTotal : profile.totalAutomation;
+  const target = profile.targetAutomation;
+
+  return (
+    <div ref={ref} className="rounded-2xl border border-boost-border bg-boost-surface p-4 sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-boost-muted">Where your traffic sits</p>
+          <p className="text-sm font-semibold text-boost-dark mt-0.5">{profile.title}</p>
+        </div>
+        {profile.dataset && <FilterChip dataset={profile.dataset} />}
+      </div>
+
+      {/* Proportional mix bar */}
+      <div className="flex h-8 w-full overflow-hidden rounded-lg">
+        {profile.channels.map((c, i) => (
+          <div
+            key={c.channel}
+            className={`flex items-center justify-center ${CHANNEL_FILL[i % CHANNEL_FILL.length]}`}
+            style={{
+              width: isVisible ? `${c.share}%` : "0%",
+              transition: `width 1s ease-out ${i * 120}ms`,
+            }}
+          >
+            <span className="text-[11px] font-bold text-white tabular-nums">{c.share}%</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Per-channel cards — volume + automation today */}
+      <div className="mt-3 grid gap-2.5 sm:grid-cols-3">
+        {profile.channels.map((c, i) => (
+          <div key={c.channel} className="rounded-xl border border-boost-border bg-white p-3">
+            <div className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHANNEL_DOT[i % CHANNEL_DOT.length] }} />
+              <span className="text-xs font-semibold text-boost-dark">{c.channel}</span>
+            </div>
+            <p className="mt-1 text-[11px] tabular-nums text-boost-muted">{c.volume}</p>
+            <div className="mt-2 flex items-center gap-2">
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-boost-surface">
+                <div className="h-full rounded-full bg-boost-green-light" style={{ width: isVisible ? `${Math.min(100, c.automation)}%` : 0, transition: `width 1s ease-out ${300 + i * 120}ms` }} />
+              </div>
+              <span className="text-[11px] font-bold tabular-nums text-boost-dark">{c.automation}%</span>
+            </div>
+            <p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-boost-muted">automated</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Today → target automation gauge */}
+      <div className="mt-4">
+        <div className="flex items-baseline justify-between">
+          <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-boost-muted">Total automation today</span>
+          <span className="text-[11px] font-semibold text-boost-green tabular-nums">Target {target}%</span>
+        </div>
+        <div className="relative mt-1.5 h-3 w-full overflow-hidden rounded-full bg-boost-purple/10">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-boost-purple to-boost-green-light"
+            style={{ width: isVisible ? `${Math.min(100, total)}%` : 0, transition: "width 1.1s ease-out 200ms" }}
+          />
+          <span
+            className="absolute top-1/2 -translate-y-1/2 text-[10px] font-bold tabular-nums text-boost-dark"
+            style={{ left: `calc(${Math.min(100, total)}% + 6px)` }}
+          >
+            {total}%
+          </span>
+        </div>
+      </div>
+
+      {profile.note && <p className="mt-3 text-xs leading-relaxed text-boost-muted">{profile.note}</p>}
     </div>
   );
 }
 
 /* ─── One chapter block ────────────────────────────────────────── */
 function ChapterBlock({
-  chapter, hero, index,
-}: { chapter: StoryChapter; hero: { stat: string; narrative: string; headline: string }; index: number }) {
+  chapter, hero, index, customer,
+}: { chapter: StoryChapter; hero: { stat: string; narrative: string; headline: string }; index: number; customer?: Customer }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [showDetail, setShowDetail] = useState(false);
   const [showDemo, setShowDemo] = useState(false);
-  const featured = chapter.id === "agentic-adoption";
 
   return (
     <div
@@ -241,25 +459,14 @@ function ChapterBlock({
           </div>
         )}
 
-        {/* 3. Your data / benchmark */}
-        {chapter.benchmark && (
-          <div className="rounded-2xl bg-boost-purple/5 border border-boost-purple/15 p-4 sm:p-5">
-            <Eyebrow>Where you stand</Eyebrow>
-            <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
-              <p className="text-sm font-semibold text-boost-dark">{chapter.benchmark.title}</p>
-              {chapter.benchmark.average && (
-                <span className="text-sm text-boost-purple font-bold">Average {chapter.benchmark.average}</span>
-              )}
-              {chapter.benchmark.leader && (
-                <span className="text-sm text-boost-purple font-bold">Leader {chapter.benchmark.leader}</span>
-              )}
-            </div>
-            {chapter.benchmark.note && <p className="text-xs text-boost-muted mt-1.5 leading-relaxed">{chapter.benchmark.note}</p>}
-          </div>
-        )}
+        {/* 3. Your data / benchmark — live bar comparison */}
+        {chapter.benchmark && <ChapterBenchmarkViz benchmark={chapter.benchmark} customer={customer} />}
 
-        {/* Roadmap (opt-in detail — Agentic Adoption) */}
-        {featured && chapter.roadmap && chapter.roadmap.length > 0 && (
+        {/* 3b. Your channel profile, told as our story (slide 40) */}
+        {chapter.channelProfile && <ChannelProfileViz profile={chapter.channelProfile} customer={customer} />}
+
+        {/* Roadmap — the items that help solve THIS challenge (opt-in detail) */}
+        {chapter.roadmap && chapter.roadmap.length > 0 && (
           <div>
             <button
               type="button"
@@ -397,6 +604,7 @@ export default function ThoughtLeadershipSection({ customer, sectionNumber }: Th
               key={ch.id}
               chapter={ch}
               index={i}
+              customer={customer}
               hero={{
                 headline: o?.headline?.trim() || ch.headline,
                 stat: o?.stat?.trim() || ch.stat,

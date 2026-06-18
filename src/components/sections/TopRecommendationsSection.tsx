@@ -18,6 +18,7 @@ import type { Customer, Recommendation } from "@/lib/types";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import RecommendationDetailModal from "./top-recommendations/RecommendationDetailModal";
+import CostEffortMatrix from "./top-recommendations/CostEffortMatrix";
 
 interface TopRecommendationsSectionProps {
   customer?: Customer;
@@ -54,6 +55,9 @@ export default function TopRecommendationsSection({
     .slice()
     .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
   const openRec = openIndex !== null ? recs[openIndex] : null;
+  /** When initiatives carry an effort rating, prioritise them on a
+   *  value-vs-effort matrix instead of the ranked card grid. */
+  const useMatrix = recs.some((r) => r.effort);
 
   if (recs.length === 0) {
     return (
@@ -71,10 +75,17 @@ export default function TopRecommendationsSection({
     <section>
       <SectionHeader
         number={sectionNumber ? `SECTION ${sectionNumber}` : undefined}
-        title="Top recommendations"
-        subtitle="Ranked by strategic weight. Each card carries the engine's rationale + confidence."
+        title={useMatrix ? "Where to focus next" : "Top recommendations"}
+        subtitle={
+          useMatrix
+            ? "Each initiative plotted by the value it drives against the effort to deliver. Tap any to see how to proceed, what to weigh up, and where to find resources."
+            : "Ranked by strategic weight. Each card carries the engine's rationale + confidence."
+        }
       />
 
+      {useMatrix ? (
+        <CostEffortMatrix recs={recs} onOpen={setOpenIndex} />
+      ) : (
       <div
         ref={ref}
         className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 transition-all duration-700 ${
@@ -149,6 +160,7 @@ export default function TopRecommendationsSection({
           );
         })}
       </div>
+      )}
 
       {openRec && (
         <RecommendationDetailModal

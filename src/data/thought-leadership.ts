@@ -1,4 +1,4 @@
-import type { ThoughtLeadershipStat } from "@/lib/types";
+import type { PerformanceMetrics, ThoughtLeadershipStat } from "@/lib/types";
 
 /* ──────────────────────────────────────────────────────────────
  *  The state-of-conversational-AI story
@@ -45,18 +45,96 @@ export interface ChapterRoadmapItem {
   body: string;
 }
 
+/** One row of the chapter benchmark — a single labelled bar. */
+export interface ChapterBenchmarkBar {
+  label: string;
+  value: number;
+  tone: "you" | "peer" | "industry";
+}
+
+/** Grouped per-channel comparison row (deck slide 35). */
+export interface ChapterChannelBar {
+  channel: string;
+  you: number;
+  peer: number;
+}
+
+/** Peer / industry benchmark rendered as a LIVE bar comparison inside
+ *  the chapter (deck slides 12 / 35). The `dataset` label is the
+ *  placeholder for the dataset-filter that will drive these numbers
+ *  later — for now the bars carry static, deck-modelled values. */
+export interface ChapterBenchmark {
+  /** What's being measured, e.g. "% of agentic replies". */
+  title: string;
+  /** Placeholder dataset filter the comparison is drawn from. */
+  dataset?: string;
+  /** Unit suffix on the numbers (default "%"). */
+  unit?: string;
+  /** Simple horizontal-bar comparison (you vs peers vs leaders). */
+  bars?: ChapterBenchmarkBar[];
+  /** Grouped per-channel comparison (deck slide 35). */
+  channels?: ChapterChannelBar[];
+  /** When set, the "you" value reads the live customer figure for this
+   *  PerformanceMetrics field (falls back to the static value). */
+  youFromPerformance?: keyof PerformanceMetrics;
+  /** Short caption under the chart. */
+  note?: string;
+}
+
+/** One channel in the customer's inquiry-mix profile (deck slide 40 —
+ *  "Adoption & Automation of incoming inquiries"). The story of where
+ *  this customer's traffic sits today and how much of it is automated. */
+export interface ChannelMixSlice {
+  channel: string;
+  /** Share of total inquiries (%). */
+  share: number;
+  /** Human-readable annual volume, e.g. "~914,000 / yr". */
+  volume: string;
+  /** Current automation rate for this channel (%). */
+  automation: number;
+}
+
+/** The customer's channel profile "as our story" — the inquiry mix
+ *  across channels plus the today→target automation arc (deck slide 40). */
+export interface ChannelProfile {
+  title: string;
+  /** Placeholder dataset filter the profile is drawn from. */
+  dataset?: string;
+  channels: ChannelMixSlice[];
+  /** Total automation today (%). */
+  totalAutomation: number;
+  /** The automation ceiling we're aiming for (%). */
+  targetAutomation: number;
+  /** When set, total automation reads the live customer figure. */
+  totalFromPerformance?: keyof PerformanceMetrics;
+  note?: string;
+}
+
+export interface UseCaseTurn {
+  from: "user" | "agent";
+  text: string;
+}
+
+/** One side of the before/after — a transcript plus its resolved line. */
+export interface UseCaseTranscript {
+  messages: UseCaseTurn[];
+  /** The result line under the transcript. */
+  outcome?: string;
+}
+
 /** A real, named example — the "see it in action" pitch. Rendered as a
- *  chat mockup so the chapter shows the going-forward experience, not
- *  just describes it (deck slides 20 / 24 / 36). */
+ *  side-by-side chat before/after so the chapter SHOWS the same request
+ *  handled today vs going forward, not just describes it (deck slides
+ *  20 / 24 / 36). */
 export interface ChapterUseCase {
   /** "Real example — LähiTapiola auto-insurance invoice". */
   label: string;
   /** One-line scenario context. */
   scenario: string;
-  /** The conversation, in order. */
-  messages: { from: "user" | "agent"; text: string }[];
-  /** The resolved outcome line under the transcript. */
-  outcome?: string;
+  /** The same request, handled the way it is today. */
+  today: UseCaseTranscript;
+  /** The same request, handled the agentic way going forward. */
+  future: UseCaseTranscript;
 }
 
 export interface StoryChapter {
@@ -75,9 +153,12 @@ export interface StoryChapter {
   proofPoints?: ChapterProofPoint[];
   /** Named success stories. */
   caseStudies?: ChapterCaseStudy[];
-  /** Peer / industry benchmark context. */
-  benchmark?: { title: string; average?: string; leader?: string; note?: string };
-  /** Roadmap items that extend the story (Agentic Adoption). */
+  /** Peer / industry benchmark — rendered as a live bar comparison. */
+  benchmark?: ChapterBenchmark;
+  /** The customer's own channel-mix profile, told as our story (slide 40). */
+  channelProfile?: ChannelProfile;
+  /** Roadmap items that extend THIS challenge's story (every chapter
+   *  carries the items that help solve its own challenge). */
   roadmap?: ChapterRoadmapItem[];
   /** Opt-in real-example chat mockup ("see it in action"). */
   useCase?: ChapterUseCase;
@@ -115,9 +196,14 @@ export const STORY_CHAPTERS: StoryChapter[] = [
       },
     ],
     benchmark: {
-      title: "% of Agentic replies — Insurance Nordics",
-      average: "28%",
-      note: "Among insurers who've activated agentic actions. Top movers already exceed 90% — the gap is the opportunity.",
+      title: "% of agentic replies",
+      dataset: "Insurance · Nordics · agentic actions activated",
+      bars: [
+        { label: "You", value: 28, tone: "you" },
+        { label: "Peer cohort avg", value: 41, tone: "peer" },
+        { label: "Top movers", value: 90, tone: "industry" },
+      ],
+      note: "Top movers already exceed 90% of replies handled agentically — the gap is the opportunity.",
     },
     roadmap: [
       {
@@ -138,14 +224,25 @@ export const STORY_CHAPTERS: StoryChapter[] = [
     ],
     useCase: {
       label: "Real example — Storebrand agentic claims",
-      scenario: "A customer reports a travel-claim while abroad — the agent acts, it doesn't just answer.",
-      messages: [
-        { from: "user", text: "My flight home got cancelled and I had to book a hotel. Can I claim it?" },
-        { from: "agent", text: "Yes — your travel policy covers cancellation costs. I can see the claim already, want me to start it for you?" },
-        { from: "user", text: "Please." },
-        { from: "agent", text: "Done. I've opened claim #TR-48201, pre-filled it from your booking and added the hotel receipt you uploaded. Reimbursement of €214 is approved and on its way to your account." },
-      ],
-      outcome: "Claim reported, validated and settled in one conversation — no handover, no form.",
+      scenario: "A customer reports a travel-claim while abroad — the same request, handled two ways.",
+      today: {
+        messages: [
+          { from: "user", text: "My flight home got cancelled and I had to book a hotel. Can I claim it?" },
+          { from: "agent", text: "I can help with travel claims. Please open the claims portal and complete the travel-claim form — you'll need your policy number and receipts." },
+          { from: "user", text: "Where do I find my policy number?" },
+          { from: "agent", text: "It's on your policy documents, or you can log in to your account to look it up." },
+        ],
+        outcome: "Sent to a portal to do the work themselves — many drop off here.",
+      },
+      future: {
+        messages: [
+          { from: "user", text: "My flight home got cancelled and I had to book a hotel. Can I claim it?" },
+          { from: "agent", text: "Yes — your travel policy covers cancellation costs. I can see the trip already, want me to start the claim for you?" },
+          { from: "user", text: "Please." },
+          { from: "agent", text: "Done. I've opened claim #TR-48201, pre-filled it from your booking and added the hotel receipt you uploaded. Reimbursement of €214 is approved and on its way to your account." },
+        ],
+        outcome: "Reported, validated and settled in one conversation — no handover, no form.",
+      },
     },
     transition: {
       today: "Single-agent flows, rule-based routing, and manual oversight of edge cases.",
@@ -190,20 +287,48 @@ export const STORY_CHAPTERS: StoryChapter[] = [
       },
     ],
     benchmark: {
-      title: "Positive conversation feedback vs insurers",
-      leader: "85.5%",
-      note: "Personalised + agentic conversations consistently top peer feedback scores.",
+      title: "Conversations authenticated",
+      dataset: "Insurance · Nordics",
+      bars: [
+        { label: "You", value: 49, tone: "you" },
+        { label: "Peer cohort avg", value: 61, tone: "peer" },
+        { label: "Leaders", value: 78, tone: "industry" },
+      ],
+      note: "Authenticating the end-user unlocks account-aware, proactive answers — and consistently tops peer feedback scores.",
     },
+    roadmap: [
+      {
+        tag: "Q1",
+        title: "Long-term memory",
+        body: "The agent remembers prior conversations and preferences across sessions — a continuous, personal relationship, not a cold start every time.",
+      },
+      {
+        tag: "Q2",
+        title: "Proactive outreach",
+        body: "Account-aware nudges at the right moment — renewal reminders, claim updates, payment due dates — sent before the customer has to ask.",
+      },
+    ],
     useCase: {
       label: "Real example — auto-insurance invoice",
-      scenario: "An authenticated customer asks about a bill — the agent already knows which one.",
-      messages: [
-        { from: "user", text: "Do I have any unpaid invoices?" },
-        { from: "agent", text: "You have one open auto-insurance invoice of €182, due 5 May. Would you like to pay it now or move the due date?" },
-        { from: "user", text: "Can I push it back a few weeks?" },
-        { from: "agent", text: "Done — I've moved the due date to 2 June and sent you the updated invoice. Nothing else is outstanding." },
-      ],
-      outcome: "Account-aware from the first message — no portal, no login wall, no \"please check your statements\".",
+      scenario: "A customer asks about a bill — generic answer vs account-aware action.",
+      today: {
+        messages: [
+          { from: "user", text: "Do I have any unpaid invoices?" },
+          { from: "agent", text: "You can view your invoices by logging in to the customer portal under 'Billing'. Is there anything else I can help with?" },
+          { from: "user", text: "Can't you just tell me?" },
+          { from: "agent", text: "I'm not able to access account details here — please log in to check your balance." },
+        ],
+        outcome: "Account-blind — the customer has to go find the answer themselves.",
+      },
+      future: {
+        messages: [
+          { from: "user", text: "Do I have any unpaid invoices?" },
+          { from: "agent", text: "You have one open auto-insurance invoice of €182, due 5 May. Would you like to pay it now or move the due date?" },
+          { from: "user", text: "Can I push it back a few weeks?" },
+          { from: "agent", text: "Done — I've moved the due date to 2 June and sent you the updated invoice. Nothing else is outstanding." },
+        ],
+        outcome: "Account-aware from the first message — no portal, no login wall.",
+      },
     },
     transition: {
       today: "Generic answers point customers to a portal to find invoices, coverage and claim status themselves.",
@@ -236,17 +361,48 @@ export const STORY_CHAPTERS: StoryChapter[] = [
         ],
       },
     ],
+    benchmark: {
+      title: "Lead conversion via AI Agent vs static forms",
+      dataset: "FS · revenue-generating agents",
+      bars: [
+        { label: "Static web forms", value: 6, tone: "you" },
+        { label: "Tryg · AI Agent", value: 42, tone: "peer" },
+        { label: "Nordic Insurance", value: 60, tone: "industry" },
+      ],
+      note: "Static web forms convert in low single digits — proactive, in-conversation capture is the gap.",
+    },
+    roadmap: [
+      {
+        tag: "Q2",
+        title: "In-conversation product recommendations",
+        body: "The agent surfaces the right product at the moment of intent and completes the sale in the conversation — no hand-off to a form.",
+      },
+      {
+        tag: "Q3",
+        title: "Lead scoring & advisor handoff",
+        body: "Qualify and score leads in real time, then route the hottest to advisors with the full conversation context attached.",
+      },
+    ],
     useCase: {
       label: "Real example — proactive mortgage lead",
-      scenario: "A customer browses the rates page — the agent reads intent and opens the door.",
-      messages: [
-        { from: "agent", text: "Looking at mortgage rates? I can give you a personalised estimate in under a minute — want to try?" },
-        { from: "user", text: "Sure. We're thinking about a place around €350k." },
-        { from: "agent", text: "Based on your profile that's well within reach. A specialist can confirm the exact rate — shall I book a callback for tomorrow at 14:00?" },
-        { from: "user", text: "Yes, perfect." },
-        { from: "agent", text: "Booked. You'll get a confirmation by SMS, and I've passed your details to the mortgage team." },
-      ],
-      outcome: "A passive page-view turned into a qualified lead and a booked callback — €10M in mortgage sales started this way.",
+      scenario: "A customer browses the rates page — passive answer vs proactive capture.",
+      today: {
+        messages: [
+          { from: "user", text: "What's your mortgage rate?" },
+          { from: "agent", text: "Our mortgage rates start from 3.4%. You can read more on our mortgages page or call our advisors during office hours." },
+        ],
+        outcome: "A service answer, then silence — no lead captured, the moment of intent passes.",
+      },
+      future: {
+        messages: [
+          { from: "agent", text: "Looking at mortgage rates? I can give you a personalised estimate in under a minute — want to try?" },
+          { from: "user", text: "Sure. We're thinking about a place around €350k." },
+          { from: "agent", text: "Based on your profile that's well within reach. A specialist can confirm the exact rate — shall I book a callback for tomorrow at 14:00?" },
+          { from: "user", text: "Yes, perfect." },
+          { from: "agent", text: "Booked. You'll get a confirmation by SMS, and I've passed your details to the mortgage team." },
+        ],
+        outcome: "A passive page-view turned into a qualified lead and a booked callback — €10M in mortgage sales started this way.",
+      },
     },
     transition: {
       today: "The agent answers service questions; sales and upsell happen elsewhere, if at all.",
@@ -282,18 +438,67 @@ export const STORY_CHAPTERS: StoryChapter[] = [
     ],
     benchmark: {
       title: "Total automation across all channels vs FS",
+      dataset: "Financial services · all channels",
+      unit: "%",
+      youFromPerformance: "automation_rate",
+      channels: [
+        { channel: "Phone", you: 4, peer: 22 },
+        { channel: "Messages", you: 18, peer: 40 },
+        { channel: "Chat", you: 25, peer: 55 },
+        { channel: "Total", you: 13, peer: 35 },
+      ],
       note: "Total automation sits at ~13% today vs peers at 20–50% — the headroom across phone, messages and chat is the prize.",
     },
+    channelProfile: {
+      title: "Your inquiry mix today",
+      dataset: "All channels · last 12 months",
+      channels: [
+        { channel: "Phone", share: 41, volume: "~914,000 / yr", automation: 4 },
+        { channel: "Online messages", share: 34, volume: "~750,000 / yr", automation: 18 },
+        { channel: "Chat", share: 25, volume: "~550,000 / yr", automation: 53 },
+      ],
+      totalAutomation: 13,
+      targetAutomation: 100,
+      totalFromPerformance: "automation_rate",
+      note: "Phone carries the most volume yet the least automation — the biggest, most visible prize as one AI Agent moves onto the voice line.",
+    },
+    roadmap: [
+      {
+        tag: "Now",
+        title: "Boost Voice — in-house",
+        body: "One AI Agent across chat, voice and messaging. Voice automation built natively, not stitched together from third parties.",
+      },
+      {
+        tag: "Q2",
+        title: "Adaptive Voice & WebRTC",
+        body: "Low-latency, barge-in-capable voice that adapts tone and pace to the caller — the phone line that finally feels natural.",
+      },
+      {
+        tag: "Q3",
+        title: "Multi-modal avatars",
+        body: "Bring the agent on-screen for video and avatar channels as your customers adopt them — one brain, every surface.",
+      },
+    ],
     useCase: {
       label: "Real example — claim settled by voice",
-      scenario: "The same AI Agent picks up the phone — and settles the claim live, no transfer.",
-      messages: [
-        { from: "user", text: "Hi, I cracked my phone screen and I have device insurance." },
-        { from: "agent", text: "I can help with that. I've found your device cover — repairs are handled with a €49 excess. Would you like me to book a repair or arrange a replacement?" },
-        { from: "user", text: "Repair, please." },
-        { from: "agent", text: "Booked at the Helsinki centre for Thursday. I've taken the €49 excess from your saved card and texted you the confirmation and drop-off details." },
-      ],
-      outcome: "End-to-end on the phone line — the channel customers already reach for, now automated.",
+      scenario: "A device-insurance claim over the phone — transfer-and-queue vs settled live.",
+      today: {
+        messages: [
+          { from: "user", text: "Hi, I cracked my phone screen and I have device insurance." },
+          { from: "agent", text: "For device claims you'll need our claims team. I'll transfer you now — please hold." },
+          { from: "agent", text: "[Transferred] All our agents are busy. Your estimated wait is 12 minutes." },
+        ],
+        outcome: "Handed to a queue — a call that could self-serve waits for a human.",
+      },
+      future: {
+        messages: [
+          { from: "user", text: "Hi, I cracked my phone screen and I have device insurance." },
+          { from: "agent", text: "I can help with that. I've found your device cover — repairs are handled with a €49 excess. Would you like me to book a repair or arrange a replacement?" },
+          { from: "user", text: "Repair, please." },
+          { from: "agent", text: "Booked at the Helsinki centre for Thursday. I've taken the €49 excess from your saved card and texted you the confirmation and drop-off details." },
+        ],
+        outcome: "End-to-end on the phone line — the channel customers already reach for, now automated.",
+      },
     },
     transition: {
       today: "Phone (41%), written messages (34%) and chat (25%) handled in silos, 13% total automation.",

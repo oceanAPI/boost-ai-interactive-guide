@@ -674,6 +674,25 @@ export interface Recommendation {
    *  `met: true` renders as a checkmark (already in place), `false`
    *  renders as a warning dot (still pending). */
   prerequisites?: Array<{ label: string; met?: boolean }>;
+
+  /* ─── Cost-vs-effort matrix (CS value/effort plot) ───────────────
+   * When present, TopRecommendationsSection renders the initiatives
+   * as a value-vs-effort scatter instead of a card grid. `weight` is
+   * the value (Y) axis; `effort` is the effort (X) axis. The detail
+   * fields are placeholder content today — the decision engine will
+   * author them once wired. */
+
+  /** Relative implementation effort — the X-axis of the matrix. */
+  effort?: "low" | "medium" | "high";
+  /** Short statement of the value this drives — the dot label /
+   *  tooltip (e.g. "+8 pts automation"). */
+  value_label?: string;
+  /** How to proceed — ordered steps. */
+  how_to_proceed?: string[];
+  /** What to think about before / during — risks, dependencies. */
+  considerations?: string[];
+  /** Where to find resources — docs, playbooks, contacts. */
+  resources?: Array<{ label: string; url?: string }>;
 }
 
 /** Single agenda row. Used for both CE business reviews and Sales

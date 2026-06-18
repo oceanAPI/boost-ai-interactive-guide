@@ -259,6 +259,85 @@ export default function RecommendationDetailModal({
             </section>
           )}
 
+          {/* How to proceed */}
+          {recommendation.how_to_proceed && recommendation.how_to_proceed.length > 0 && (
+            <section>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-muted mb-2">
+                How to proceed
+              </p>
+              <ol className="space-y-2">
+                {recommendation.how_to_proceed.map((step, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-3 text-sm text-boost-dark leading-relaxed"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-boost-purple/10 text-[10px] font-bold text-boost-purple tabular-nums"
+                    >
+                      {i + 1}
+                    </span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          {/* What to consider */}
+          {recommendation.considerations && recommendation.considerations.length > 0 && (
+            <section>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-muted mb-2">
+                What to weigh up
+              </p>
+              <ul className="space-y-2">
+                {recommendation.considerations.map((c, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-3 text-sm text-boost-dark leading-relaxed"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="mt-1.5 flex-shrink-0 w-1.5 h-1.5 rounded-full bg-boost-gold"
+                    />
+                    <span>{c}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* Resources */}
+          {recommendation.resources && recommendation.resources.length > 0 && (
+            <section>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-boost-muted mb-2">
+                Where to find resources
+              </p>
+              <ul className="space-y-1.5">
+                {recommendation.resources.map((r, i) => (
+                  <li key={i}>
+                    {r.url ? (
+                      <a
+                        href={r.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 text-sm font-medium text-boost-green hover:text-boost-green-light transition-colors"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" /><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" /></svg>
+                        {r.label}
+                      </a>
+                    ) : (
+                      <span className="inline-flex items-center gap-2 text-sm text-boost-dark">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-boost-muted"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
+                        {r.label}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {/* Tags */}
           {recommendation.tags && recommendation.tags.length > 0 && (
             <section className="pt-4 border-t border-boost-border">
