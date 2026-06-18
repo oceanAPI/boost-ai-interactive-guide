@@ -368,7 +368,7 @@ export const CUSTOMER_SCHEMA_VERSION = "v1.3.0";
 
 /** Which Boost work mode is operating on this customer right now.
  *  Drives admin UI layout, default block library, landing-page route. */
-export type Audience = "sales" | "customer-excellence" | "professional-services";
+export type Audience = "sales" | "customer-excellence" | "professional-services" | "customer-success";
 
 /** Customer workflow state. Loops are legitimate — a `live` customer
  *  can cycle back to `delivering` when expansion kicks off. See
@@ -577,6 +577,22 @@ export interface AcceptedInitiative {
   /** Optional free-form notes the CSM has captured — rendered in
    *  the detail modal below the tasks. */
   notes?: string;
+
+  /** Append-only progress log across review sessions. The CSM logs
+   *  one entry per BR/session so a returning customer's initiatives
+   *  show how they've moved since the last meeting. Lives in the
+   *  engagement's JSONB `data` blob — no DB migration. Most-recent
+   *  last. SuccessPlanSection surfaces the trend; the CS SuccessPlan
+   *  input panel appends entries. */
+  progress_history?: Array<{
+    /** ISO 8601 of when this progress was logged. */
+    date: string;
+    rag_status: "green" | "amber" | "red";
+    /** Optional 0–100 completion estimate at this point in time. */
+    percent_complete?: number;
+    /** What moved since the last entry (optional). */
+    note?: string;
+  }>;
 }
 
 /** SWOT quadrant for a single specialist agent. Rendered by

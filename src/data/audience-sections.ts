@@ -118,11 +118,38 @@ export const PS_DEFAULTS: readonly string[] = [
   "next-steps",
 ];
 
+/**
+ * Sections enabled-by-default for the Customer Success Manager (CSM)
+ * workspace (`/cs`). The post-sale value narrative: open on the
+ * meeting agenda, prove value-to-date (performance + transformation),
+ * benchmark vs peers, surface the prioritised recommendations + the
+ * committed success plan, show agent-level diagnostics, then close on
+ * governance/cadence, the roadmap-that-matters, and enablement.
+ *
+ * case-studies is opt-in (default OFF) per the workshop notes ("a bit
+ * hidden for now"). All IDs exist in SLIDE_SECTIONS.
+ */
+export const CS_DEFAULTS: readonly string[] = [
+  "agenda",
+  "performance",
+  "agentic-before-after",
+  "benchmarking",
+  "top-recommendations",
+  "success-plan",
+  "agent-swot",
+  "uat-status",
+  "governance",
+  "platform-vision",
+  "resources",
+  "next-steps",
+];
+
 /** Per-audience default-enabled section IDs. */
 export const AUDIENCE_DEFAULTS: Record<Audience, readonly string[]> = {
   "sales": SALES_DEFAULTS,
   "customer-excellence": CE_DEFAULTS,
   "professional-services": PS_DEFAULTS,
+  "customer-success": CS_DEFAULTS,
 };
 
 /**

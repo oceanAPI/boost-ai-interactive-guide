@@ -6,6 +6,7 @@ import { auth } from "@/auth";
  *
  *   /admin*    — the guide builder
  *   /admin-x*  — the (unlinked) experimental journey mockup
+ *   /cs*       — the Customer Success Manager (CSM) workspace
  *
  * Public on purpose: /, /signin, /guide, /slides, /api/auth. Prospects
  * open shared /guide#data=... links with no login.
@@ -22,5 +23,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/admin/:path*", "/admin-x/:path*"],
+  matcher: ["/admin/:path*", "/admin-x/:path*", "/cs/:path*"],
 };
