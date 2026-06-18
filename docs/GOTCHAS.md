@@ -4,6 +4,26 @@
 
 ---
 
+## `preview_console_logs` shows a parse error that no longer exists
+
+**Symptom**: After fixing a JSX/syntax error, `preview_console_logs --level error`
+keeps reporting the SAME parse error (e.g. `TopRecommendationsSection.tsx:164
+Expected '</', got '{'`) on every check, even after reloading the page.
+
+**Cause**: The Turbopack dev server's console buffer accumulates compile errors
+from the brief interim while a file was broken, and does NOT clear them on
+reload/navigation. `npx tsc --noEmit` can also pass while the buffer still shows
+the old SWC error, widening the confusion.
+
+**Fix**: Don't trust the console buffer alone. Confirm validity two ways: (1)
+`npm run build` (production uses the same SWC parser — a clean "Compiled
+successfully" proves the file parses), and (2) actually render the component
+(GuideClient imports every section at the top, so a real parse error breaks the
+whole bundle and renders nothing — if it renders, it parses). Note `npm run
+build` wipes `.next`, so reload the dev server afterward.
+
+---
+
 ## REFERENCE.md disagrees with code
 
 **Symptom**: Page Architecture tree in REFERENCE.md says sections 01–10 in fixed positions; admin claims a 6-step form; agent industries list is incomplete.

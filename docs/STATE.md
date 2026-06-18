@@ -1,177 +1,218 @@
 # STATE — right now
 
 > Overwritten on every meaningful step. Read this first when resuming.
+> This is the HANDOVER for a fresh agent session — read it top to bottom,
+> then `git log --oneline -8` and `git status` to confirm the tree.
 
-## Branch
-main — Engagement Framework foundation shipped (`caa3b12`). Voice + AI-Agent vocabulary backlog captured this session, not yet shipped.
+## Branch & last-green
 
-## Current goal
-Backlog captured for the next push, ordered by leverage. User wants to "revert back" so this STATE.md is the resume baseline.
+`main`. Round-2 CS story-spine work done IN THE WORKING TREE, **uncommitted**
+(plus the earlier uncommitted entry-restructure + the throwaway
+`scratch_match.mjs`). Nothing committed this session — awaiting explicit push.
 
----
+Last commits (newest first):
+```
+93bdad5 chore(admin-x): track experimental admin route
+5b4cb06 feat(cs): story-spine builder — Planhat-style entry, guided journey, deck-modeled sections
+e86d287 feat(extensions): telco + airline agent rosters + extension-pointer comments
+0994966 feat(cs): Customer Success Manager workspace at /cs
+```
+`npm run build` + `npx tsc --noEmit` both clean as of this handover.
+Nothing pushed — the user pushes manually. Do NOT `git push`.
 
-## Voice + AI-Agent backlog (THIS SESSION'S TAKE)
+### Round-2 CS spine iteration (this session, uncommitted)
 
-User's 7 items + answers + my findings. Order = recommended ship sequence.
+Addressed the 5-part deck-modeled design ask:
+1. **Roadmap inside every chapter** — `STORY_CHAPTERS` carries per-chapter
+   `roadmap`; ChapterBlock gate is `chapter.roadmap` (was Agentic-only).
+2. **Benchmark tied to each chapter** — `ChapterBenchmark` + `ChapterBenchmarkViz`
+   (live bars, `youFromPerformance` reads `automation_rate`, `dataset` chip =
+   future dataset-filter placeholder).
+3. **Channel profile "as our story"** (deck slide 40) under Channels —
+   `ChannelProfile` type + `ChannelProfileViz` (inquiry-mix bar + per-channel
+   automation cards + today→target gauge, live total via `automation_rate`).
+4. **Value-vs-effort matrix** replaces TopRecommendations grid when any rec has
+   `effort` — `CostEffortMatrix` + new `Recommendation` fields (`effort`,
+   `value_label`, `how_to_proceed`, `considerations`, `resources`); detail
+   modal renders the 3 new blocks. Data-presence branch (CE/Sales unaffected).
+5. Placeholder customers' recs enriched so the matrix renders in `/cs`.
 
-### A. Vocabulary unification — "1 AI Agent"
-Codebase-wide rename pass:
-- "Virtual agent" / "Virtual agents" / "VA" / "VAs" → **"AI Agent"** (capital A, singular)
-- "Chatbot" / "chat bot" → **"AI Agent"**
-- "Generative action" → **"Agentic action"**
-- Position: "boost.ai sells **1 AI Agent**" (one customer = one AI Agent across channels)
+Files touched: `src/data/thought-leadership.ts`,
+`src/components/sections/ThoughtLeadershipSection.tsx`,
+`src/components/sections/TopRecommendationsSection.tsx`,
+`src/components/sections/top-recommendations/CostEffortMatrix.tsx` (new),
+`src/components/sections/top-recommendations/RecommendationDetailModal.tsx`,
+`src/lib/types.ts`, `src/data/cs-placeholder-customers.ts`.
 
-Touches: admin labels (chat_va_external, voice_va field labels in pricing builder), pricing-2026.ts comments, ROADMAP_LANES strings ("Specialist agents"), agent registry copy, Hero / Trust copy, Topics content blocks, every "VA" or "chatbot" string.
-
-**Lift**: 1–2 hrs. Single focused commit. Lowest risk, highest visibility.
-
-### B. Channel picker — Voice / Chat / Both
-New chip group early in admin journey: Voice / Chat / Both. Drives:
-- Chat Preview visible only when chat is in scope
-- Voice-specific section flavor (when wired in C–E below)
-- ROI baseline-cost capture per channel (D)
-
-User confirmed: only Chat Preview is strictly chat-only today; everything else channel-agnostic.
-
-**Lift**: 2–3 hrs.
-
-### C. Voice ROI wiring (per-channel baseline cost)
-Voice baseline = `$/minute` (vs chat's `$/conversation`). Add `voice_cost_per_minute` to admin Section 3 alongside `conversation_cost`. ROI calculator computes per-channel monthly cost, sums for total.
-
-Pricing math (csv tiers + invoice) is already correctly per-channel — only the BASELINE-COST INPUT was chat-shaped. Voice automation default 60% (vs chat's 80%) — promote to engagement_framework or per-channel agent-set average.
-
-**Lift**: 3–4 hrs.
-
-### D. Voice migration playbook → Roadmap mapping
-User's mapping (from playbook PDF):
-- Build = playbook's pre-pilot stages (Align + Assess + Enable + Test + Fix and plan + Ready)
-- Pilot = Go Live moment
-- Scale = Hypercare (2 weeks per playbook) + onwards
-- Discovery still exists but compressed for voice migrations
-
-Engagement framework gains:
-- `migration: boolean` flag — distinguishes greenfield voice (build new) from migration (existing → Boost Voice)
-- Different default phase weeks for voice migration vs chat greenfield
-- Maps the playbook 8-phase checklist (Align / Assess / Enable / Test / Fix and plan / Ready / Go Live / Hypercare) onto the existing 4-phase Roadmap as Key Milestones overrides
-
-**Lift**: 3–4 hrs.
-
-### E. Roadmap section vision revision toward PDS
-Audit done. Source of truth: `~/Downloads/Product Roadmap 2026 .pdf` (143 pages, canonical content pages 1-39 — slide 39 says "All slides after this will be archived soon").
-
-**Already aligned** in code:
-- `src/data/product-roadmap-2026.ts` — all 21 PDF items match exactly (4 NOW Q1, 8 SOON Q2, 9 LATER Q3-Q4)
-- `src/data/product-vision.ts` — all 4 focus area vision paragraphs match PDF wording
-
-**Missing from code** (PDF has, code doesn't yet):
-1. Overall company tagline: "Trust every conversation"
-2. Overall vision paragraph: "The future isn't about automation — it's about conversations"
-3. Three Product Strategy pillars: **Simplifying complexity / Right level of Control / Security & Safety first** (with their full-paragraph descriptions from PDF page 3)
-4. Per focus area: 4-phase breakdowns ("Phase 1: ... Phase 4: ...") — currently absent
-5. Per focus area: "Value for your team and end users" 5-bullet sets
-6. Boost Voice 4-phase delivery: "Phase 1: in-house voice offering ... Phase 4: end-to-end user engagement analytics"
-7. Adaptive Voice + WebRTC + Voice Cloning + Multi-modal Avatars — all in roadmap items but PDF has richer copy
-
-**Lift**: 2–3 hrs to add to `product-vision.ts` + render in `VisionTab.tsx`.
-
-### F. Academy + Help Centers + Community section (NEW big section)
-Three external surfaces:
-- **Academy** — `https://academy.boost.ai/student/catalog` — public, course catalog. Sections: Quick overview / How do we build an AI agent? / How boost.ai leverages generative AI / Interested in knowing more?
-- **Support / Help Center** — `https://support.boost.ai/` — gated behind Freshdesk OAuth (login required, can't WebFetch)
-- **Trust Center** — `https://trustcenter.boost.ai/` — Vanta-powered dashboard (JS-rendered, can't extract via WebFetch)
-
-User flagged Boost Camp / Community as part of this section — `BOOST_CAMP_EVENTS` already exists as a partial subset. New section bundles all four (Academy / Help Center / Trust Center / Community).
-
-**Open**: user said they "might have to give material" for Academy and Help Centers. Defer authoring until material lands. Wire the three external URLs as cards now.
-
-**Lift**: 2–3 hrs once material is in hand.
-
-### G. Greenfield vs migration — admin shape
-Two flows in admin:
-- Greenfield: customer with no current voice → builds on Boost Voice
-- Migration: customer with existing voice → migrates to Boost (playbook flow)
-
-**Open question**: top-level chip in journey (clutters entry) vs preset within engagement framework (cleaner)? My recommendation: preset-within-framework. Awaiting user confirmation before shipping.
+GOTCHA: the dev `preview_console_logs` buffer shows a stale
+`TopRecommendationsSection:164` parse error — IGNORE IT. The module renders on
+`/guide` and the production build compiles clean; the buffer just never cleared
+from the brief broken interim while the value/effort ternary was being wired.
 
 ---
 
-## Five remaining open questions for the user
+## What this project is
 
-1. **Voice pricing doc** — when "documentation of pricing" was mentioned (item #3): (a) the voice tiers already in `src/data/pricing-2026.ts` (Enterprise/Express + per-minute) ARE the documentation, or (b) separate Boost Voice pricing PDF exists?
+Per-customer interactive guides for boost.ai, assembled from a shared,
+additive `Customer` record. Static-export Next.js 16 (Turbopack) → GitHub
+Pages, plus a Cloudflare Worker for feedback/search telemetry. Guide state
+round-trips through a base64url URL **fragment** (`#data=`), not a backend.
+Full architecture: `docs/ARCHITECTURE.md` (trust it over `docs/REFERENCE.md`).
 
-2. **Academy material** — when ready, what shape: outline / draft text / full doc / link to existing material elsewhere?
-
-3. **Help Centers + Community** — what's the boundary: Help Center = static docs, Community = forum/peer events? Or different split?
-
-4. **Greenfield vs migration UI placement** — top-level chip OR preset within framework? (Recommendation: preset.)
-
-5. **Voice + Chat combined deck shape** — defer per-value discussion to when divergent values are actually surfaced (user said "discuss each single value").
+Four audiences share one section catalogue, differing only by which sections
+are default-enabled: **Sales** (`/admin`), **Customer Excellence**,
+**Professional Services**, and **Customer Success / CSM** (`/cs`). The CS
+workspace is the current focus.
 
 ---
 
-## Recently shipped (commits behind this session)
+## Where everything lives (redirection map)
 
-- `caa3b12` Engagement Framework foundation — first set of timeline knobs (total_weeks, phase_weeks, milestones, pilot_traffic_pct) with Roadmap consumer wired
-- `b74402b` Landing page reframe → "One interactive platform. Everything at work." + Analytics showcase tile
-- `360872c` Currency defaults to USD
-- `cdce56f` Currency picker moves into rail header
-- `695dc52` Pricing leaks closed (slides field-completeness + SoW PDF currency-arg bug + parseConversationCost helper)
-- `7d0fda8` Guide Sections cleanup (preset chrome stripped + row noise quieted)
+**Routes** (`src/app/`): `/` chooser · `/admin` Sales builder · `/admin-x`
+experimental (isolated) · `/cs` CSM home · `/cs/build` CSM builder ·
+`/cs/mine` · `/cs/browse` · `/guide` render · `/slides` slideshow ·
+`/signin` + `/api/auth/[...nextauth]` Google auth.
 
-## Last-green SHA
-`caa3b12`
+**The CS story spine (this session's work):**
+- Data: `src/data/thought-leadership.ts` — `STORY_CHAPTERS` (4 chapters:
+  agentic-adoption / personalised-cx / sales / channels). Each has stat,
+  narrative, proofPoints, caseStudies, benchmark, optional roadmap (agentic
+  only), `useCase` (today/future chat before-after), transition, and a
+  `linkSection` anchor into its deep-dive. `THOUGHT_LEADERSHIP_DEFAULTS` =
+  the 4 hero stats the CSM can override.
+- Render: `src/components/sections/ThoughtLeadershipSection.tsx` — dynamic
+  customer snapshot hero → "The state of conversational AI" four-challenge
+  header (deck slide 3) → 4 ChapterBlocks. `UseCaseDemo`/`ChatColumn` render
+  the opt-in today-vs-future chat before/after. `snapshot()` builds the
+  dynamic headline from `performance.automation_rate` + recommendations.
+- Two net-new sections: `PersonalisationSection.tsx` (intent→integration
+  opportunities) + `RevenueSection.tsx` (lead-gen + sell journeys).
+- Input panels: `src/components/builder/sections/cs/` —
+  `ThoughtLeadershipInputPanel`, `PersonalisationInputPanel`,
+  `RevenueInputPanel`, `CompanyInputPanel` (Planhat-style search + instance
+  picker), `AgendaInputPanel` (auto-fills from completed chapters).
+- Placeholder customers: `src/data/cs-placeholder-customers.ts` — 3 fake
+  insurance customers, `searchPlaceholderCustomers(query)`.
+
+**Wiring (the golden path — touch all 5 to add a section):**
+1. Component in `src/components/sections/`.
+2. Register in `src/lib/slide-sections.ts` (`SLIDE_SECTIONS`).
+3. Render in `src/app/guide/GuideClient.tsx` (import + `activeSectionSet.has(id)` block).
+4. CS input panel + preview/hasContent in `src/components/builder/workspace-config.ts` (`CS_WORKSPACE`).
+5. Default-enable in `src/data/audience-sections.ts` (`CS_DEFAULTS`, deck order).
+
+**Types:** `src/lib/types.ts` — `Customer` extends `GuideFormData`. CS fields
+are optional, round-trip in JSONB / the URL fragment. Key fields: `performance`,
+`benchmarks`, `agentic_outcomes`, `recommendations`, `accepted_initiatives`,
+`agent_swot`, `uat_status`, `governance`, `br_context`, `thought_leadership`,
+`personalisation_opportunities`, `revenue_story`, `selected_instance_ids`.
+
+**URL encoding:** `src/lib/url-encoding.ts`. Encode =
+`Buffer.from(JSON.stringify(data),"utf-8").toString("base64")` then base64url
+(`+`→`-`, `/`→`_`, strip `=`). Guide URL shape:
+`/guide?audience=customer-success#data=<base64url>&sections=<comma-list>`.
+NB: a fragment-only change does NOT reload the page; set a different search
+param (e.g. `&t=1`) to force navigation when testing, and never call
+`location.reload()` in the same tick as setting `location.href` (it races and
+drops the fragment — see GOTCHAS).
+
+**Persistence:** `src/app/actions/engagements.ts` + `src/lib/supabase.ts`.
+Migrations in `supabase/migrations/` (`0001_engagements.sql`,
+`0002_access_requests.sql`).
+
+**Reference deck (the gold standard the builder is modelling):**
+`/Users/mikalmonslaup/Downloads/Copy of LähiTapiola & Turva 3.6.2026 Tampere.pdf`
+(46 pages). Slide 3 = the four challenges. The narrative arc per chapter is
+consistent: boost data-driven story → success stories → the customer's own
+benchmark → how the transition looks for them.
+
+---
+
+## Current goal / next actions (Round 2)
+
+The story spine + entry + guided journey ship. Verified end-to-end on
+`/guide`. **Round 2 is the next big chunk — held for the next session
+because it needs a concrete spec, not speculation:**
+
+1. **Fork reused CE sections into CS-specific versions — NEEDS A SPEC FIRST.**
+   Today the CS guide renders the SAME components as CE (Performance,
+   Benchmarking, AgenticBeforeAfter, SuccessPlan, Governance, AgentSwot,
+   UatStatus, TopRecommendations) — there is NO audience branching in
+   GuideClient. Do NOT blind-fork all 8: that's duplicate code with no
+   user-facing gain until we know HOW each should differ for CS. ASK THE USER
+   per-section what should change (copy, density, ordering, which fields show)
+   before forking. Pattern when forking: new `*CsSection.tsx`, gate in
+   GuideClient on `audience === "customer-success"`.
+2. **Remaining bespoke deck sections** — confirm with the user whether the
+   Channels "what-if" savings wants its own section or stays folded into the
+   existing `roi`/`impact` sections (the plan said reuse; the deck shows it as
+   its own beat). Integration-journey polish on PersonalisationSection.
+3. **Rail drag-reorder + make GuideClient honor `?sections=` order.** Today
+   GuideClient renders in fixed JSX order regardless of the order in
+   `?sections=`. If the CSM reorders chapters, the guide won't reflect it.
+   Offered previously, awaiting go-ahead.
+
+---
 
 ## Blockers
-- F8 onboarding section — still blocked on CSM playbook
-- Backlog F (Academy/Help/Trust/Community) — blocked on user-supplied material for Academy + Help Centers
-- Backlog G (greenfield/migration) — blocked on UI placement decision
 
-## Next action
-1. **User answers the 5 open questions above** (especially Voice pricing doc + greenfield/migration placement).
-2. **Ship A first** (vocabulary sweep) — lowest risk, broadest visibility, doesn't depend on any open answers.
-3. **Then B → C → D** in sequence (channel picker → voice ROI wiring → playbook → Roadmap mapping).
-4. **E in parallel** with B–D (vision revision is content-only, doesn't conflict).
-5. **F + G** when the answers/material come in.
+- **Supabase is DOWN** — `woefktcoizqotflzvsvg.supabase.co` resolves NXDOMAIN.
+  All auto-save / save+present / engagement-list DB loops are unverifiable
+  until it's restored. When back: run `0001` + `0002` migrations, then verify
+  the save→reopen loop. Everything else (build/route/UI/prefill→render→Generate)
+  verifies locally without it.
+- A buggy local `.git/hooks/post-commit` prints `declare: -A` / `division by 0`
+  noise on every commit. Harmless — the commit still lands. Ignore it.
 
-## Key context for next session
-- **Roadmap data is already canonical** — `product-roadmap-2026.ts` matches the PDF deck 1:1. No new items to add.
-- **Vision data is half-done** — paragraphs match, but Strategy pillars + Phase 1-4 breakdowns + Value bullets per focus area are missing.
-- **AI Agent vocabulary** is the foundational naming sweep — should land before voice-specific work so new code uses unified terminology from the start.
-- **Voice playbook** = migration only (existing voice → Boost). Greenfield voice = Boost Voice from scratch. Two flows.
-- **Pricing source of truth**: `src/data/pricing-2026.ts`. CSV-mirrored, voice tiers (Enterprise / Express + per-minute) + chat tiers (per-conversation) both wired.
-- **Engagement Framework** is the new home for tunable timeline knobs. Currently only Roadmap consumer wired; Ways of Working / Impact / SoW wiring deferred to follow-up commits.
+---
+
+## House rules (do not violate)
+
+- NEVER `git push` and NEVER commit unless explicitly asked.
+- One logical change per commit; Conventional Commits; add
+  `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>` when Claude wrote ≥50%.
+- No CI gates — run `npm run build` + smoke-check before relying on a change.
+- Never hand-roll chips — use `AdminChip`/`AdminChipRow`/`AdminPrompt`/
+  `AdminMiniLabel` from `src/components/admin/primitives.tsx`.
+- "instances" = AWS data-source deployments, NOT agents (`selected_instance_ids`).
+- `security` industry stays HIDDEN. Extensions authored in `src/data/extensions/`
+  first, then spliced per `integration-guide.md`.
+- boost.ai is the engagement owner until the customer's tech team takes over
+  (swappable keys).
+- Preview server: serverId `337a296c-5bdb-4b5c-b419-8494974547fd`, port 3000.
+  `npm run build` wipes `.next`, so reload the dev server after a build.
 
 ## Auto-snapshot
-Last updated: 2026-04-28T (this session)
+Last updated: 2026-06-18 (CS story spine + before/after demos + benchmark fix shipped)
 Branch: main
-Working tree pending the 6 unpushed commits listed above.
+Last commit: 93bdad5
 
 <!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
 ## Auto-snapshot
-Last updated: 2026-06-18T13:09:14+02:00
+Last updated: 2026-06-18T14:31:16+02:00
 Branch: main
-Last commit: 0994966 feat(cs): Customer Success Manager workspace at /cs
+Last commit: 42f0514 feat(engagements): collaborators + detail view, live-demo default, mobile chat height
 Working tree:
 ```
- M docs/JOURNAL.md
- M docs/STATE.md
- M src/app/actions/engagements.ts
- M src/app/cs/page.tsx
- M src/app/guide/GuideClient.tsx
- M src/components/builder/EngagementDetail.tsx
- M src/components/builder/sections/cs/AgendaInputPanel.tsx
- M src/components/builder/sections/cs/CompanyInputPanel.tsx
- M src/components/builder/workspace-config.ts
- M src/data/agents/_types.ts
- M src/data/agents/index.ts
- M src/data/audience-sections.ts
- M src/data/company-patterns.ts
- M src/data/extensions/agents/airline/index.ts
- M src/data/extensions/agents/telco/device-support.ts
- M src/data/extensions/agents/telco/index.ts
- M src/data/extensions/index.ts
- M src/lib/slide-sections.ts
- M src/lib/types.ts
-?? scratch_match.mjs
+ M docs/GOTCHAS.md
+MM docs/JOURNAL.md
+MM docs/STATE.md
+M  src/app/actions/engagements.ts
+A  src/app/admin-x/page.tsx
+M  src/app/admin/page.tsx
+A  src/app/cs/browse/page.tsx
+A  src/app/cs/build/page.tsx
+A  src/app/cs/mine/page.tsx
+A  src/app/cs/page.tsx
+M  src/app/guide/GuideClient.tsx
+A  src/components/builder/CollapsibleSection.tsx
+A  src/components/builder/CsChrome.tsx
+A  src/components/builder/EngagementCard.tsx
+A  src/components/builder/EngagementDetail.tsx
+A  src/components/builder/Rail.tsx
+A  src/components/builder/sections/cs/AgendaInputPanel.tsx
+A  src/components/builder/sections/cs/AgentSwotInputPanel.tsx
+A  src/components/builder/sections/cs/AgenticOutcomeInputPanel.tsx
+A  src/components/builder/sections/cs/BenchmarkInputPanel.tsx
 ```
 <!-- AUTO-HOOK-END -->
