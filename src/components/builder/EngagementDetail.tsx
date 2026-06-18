@@ -5,6 +5,7 @@ import type {
   EngagementSummary,
   CollaboratorRow,
   CommentRow,
+  AccessRequestRow,
 } from "@/app/actions/engagements";
 
 /* ─── Engagement detail panel (inside My Engagements modal) ───
@@ -28,6 +29,11 @@ export function EngagementDetail(props: {
   onOpen: () => void;
   onDelete: () => void;
   isOpenEngagement: boolean;
+  /** Owner-only pending edit-access requests + handlers. Optional —
+   *  callers that don't surface requests (e.g. legacy modal) omit them. */
+  accessRequests?: AccessRequestRow[];
+  onApproveRequest?: (email: string) => void;
+  onDenyRequest?: (email: string) => void;
 }) {
   const {
     engagement: e,
@@ -44,6 +50,9 @@ export function EngagementDetail(props: {
     onOpen,
     onDelete,
     isOpenEngagement,
+    accessRequests = [],
+    onApproveRequest,
+    onDenyRequest,
   } = props;
 
   const dom = (e.company_url || "")
@@ -86,6 +95,39 @@ export function EngagementDetail(props: {
         >
           Open in builder <span aria-hidden="true">→</span>
         </button>
+
+        {/* Access requests (owner only) */}
+        {isOwner && accessRequests.length > 0 ? (
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-boost-muted mb-2">
+              Edit access requests
+            </p>
+            <ul className="space-y-1.5">
+              {accessRequests.map((r) => (
+                <li
+                  key={r.requester_email}
+                  className="flex items-center gap-2 rounded-lg border border-boost-border bg-boost-surface/40 px-3 py-2"
+                >
+                  <span className="flex-1 truncate text-[12px] text-boost-dark">{r.requester_email}</span>
+                  <button
+                    type="button"
+                    onClick={() => onApproveRequest?.(r.requester_email)}
+                    className="rounded-md bg-boost-green-light px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white hover:bg-boost-green-light/90 transition-colors"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDenyRequest?.(r.requester_email)}
+                    className="text-[10px] font-semibold uppercase tracking-[0.12em] text-boost-muted hover:text-boost-gold transition-colors"
+                  >
+                    Deny
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {/* Collaborators */}
         <div>

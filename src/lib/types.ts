@@ -741,6 +741,53 @@ export interface AgenticOutcome {
   validated_on?: string;
 }
 
+/** A personalised-CX integration opportunity. One row of the deck's
+ *  "Top intents & user-journey improvement suggestions" table: a
+ *  customer intent that would benefit from a CRM/API integration,
+ *  the proposed solution, its projected impact, and the step-by-step
+ *  user journey the integration enables. Drives PersonalisationSection. */
+export interface PersonalisationOpportunity {
+  /** The customer intent / top topic, e.g. "Check status of my claim". */
+  intent: string;
+  /** The proposed integration, e.g. "CRM API to check case statuses". */
+  solution: string;
+  /** Projected 180-day impact / volume, e.g. "12k requests". Free text. */
+  impact_180d?: string;
+  /** Optional request-volume number for sizing. */
+  requests?: number;
+  /** Flag the intent as a current top negative-feedback driver. */
+  negative_feedback?: boolean;
+  /** The user-journey this integration enables, as ordered steps
+   *  (e.g. ["authentication", "intent recognition", "invoice API",
+   *  "LLM-generated guidance"]). Rendered as a vertical flow. */
+  journey_steps?: string[];
+}
+
+/** A single thought-leadership story stat — the deck's big-number
+ *  opener (e.g. headline "Agentic", figure "88%", narrative "91% of
+ *  our customers have LLM features in production today…"). */
+export interface ThoughtLeadershipStat {
+  /** Short headline word, e.g. "Agentic" / "Personalised" / "Channels". */
+  headline: string;
+  /** Hero figure, e.g. "88%". Free text so "4–5×" etc. work too. */
+  stat: string;
+  /** Data-driven narrative paragraph beneath the headline. */
+  narrative: string;
+}
+
+/** Sales / revenue narrative for the engagement — lead-generation
+ *  proof + sell-via-agent journeys. Drives RevenueSection. */
+export interface RevenueStory {
+  /** Headline lead/revenue metric tiles (e.g. "42% higher lead
+   *  conversion"). */
+  lead_metrics?: Array<{ label: string; value: string; sublabel?: string }>;
+  /** Short note on the proactivity / lead-gen play. */
+  proactivity_note?: string;
+  /** Sell-via-agent user journeys (e.g. "Sell products via the AI
+   *  Agent": intent → subscription fit → login → porting → SIM → order). */
+  sell_journeys?: Array<{ title: string; steps: string[] }>;
+}
+
 /**
  * Customer — unified record spanning all three audiences.
  *
@@ -820,6 +867,30 @@ export interface Customer extends GuideFormData {
    *  AgenticBeforeAfterSection — the "agentic transformation"
    *  story told as side-by-side tiles. */
   agentic_outcomes?: AgenticOutcome[];
+
+  /** Personalised-CX integration opportunities — the deck's "Top
+   *  intents & user-journey improvement suggestions" table. Drives
+   *  PersonalisationSection. */
+  personalisation_opportunities?: PersonalisationOpportunity[];
+
+  /** Sales / revenue narrative — lead-gen metrics + sell-via-agent
+   *  journeys. Drives RevenueSection. */
+  revenue_story?: RevenueStory;
+
+  /** AWS instance ids this engagement pulls data from. An "instance"
+   *  is a customer's boost.ai/AWS deployment where their data lives;
+   *  each selected instance is (future) fetched via the AWS API to
+   *  dynamically populate the engagement sections. Distinct from
+   *  `areas_of_interest` (agent keys, part of the fetched metadata). */
+  selected_instance_ids?: string[];
+
+  /** Thought-leadership story stats — the deck's big-number opener
+   *  slides (headline word + data-driven narrative + a hero figure).
+   *  These are boost.ai market-position stats (shared, not per-customer);
+   *  the section falls back to THOUGHT_LEADERSHIP_DEFAULTS when this is
+   *  unset, and the CSM can customise/override. Drives
+   *  ThoughtLeadershipSection. */
+  thought_leadership?: ThoughtLeadershipStat[];
 
   /* ─── Scope-of-Work fields ───────────────────────────────────
    * All optional, additive-only. Cross-audience by design: most of

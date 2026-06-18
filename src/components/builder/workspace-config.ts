@@ -97,15 +97,18 @@ export const CS_WORKSPACE: WorkspaceConfig<Customer> = {
   initialSection: "company",
   sectionOrder: [
     "company",
-    "agenda",
+    "thought-leadership",
     "performance",
     "agentic-before-after",
     "benchmarking",
+    "personalisation",
     "top-recommendations",
+    "revenue",
     "success-plan",
     "agent-swot",
     "uat-status",
     "governance",
+    "agenda",
   ],
   sections: [
     {
@@ -116,16 +119,16 @@ export const CS_WORKSPACE: WorkspaceConfig<Customer> = {
       hasContent: (f) => !!f.company_name?.trim(),
     },
     {
-      id: "agenda",
+      id: "thought-leadership",
       number: 2,
-      title: "Meeting Agenda",
+      title: "Story & Thought Leadership",
       preview: (f) => {
-        const n = f.br_context?.agenda_items?.length ?? 0;
-        return n ? `${n} agenda item${n === 1 ? "" : "s"}` : "BR title, date, agenda";
+        const n = f.thought_leadership?.length ?? 0;
+        return n ? `${n} custom stat${n === 1 ? "" : "s"}` : "boost.ai market story (default)";
       },
-      hasContent: (f) =>
-        !!f.br_context?.meeting_title?.trim() ||
-        (f.br_context?.agenda_items?.length ?? 0) > 0,
+      // Always "has content" — falls back to the boost.ai default story,
+      // so the narrative opener is never empty.
+      hasContent: () => true,
     },
     {
       id: "performance",
@@ -162,8 +165,18 @@ export const CS_WORKSPACE: WorkspaceConfig<Customer> = {
       hasContent: (f) => Object.keys(f.benchmarks ?? {}).length > 0,
     },
     {
-      id: "top-recommendations",
+      id: "personalisation",
       number: 6,
+      title: "Personalised CX",
+      preview: (f) => {
+        const n = f.personalisation_opportunities?.length ?? 0;
+        return n ? `${n} integration ${n === 1 ? "opportunity" : "opportunities"}` : "Top intents → integrations";
+      },
+      hasContent: (f) => (f.personalisation_opportunities?.length ?? 0) > 0,
+    },
+    {
+      id: "top-recommendations",
+      number: 7,
       title: "Recommendations",
       preview: (f) => {
         const n = f.recommendations?.length ?? 0;
@@ -172,8 +185,22 @@ export const CS_WORKSPACE: WorkspaceConfig<Customer> = {
       hasContent: (f) => (f.recommendations?.length ?? 0) > 0,
     },
     {
+      id: "revenue",
+      number: 8,
+      title: "Sales & Revenue",
+      preview: (f) => {
+        const m = f.revenue_story?.lead_metrics?.length ?? 0;
+        const j = f.revenue_story?.sell_journeys?.length ?? 0;
+        return m || j ? `${m} metric${m === 1 ? "" : "s"} · ${j} journey${j === 1 ? "" : "s"}` : "Lead-gen + sell journeys";
+      },
+      hasContent: (f) =>
+        (f.revenue_story?.lead_metrics?.length ?? 0) > 0 ||
+        (f.revenue_story?.sell_journeys?.length ?? 0) > 0 ||
+        !!f.revenue_story?.proactivity_note,
+    },
+    {
       id: "success-plan",
-      number: 7,
+      number: 9,
       title: "Success Plan",
       preview: (f) => {
         const n = f.accepted_initiatives?.length ?? 0;
@@ -183,7 +210,7 @@ export const CS_WORKSPACE: WorkspaceConfig<Customer> = {
     },
     {
       id: "agent-swot",
-      number: 8,
+      number: 10,
       title: "Agent SWOT",
       preview: (f) => {
         const n = Object.keys(f.agent_swot ?? {}).length;
@@ -193,7 +220,7 @@ export const CS_WORKSPACE: WorkspaceConfig<Customer> = {
     },
     {
       id: "uat-status",
-      number: 9,
+      number: 11,
       title: "UAT / Rollout Status",
       preview: (f) => {
         const n = f.uat_status?.length ?? 0;
@@ -203,7 +230,7 @@ export const CS_WORKSPACE: WorkspaceConfig<Customer> = {
     },
     {
       id: "governance",
-      number: 10,
+      number: 12,
       title: "Governance & Cadence",
       preview: (f) => {
         const g = f.governance;
@@ -214,6 +241,22 @@ export const CS_WORKSPACE: WorkspaceConfig<Customer> = {
       },
       hasContent: (f) =>
         !!f.governance && Object.values(f.governance).some((v) => v != null),
+    },
+    {
+      // Agenda is the LAST authoring step — it auto-fills from the
+      // chapters already completed, so it's a quick review-and-tweak
+      // before generating. In the guide it renders FIRST (meeting
+      // opener) via CS_DEFAULTS order.
+      id: "agenda",
+      number: 13,
+      title: "Meeting Agenda",
+      preview: (f) => {
+        const n = f.br_context?.agenda_items?.length ?? 0;
+        return n ? `${n} agenda item${n === 1 ? "" : "s"}` : "Auto-fills from your chapters";
+      },
+      hasContent: (f) =>
+        !!f.br_context?.meeting_title?.trim() ||
+        (f.br_context?.agenda_items?.length ?? 0) > 0,
     },
   ],
 };

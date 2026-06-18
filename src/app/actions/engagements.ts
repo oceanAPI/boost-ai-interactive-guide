@@ -38,6 +38,34 @@ export interface EngagementSummary {
   owner_email: string;
   updated_at: string;
   role: "owner" | "collaborator";
+  /** Collaborator emails on this engagement. Attached by the list
+   *  actions via a single batched query (no N+1). */
+  collaborators?: string[];
+}
+
+/** Browse-library row: every engagement the caller can see in the
+ *  shared library, with the caller's relationship to it. "other" =
+ *  owned by someone else and the caller is not a collaborator (view
+ *  is baseline; they can request edit access). */
+export interface BrowseSummary {
+  id: string;
+  title: string | null;
+  company_name: string | null;
+  company_url: string | null;
+  audience: string | null;
+  owner_email: string;
+  updated_at: string;
+  role: "owner" | "collaborator" | "other";
+  collaborators: string[];
+  /** True when the caller already has a pending edit-access request. */
+  pending_request: boolean;
+}
+
+export interface AccessRequestRow {
+  engagement_id: string;
+  requester_email: string;
+  status: string;
+  created_at: string;
 }
 
 export interface CollaboratorRow {
@@ -192,6 +220,31 @@ export async function getEngagement(id: string): Promise<Result<EngagementRow>> 
   return { ok: true, data: eng as EngagementRow };
 }
 
+/** Read-only fetch for the shared library. ANY signed-in boost user
+ *  may view (baseline access) — returns just enough to render the
+ *  read-only guide (data + sections + audience). Edit still requires
+ *  getEngagement's owner/collaborator/invitee check. */
+export async function getEngagementForView(
+  id: string,
+): Promise<Result<{ data: GuideFormData; sections: string[]; audience: string | null }>> {
+  const email = await sessionEmail();
+  if (!email) return { ok: false, error: "Not signed in." };
+  if (!isBoost(email)) return { ok: false, error: "Only boost.ai users can view engagements." };
+
+  const db = getServiceClient();
+  const { data: eng, error } = await db
+    .from("engagements")
+    .select("data,sections,audience")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) return { ok: false, error: error.message };
+  if (!eng) return { ok: false, error: "Engagement not found." };
+  return {
+    ok: true,
+    data: { data: eng.data as GuideFormData, sections: eng.sections ?? [], audience: eng.audience },
+  };
+}
+
 /** Delete an entire engagement. Owner only. Cascades to children. */
 export async function deleteEngagement(id: string): Promise<Result<{ id: string }>> {
   const email = await sessionEmail();
@@ -251,7 +304,35 @@ export async function listMyEngagements(): Promise<Result<EngagementSummary[]>> 
     ...(owned ?? []).map((e) => ({ ...e, role: "owner" as const })),
     ...collabEngagements.map((e) => ({ ...e, role: "collaborator" as const })),
   ];
+
+  // Attach collaborator emails in one batched query (no N+1).
+  const collabsById = await collaboratorsByEngagement(
+    db,
+    summaries.map((s) => s.id),
+  );
+  for (const s of summaries) s.collaborators = collabsById.get(s.id) ?? [];
+
   return { ok: true, data: summaries };
+}
+
+/** Batch-fetch collaborator emails for a set of engagement ids,
+ *  grouped by engagement_id. One query, grouped in memory. */
+async function collaboratorsByEngagement(
+  db: ReturnType<typeof getServiceClient>,
+  ids: string[],
+): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  if (ids.length === 0) return map;
+  const { data } = await db
+    .from("engagement_collaborators")
+    .select("engagement_id,email")
+    .in("engagement_id", ids);
+  for (const row of data ?? []) {
+    const list = map.get(row.engagement_id) ?? [];
+    list.push(row.email);
+    map.set(row.engagement_id, list);
+  }
+  return map;
 }
 
 /* ─── Collaborators (boost-domain editors) ───
@@ -342,4 +423,179 @@ export async function listComments(
     .order("created_at", { ascending: true });
   if (error) return { ok: false, error: error.message };
   return { ok: true, data: (data ?? []) as CommentRow[] };
+}
+
+/* ─── Shared engagement library + edit-access requests ───
+ *  Any signed-in boost user can browse every engagement (view is
+ *  baseline — the read-only guide render). For engagements they don't
+ *  own or collaborate on, they can request edit access; the owner
+ *  approves in-app, which promotes them to a collaborator. */
+
+/** List every engagement in the shared library with the caller's
+ *  relationship to each. Boost-only. */
+export async function listAllEngagements(): Promise<Result<BrowseSummary[]>> {
+  const email = await sessionEmail();
+  if (!email) return { ok: false, error: "Not signed in." };
+  if (!isBoost(email)) return { ok: false, error: "Only boost.ai users can browse engagements." };
+
+  const db = getServiceClient();
+  const cols =
+    "id,title,company_name,audience,owner_email,updated_at,company_url:data->>company_url";
+
+  const { data: rows, error } = await db
+    .from("engagements")
+    .select(cols)
+    .order("updated_at", { ascending: false });
+  if (error) return { ok: false, error: error.message };
+  const all = rows ?? [];
+
+  const ids = all.map((e) => e.id);
+  const collabsById = await collaboratorsByEngagement(db, ids);
+
+  // Engagement ids where the caller has a pending edit-access request.
+  const { data: reqRows } = await db
+    .from("engagement_access_requests")
+    .select("engagement_id")
+    .ilike("requester_email", email)
+    .eq("status", "pending");
+  const pendingIds = new Set((reqRows ?? []).map((r) => r.engagement_id));
+
+  const summaries: BrowseSummary[] = all.map((e) => {
+    const collaborators = collabsById.get(e.id) ?? [];
+    const isOwner = e.owner_email.toLowerCase() === email;
+    const isCollab = collaborators.some((c) => c.toLowerCase() === email);
+    const role: BrowseSummary["role"] = isOwner
+      ? "owner"
+      : isCollab
+        ? "collaborator"
+        : "other";
+    return { ...e, collaborators, role, pending_request: pendingIds.has(e.id) };
+  });
+
+  return { ok: true, data: summaries };
+}
+
+/** Request edit access to an engagement the caller doesn't own/collab.
+ *  Idempotent (PK on engagement_id + requester_email). Boost-only. */
+export async function requestEditAccess(
+  engagementId: string,
+): Promise<Result<{ status: string }>> {
+  const email = await sessionEmail();
+  if (!email) return { ok: false, error: "Not signed in." };
+  if (!isBoost(email)) return { ok: false, error: "Only boost.ai users can request access." };
+  if (await canEdit(engagementId, email)) {
+    return { ok: false, error: "You already have edit access." };
+  }
+
+  const db = getServiceClient();
+  const { error } = await db
+    .from("engagement_access_requests")
+    .upsert(
+      { engagement_id: engagementId, requester_email: email, status: "pending" },
+      { onConflict: "engagement_id,requester_email" },
+    );
+  if (error) return { ok: false, error: error.message };
+
+  // Best-effort audit event (non-fatal).
+  await db.from("engagement_events").insert({
+    engagement_id: engagementId,
+    viewer_email: email,
+    event_type: "access_requested",
+  });
+
+  return { ok: true, data: { status: "pending" } };
+}
+
+/** List pending edit-access requests for an engagement. Owner only. */
+export async function listAccessRequests(
+  engagementId: string,
+): Promise<Result<AccessRequestRow[]>> {
+  const email = await sessionEmail();
+  if (!email) return { ok: false, error: "Not signed in." };
+
+  const db = getServiceClient();
+  const { data: eng } = await db
+    .from("engagements")
+    .select("owner_email")
+    .eq("id", engagementId)
+    .maybeSingle();
+  if (!eng || eng.owner_email.toLowerCase() !== email) {
+    return { ok: false, error: "Only the owner can view access requests." };
+  }
+
+  const { data, error } = await db
+    .from("engagement_access_requests")
+    .select("engagement_id,requester_email,status,created_at")
+    .eq("engagement_id", engagementId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: (data ?? []) as AccessRequestRow[] };
+}
+
+/** Approve a request → add the requester as a collaborator + mark
+ *  the request approved. Owner only. */
+export async function approveAccessRequest(
+  engagementId: string,
+  rawRequester: string,
+): Promise<Result<{ email: string }>> {
+  const email = await sessionEmail();
+  if (!email) return { ok: false, error: "Not signed in." };
+
+  const db = getServiceClient();
+  const { data: eng } = await db
+    .from("engagements")
+    .select("owner_email")
+    .eq("id", engagementId)
+    .maybeSingle();
+  if (!eng || eng.owner_email.toLowerCase() !== email) {
+    return { ok: false, error: "Only the owner can approve access." };
+  }
+
+  const requester = rawRequester.trim().toLowerCase();
+  if (!requester) return { ok: false, error: "No requester." };
+
+  const { error: collabErr } = await db
+    .from("engagement_collaborators")
+    .upsert(
+      { engagement_id: engagementId, email: requester, added_by: email },
+      { onConflict: "engagement_id,email" },
+    );
+  if (collabErr) return { ok: false, error: collabErr.message };
+
+  await db
+    .from("engagement_access_requests")
+    .update({ status: "approved" })
+    .eq("engagement_id", engagementId)
+    .ilike("requester_email", requester);
+
+  return { ok: true, data: { email: requester } };
+}
+
+/** Deny a request → mark it denied (no collaborator added). Owner only. */
+export async function denyAccessRequest(
+  engagementId: string,
+  rawRequester: string,
+): Promise<Result<{ email: string }>> {
+  const email = await sessionEmail();
+  if (!email) return { ok: false, error: "Not signed in." };
+
+  const db = getServiceClient();
+  const { data: eng } = await db
+    .from("engagements")
+    .select("owner_email")
+    .eq("id", engagementId)
+    .maybeSingle();
+  if (!eng || eng.owner_email.toLowerCase() !== email) {
+    return { ok: false, error: "Only the owner can deny access." };
+  }
+
+  const requester = rawRequester.trim().toLowerCase();
+  const { error } = await db
+    .from("engagement_access_requests")
+    .update({ status: "denied" })
+    .eq("engagement_id", engagementId)
+    .ilike("requester_email", requester);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: { email: requester } };
 }

@@ -148,30 +148,30 @@ Working tree pending the 6 unpushed commits listed above.
 
 <!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
 ## Auto-snapshot
-Last updated: 2026-04-28T16:02:45+02:00
+Last updated: 2026-06-18T13:09:14+02:00
 Branch: main
-Last commit: caa3b12 feat(framework): Engagement Framework — first set of timeline knobs
+Last commit: 0994966 feat(cs): Customer Success Manager workspace at /cs
 Working tree:
 ```
+ M docs/JOURNAL.md
  M docs/STATE.md
+ M src/app/actions/engagements.ts
+ M src/app/cs/page.tsx
+ M src/app/guide/GuideClient.tsx
+ M src/components/builder/EngagementDetail.tsx
+ M src/components/builder/sections/cs/AgendaInputPanel.tsx
+ M src/components/builder/sections/cs/CompanyInputPanel.tsx
+ M src/components/builder/workspace-config.ts
  M src/data/agents/_types.ts
  M src/data/agents/index.ts
+ M src/data/audience-sections.ts
  M src/data/company-patterns.ts
- M src/data/customer-fixtures.ts
  M src/data/extensions/agents/airline/index.ts
  M src/data/extensions/agents/telco/device-support.ts
  M src/data/extensions/agents/telco/index.ts
  M src/data/extensions/index.ts
-?? src/app/admin-x/
-?? src/data/extensions/agents/airline/ancillaries.ts
-?? src/data/extensions/agents/airline/award-redemption.ts
-?? src/data/extensions/agents/airline/cargo-freight.ts
-?? src/data/extensions/agents/airline/disruption-irrops.ts
-?? src/data/extensions/agents/airline/groups-corporate.ts
-?? src/data/extensions/agents/airline/lost-found.ts
-?? src/data/extensions/agents/airline/refunds-changes.ts
-?? src/data/extensions/agents/airline/travel-documents.ts
-?? src/data/extensions/agents/telco/account-security.ts
-?? src/data/extensions/agents/telco/business-sme.ts
+ M src/lib/slide-sections.ts
+ M src/lib/types.ts
+?? scratch_match.mjs
 ```
 <!-- AUTO-HOOK-END -->

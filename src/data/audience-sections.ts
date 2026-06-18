@@ -131,10 +131,13 @@ export const PS_DEFAULTS: readonly string[] = [
  */
 export const CS_DEFAULTS: readonly string[] = [
   "agenda",
+  "thought-leadership",
   "performance",
   "agentic-before-after",
   "benchmarking",
+  "personalisation",
   "top-recommendations",
+  "revenue",
   "success-plan",
   "agent-swot",
   "uat-status",

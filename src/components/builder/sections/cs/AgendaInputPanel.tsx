@@ -1,9 +1,15 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { Customer, BrContext, AgendaItem } from "@/lib/types";
 import { TextField, TextAreaField, SelectField, LinesField, ListEditor, FieldGrid } from "./_fields";
+import { AdminPrompt } from "@/components/admin/primitives";
+import { CS_WORKSPACE } from "@/components/builder/workspace-config";
 
-/* Authors br_context — meeting opener + agenda rows for the BR. */
+/* Authors br_context — the meeting opener + agenda rows. The agenda is
+ * the LAST step before generating, so it auto-fills from the sections
+ * that already have content (one row per filled chapter); the CSM can
+ * then reorder / reword / add timings. */
 export function AgendaInputPanel({
   form,
   update,
@@ -15,8 +21,42 @@ export function AgendaInputPanel({
   const setBr = (patch: Partial<BrContext>) =>
     update({ br_context: { ...br, ...patch } });
 
+  /** Derive agenda rows from the chapters that hold content (skipping
+   *  company + agenda itself). */
+  const deriveItems = (): AgendaItem[] =>
+    CS_WORKSPACE.sections
+      .filter((s) => s.id !== "company" && s.id !== "agenda" && s.hasContent(form))
+      .map((s) => ({ topic: s.title }));
+
+  const autoFill = () => setBr({ agenda_items: deriveItems(), agenda_style: br.agenda_style ?? "numbered" });
+
+  // Auto-fill once on first open when nothing is captured yet.
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (seeded.current) return;
+    seeded.current = true;
+    if ((br.agenda_items?.length ?? 0) === 0) {
+      const derived = deriveItems();
+      if (derived.length > 0) setBr({ agenda_items: derived, agenda_style: br.agenda_style ?? "numbered" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="space-y-3">
+      <AdminPrompt
+        question="Agenda"
+        helper="Auto-filled from the chapters you've completed. Reorder or reword as needed."
+        action={
+          <button
+            type="button"
+            onClick={autoFill}
+            className="rounded-lg border border-boost-border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-boost-dark hover:bg-boost-surface transition-colors whitespace-nowrap"
+          >
+            Auto-fill from engagement
+          </button>
+        }
+      />
       <FieldGrid>
         <TextField
           label="Meeting title"

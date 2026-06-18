@@ -12,6 +12,9 @@ import OrchestratorSection from "@/components/sections/OrchestratorSection";
 import PerformanceSection from "@/components/sections/PerformanceSection";
 import BenchmarkingSection from "@/components/sections/BenchmarkingSection";
 import AgenticBeforeAfterSection from "@/components/sections/AgenticBeforeAfterSection";
+import PersonalisationSection from "@/components/sections/PersonalisationSection";
+import RevenueSection from "@/components/sections/RevenueSection";
+import ThoughtLeadershipSection from "@/components/sections/ThoughtLeadershipSection";
 import AgentSwotSection from "@/components/sections/AgentSwotSection";
 import UatStatusSection from "@/components/sections/UatStatusSection";
 import SuccessPlanSection from "@/components/sections/SuccessPlanSection";
@@ -265,6 +268,13 @@ export default function GuideClient({
             </div>
           )}
 
+          {(!activeSectionSet || activeSectionSet.has("thought-leadership")) && (
+            <div id="thought-leadership" ref={(el) => { sectionRefs.current["thought-leadership"] = el; }}>
+              <SectionReportPill sectionId="thought-leadership" displayName="State of Conversational AI" />
+              <ThoughtLeadershipSection customer={customer} sectionNumber={sn("thought-leadership")} />
+            </div>
+          )}
+
           {(!activeSectionSet || activeSectionSet.has("orchestrator")) && (
             <div id="orchestrator" ref={(el) => { sectionRefs.current["orchestrator"] = el; }}>
               <SectionReportPill sectionId="orchestrator" displayName="Agent Orchestrator" />
@@ -350,6 +360,20 @@ export default function GuideClient({
             <div id="agentic-before-after" ref={(el) => { sectionRefs.current["agentic-before-after"] = el; }}>
               <SectionReportPill sectionId="agentic-before-after" displayName="Agentic Transformation" />
               <AgenticBeforeAfterSection customer={customer} sectionNumber={sn("agentic-before-after")} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("personalisation")) && (
+            <div id="personalisation" ref={(el) => { sectionRefs.current["personalisation"] = el; }}>
+              <SectionReportPill sectionId="personalisation" displayName="Personalised CX" />
+              <PersonalisationSection customer={customer} sectionNumber={sn("personalisation")} />
+            </div>
+          )}
+
+          {(!activeSectionSet || activeSectionSet.has("revenue")) && (
+            <div id="revenue" ref={(el) => { sectionRefs.current["revenue"] = el; }}>
+              <SectionReportPill sectionId="revenue" displayName="Sales & Revenue" />
+              <RevenueSection customer={customer} sectionNumber={sn("revenue")} />
             </div>
           )}
 
