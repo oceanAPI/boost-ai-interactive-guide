@@ -704,6 +704,87 @@ export async function loadOverrides(
   return { ok: true, data: out };
 }
 
+/* ─── Assets (instances) ───────────────────────────────────────── */
+
+export interface AssetHit {
+  /** Planhat asset _id (stable, for keys). */
+  planhatId: string;
+  /** Display name. */
+  name: string;
+  /** The identifier we persist as the instance id (externalId ?? name). */
+  instanceId: string;
+}
+
+/** Fetch the assets belonging to one company. In Planhat an asset is an
+ *  instance/deployment under a company, so this populates the engagement's
+ *  instance picker. Session-gated (CS-team feature), reads only. */
+export async function fetchPlanhatAssets(
+  connectionId: string,
+  companyId: string,
+): Promise<Result<AssetHit[]>> {
+  const email = await sessionEmail();
+  if (!email) return { ok: false, error: "Not signed in." };
+
+  const conn = await loadConnection(connectionId);
+  if (!conn) return { ok: false, error: "Connection not found." };
+  const tok = resolveToken(conn);
+  if (!tok.ok) return tok;
+
+  try {
+    const cid = companyId.trim();
+    const res = await planhatGet(
+      conn.endpoint ?? "",
+      `/assets?companyId=${encodeURIComponent(cid)}&limit=2000`,
+      tok.data,
+    );
+    if (!res.ok) return { ok: false, error: `Planhat HTTP ${res.status} listing assets.` };
+    const list = Array.isArray(res.body) ? (res.body as Record<string, unknown>[]) : [];
+    // Defense in depth: if the query param was ignored and items carry a
+    // companyId, keep only this company's assets.
+    const matches = list.filter((a) => String((a.companyId as string) ?? "") === cid);
+    const final = matches.length > 0 ? matches : list;
+    const hits = final.map((a) => {
+      const name = String((a.name as string) ?? "(unnamed asset)");
+      const externalId = (a.externalId as string) ?? "";
+      return {
+        planhatId: String((a._id as string) ?? (a.id as string) ?? ""),
+        name,
+        instanceId: externalId || name,
+      };
+    });
+    return { ok: true, data: hits };
+  } catch (e) {
+    return { ok: false, error: `Network error reaching Planhat: ${(e as Error).message}` };
+  }
+}
+
+/** Sample live assets and return the real field shape — used to confirm
+ *  which key identifies the instance. Operator-gated. */
+export async function introspectAssetSchema(
+  connectionId: string,
+): Promise<Result<{ fields: SchemaField[]; sampled: number }>> {
+  const email = await operatorEmail();
+  if (!email) return { ok: false, error: "Not authorized." };
+
+  const conn = await loadConnection(connectionId);
+  if (!conn) return { ok: false, error: "Connection not found." };
+  if (conn.provider !== "planhat") {
+    return { ok: false, error: "Asset introspection currently supports Planhat only." };
+  }
+  const tok = resolveToken(conn);
+  if (!tok.ok) return tok;
+
+  try {
+    const res = await planhatGet(conn.endpoint ?? "", "/assets?limit=20", tok.data);
+    if (!res.ok) return { ok: false, error: `Planhat HTTP ${res.status} sampling assets.` };
+    const list = Array.isArray(res.body) ? (res.body as Record<string, unknown>[]) : [];
+    if (list.length === 0) return { ok: false, error: "Planhat returned no assets to sample." };
+    return { ok: true, data: { fields: flattenCompanyKeys(list), sampled: list.length } };
+  } catch (e) {
+    return { ok: false, error: `Network error reaching Planhat: ${(e as Error).message}` };
+  }
+}
+
 /** Upsert one manually-filled field for a customer (queryable later via
  *  SQL — this is the persisted store of metadata Planhat doesn't have).
  *  An empty value deletes the override. */

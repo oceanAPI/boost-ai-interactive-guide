@@ -12,8 +12,10 @@ import {
   getDefaultPlanhatConnection,
   searchPlanhatCompanies,
   pullCustomer,
+  fetchPlanhatAssets,
   saveOverride,
   type CompanyHit,
+  type AssetHit,
 } from "@/app/actions/integrations";
 
 /* ─── CSM customer entry ───
@@ -95,6 +97,10 @@ export function CompanyInputPanel({
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [savingTarget, setSavingTarget] = useState<string | null>(null);
 
+  // Planhat assets = the company's instances
+  const [assets, setAssets] = useState<AssetHit[]>([]);
+  const [loadingAssets, setLoadingAssets] = useState(false);
+
   // Discover the default Planhat connection once.
   useEffect(() => {
     let live = true;
@@ -154,6 +160,13 @@ export function CompanyInputPanel({
         res.data.missing.length ? ` · ${res.data.missing.length} to fill in` : ""
       }.`,
     });
+
+    // Load this company's assets (instances) from Planhat.
+    setAssets([]);
+    setLoadingAssets(true);
+    const ar = await fetchPlanhatAssets(connId!, hit.id);
+    setLoadingAssets(false);
+    if (ar.ok) setAssets(ar.data);
   };
 
   const pickPlaceholder = (c: PlaceholderCustomer) => {
@@ -164,6 +177,7 @@ export function CompanyInputPanel({
     setQuery(c.company_name);
     setCompanyId(null);
     setMissing([]);
+    setAssets([]);
     setOpen(false);
   };
 
@@ -171,6 +185,7 @@ export function CompanyInputPanel({
     update({ company_name: query.trim() });
     setCompanyId(null);
     setMissing([]);
+    setAssets([]);
     setOpen(false);
   };
 
@@ -363,7 +378,22 @@ export function CompanyInputPanel({
           </AdminChipRow>
         ) : (
           <div className="space-y-2">
-            {selected.size > 0 ? (
+            {loadingAssets ? (
+              <p className="text-[12px] text-boost-muted/80 italic">Loading instances from Planhat…</p>
+            ) : assets.length > 0 ? (
+              <AdminChipRow>
+                {assets.map((a) => (
+                  <AdminChip
+                    key={a.planhatId}
+                    active={selected.has(a.instanceId)}
+                    onClick={() => toggleInstance(a.instanceId)}
+                    title={a.instanceId !== a.name ? `${a.name} · ${a.instanceId}` : a.name}
+                  >
+                    {a.name}
+                  </AdminChip>
+                ))}
+              </AdminChipRow>
+            ) : selected.size > 0 ? (
               <AdminChipRow>
                 {[...selected].map((key) => (
                   <AdminChip key={key} active onClick={() => toggleInstance(key)}>
@@ -374,6 +404,19 @@ export function CompanyInputPanel({
             ) : (
               <p className="text-[12px] text-boost-muted/80 italic">No instances yet — add the AWS instance ids to pull data from.</p>
             )}
+            {/* Manually-added ids not present as Planhat assets */}
+            {assets.length > 0 &&
+            [...selected].some((k) => !assets.some((a) => a.instanceId === k)) ? (
+              <AdminChipRow>
+                {[...selected]
+                  .filter((k) => !assets.some((a) => a.instanceId === k))
+                  .map((key) => (
+                    <AdminChip key={key} active onClick={() => toggleInstance(key)}>
+                      {key}
+                    </AdminChip>
+                  ))}
+              </AdminChipRow>
+            ) : null}
             <div className="flex items-center gap-2">
               <input
                 type="text"
