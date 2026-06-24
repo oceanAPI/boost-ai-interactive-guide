@@ -6,50 +6,69 @@
 
 ## Branch & last-green
 
-`main`. Integrations persistence + live-Planhat-fetch **committed + pushed**
-this session, deploying via **Vercel** (the GitHub Pages workflow is DISABLED —
-deploy auto-runs on push to `main` through Vercel, not Actions). Only
+`main`. **Live Planhat company pull in the CS builder + schema introspection
+committed** this session (`b50abe5`), deploying via **Vercel** (GitHub Pages
+workflow DISABLED — deploy auto-runs on push to `main` via Vercel). Only
 `scratch_match.mjs` remains untracked (throwaway, do not commit).
-`npm run build` (14 routes) + `npx tsc --noEmit` both clean.
-The user pushes manually. Do NOT `git push` without an explicit ask.
+`npm run build` (14 routes) + `npx tsc --noEmit` both clean. Live search
+VERIFIED on `/cs/build` — real Planhat companies returned (Telenor, NAV,
+Norgesgruppen, …). The user pushes manually. Do NOT `git push` without an ask.
 
-### Integration page — NOW FUNCTIONAL (persistence + live Planhat)
+### Live Planhat company pull (this session — `b50abe5`)
 
-`/admin/integrations` (under `/admin*` proxy gate; narrowed to
-`ALLOWED_INTEGRATION_EMAILS` = dev@/mikal@/jakob@boost.ai). No longer a shell.
+The CS builder's Customer panel now pulls a REAL Planhat company through the
+saved field map, and the admin field picker reflects the REAL Planhat shape.
 
-- **Schema:** `supabase/migrations/0003_integrations.sql` — `integration_connections`
-  (org-level; `owner_email` audit-only) + `integration_field_maps`
-  (connection_id FK, kind/source/target/transform/position). RLS deny-all
-  backstop; server actions use service-role. **Secrets NEVER stored** —
-  `auth_env_key` holds the env-var NAME only.
-- **Server actions:** `src/app/actions/integrations.ts` — `listIntegrations`,
-  `saveConnection`, `deleteConnection`, `saveFieldMap`, `testConnection`,
-  `fetchPreview`. Both an operator allow-list AND an env-key-name allow-list
-  (`ENV_KEY_PATTERN = /^(PLANHAT|AWS)_[A-Z0-9_]+$/`) sandbox the dynamic
-  `process.env[name]` lookup so it can never reach our own secrets.
-- **Page:** `src/app/admin/integrations/page.tsx` — connections load/save/edit/
-  delete; field-map rows (kind = Planhat/Other/Custom value, searchable source
-  combo, ~90-field Customer target combo, transform note); Save enabled;
-  "Test & fetch live data" (Test connection + company query → mapped-value
-  table + raw JSON). Auth input rejects pasted JWTs/secret-looking strings.
-- `SOURCE_FIELDS` (planhat/aws) are GUESSED paths — validate against the raw
-  JSON once a live fetch shows Planhat's true company shape, then correct them.
+- **Server actions added** to `src/app/actions/integrations.ts`:
+  `introspectSchema(connId)` (operator-gated; samples 20 live companies →
+  flattens every key incl. `custom.*` so the picker shows fields not on any
+  static list), `getDefaultPlanhatConnection`, `searchPlanhatCompanies`,
+  `pullCustomer` (fetch by id → run field map → deep-merge → overlay stored
+  overrides → report still-missing targets), `loadOverrides`, `saveOverride`.
+  The pull/search/override actions are gated on ANY signed-in session
+  (`sessionEmail()`), broader than the admin allow-list, since pulling is the
+  CS team feature. Secrets still server-only.
+- **`/admin/integrations`** (`page.tsx`): `SOURCE_FIELDS.planhat` rewritten to
+  REAL paths (root `name`/`mrr`/`nps`/`h`/`csmScore` + common `custom.*`); a
+  "Discover fields from live data" button calls `introspectSchema` and
+  replaces the picker with this connection's exact shape; `FieldCombo` now
+  takes `allowCustom` so any free-text path can be mapped (provider source row).
+- **`CompanyInputPanel.tsx`**: discovers the default Planhat connection on
+  mount; debounced live search; pick → `pullCustomer` → `update(mergePatch)`;
+  a "Missing data" section lists mapped targets Planhat returned empty, each a
+  text input that `saveOverride`s to Supabase and merges into the form. Falls
+  back to placeholder customers when no connection / not signed in.
+- **Schema:** `supabase/migrations/0004_customer_overrides.sql` —
+  `integration_customer_overrides` (connection_id FK, planhat_company_id,
+  company_name, field_target, value jsonb, entered_by; unique on
+  connection+company+target). RLS deny-all backstop; queryable via SQL. This
+  is the persisted store of metadata Planhat doesn't have.
+
+### Integration page baseline (prior session — `5af3241`)
+
+`/admin/integrations` persistence: `0003_integrations.sql`
+(`integration_connections` + `integration_field_maps`), CRUD server actions
+(`listIntegrations`/`saveConnection`/`deleteConnection`/`saveFieldMap`/
+`testConnection`/`fetchPreview`), operator + `ENV_KEY_PATTERN` allow-lists
+sandboxing `process.env[name]`. `auth_env_key` holds the env-var NAME only —
+secrets never stored. Auth input rejects pasted JWTs/secret-looking strings.
 
 ### Supabase status — RESTORED
 
-Project ref `woefktcoizqotflzvsvg` is **back online** (DNS resolves; display
-name "boostaiguides", ref unchanged → URL `https://woefktcoizqotflzvsvg.supabase.co`).
-Engagement data intact (engagements 7 rows). `.env.local` has valid
-`NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`.
+Project ref `woefktcoizqotflzvsvg` online → URL
+`https://woefktcoizqotflzvsvg.supabase.co`. `.env.local` has valid
+`NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` + `PLANHAT_API_TOKEN`
+(0003 run; connection "Planhat api" saved; live search confirmed).
 
-**User actions still required before a live Planhat test:**
-1. Rotate the Planhat token that was screen-shared (treat as compromised).
-2. Run `supabase/migrations/0003_integrations.sql` in the Supabase SQL editor
-   (the integration tables do NOT exist yet — no local DDL path).
-3. Add a fresh `PLANHAT_API_TOKEN` to `.env.local` (restart dev) AND to Vercel
-   env (redeploy). Also confirm `NEXT_PUBLIC_SUPABASE_URL` +
-   `SUPABASE_SERVICE_ROLE_KEY` are in Vercel env so prod persists.
+**User actions still required:**
+1. **Run `supabase/migrations/0004_customer_overrides.sql`** in the SQL editor
+   — the override table does NOT exist yet, so `saveOverride` errors and
+   missing-field values won't persist until it's run. (`pullCustomer` itself
+   still works without it — overrides just come back empty.)
+2. Confirm `PLANHAT_API_TOKEN` + Supabase vars are in **Vercel env** so prod
+   pulls + persistence work (with the laptop off).
+3. The Planhat token pasted in chat earlier is COMPROMISED — rotate it and put
+   the fresh value only in `.env.local` / Vercel (never in chat again).
 GOTCHA: a `.select("*",{count:"exact",head:true})` existence check FALSE-POSITIVES
 on a missing table — verify table existence with a real `.select()`.
 
@@ -254,12 +273,11 @@ Last commit: 93bdad5
 
 <!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
 ## Auto-snapshot
-Last updated: 2026-06-24T13:30:41+02:00
+Last updated: 2026-06-24T14:04:38+02:00
 Branch: main
-Last commit: 8b29067 feat(admin): integration field-mapping admin at /admin/integrations
+Last commit: d48ead2 docs: handover for integrations persistence + Supabase restore
 Working tree:
 ```
- M docs/JOURNAL.md
  M docs/STATE.md
 ?? scratch_match.mjs
 ```

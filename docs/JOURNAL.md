@@ -2810,3 +2810,37 @@ strips the logical prefix as a fallback).
 ?? supabase/migrations/0003_integrations.sql
 8b29067 feat(admin): integration field-mapping admin at /admin/integrations
 ```
+
+## 2026-06-24 — live Planhat company pull in CS builder + schema introspection
+
+**What.** Wired the CS builder's Customer panel (`CompanyInputPanel.tsx`) to
+pull a real Planhat company through the saved field map, and made the
+`/admin/integrations` field picker reflect Planhat's real shape.
+- New server actions in `src/app/actions/integrations.ts`: `introspectSchema`
+  (samples 20 live companies, flattens every key incl. `custom.*`),
+  `getDefaultPlanhatConnection`, `searchPlanhatCompanies`, `pullCustomer`
+  (fetch → map → deep-merge → overlay overrides → report missing),
+  `loadOverrides`, `saveOverride`. Pull/search/override gated on any signed-in
+  session; introspect stays operator-gated.
+- `page.tsx`: real `SOURCE_FIELDS.planhat`, "Discover fields from live data"
+  button, `FieldCombo allowCustom` for free-text paths.
+- `CompanyInputPanel.tsx`: live debounced search → pull → `update(mergePatch)`
+  → "Missing data" prompts that `saveOverride` to Supabase and reuse on next pull.
+- New migration `0004_customer_overrides.sql` (`integration_customer_overrides`,
+  unique connection+company+target, RLS deny-all, SQL-queryable).
+
+**Why.** The page could test-fetch but nothing pulled a company into an
+engagement; and the source catalog was guessed paths. User: "wire it and push …
+pull company names and relevant data mapped in integrations and only be prompted
+to add missing data … store in the database on that customer so i can query with
+sql." Plus "account for missing fields not on that list that might be in planhat."
+
+**Verified.** `npx tsc --noEmit` + `npm run build` (14 routes) clean. On
+`/cs/build` the panel auto-discovered the "Planhat api" connection and live
+search returned real companies (Telenor, NAV, Norgesgruppen, Fortum, …). No
+console errors. Committed `b50abe5`.
+
+**Next.** User runs `0004_customer_overrides.sql` in the SQL editor (override
+persistence is unverifiable until then; pull itself works without it). Confirm
+Vercel env has `PLANHAT_API_TOKEN` + Supabase vars. Then live-test a full pull +
+missing-field save→reopen against a real company.
