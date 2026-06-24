@@ -1895,3 +1895,701 @@ A  src/components/builder/sections/cs/GovernanceInputPanel.tsx
 A  src/components/builder/sections/cs/PerformanceInputPanel.tsx
 ab7fd3b refactor(builder): extract shell leaves (CollapsibleSection, Rail, EngagementDetail)
 ```
+
+## Compaction checkpoint — 2026-06-18T14:46:56+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- </element>
+- </launch-selected-element>
+- make sure all local recent changes are pushed live and lets start working on specific improvements for each section. 
+- still cant change the order of these slides, in benchmarking for the graphs, instead of showing others or average as a bar we can show them as horizontal lines within the bar. 
+- for all bars such as this....
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/components/sections/ThoughtLeadershipSection.tsx
+ M src/data/thought-leadership.ts
+?? scratch_match.mjs
+1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
+```
+
+## Compaction checkpoint — 2026-06-18T15:01:24+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- <div />
+- <!-- SELECTED --><div class="rounded-2xl border border-boost-purple/15 bg-boost-purple/5 p-4 sm:p-5"><div class="mb-3 flex flex-wrap items-center justify-between gap-2"><div><p class="text-[11px] font-bold uppercase tracking-[0.16em] text-boost-muted">Where you stand</p><p class="text-sm font-semibold text-boost-dark mt-0.5">% of agentic replies — Insurance Nordics</p></div><span class="inline-flex items-center gap-1.5 rounded-full border border-boost-purple/20 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-boost-purple"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 9v6l-4 2v-8z"></path></svg>Insurance · Nordics · agentic actions activated</span></div><div><div class="relative h-44 sm:h-52"><div class="absolute inset-x-0 z-10 flex items-center" style="bottom: 28%;"><div class="h-[2px] flex-1 rounded-full bg-boost-green"></div><span class="ml-2 whitespace-nowrap rounded-full bg-boost-green px-2 py-0.5 text-[10px] font-bold text-white">Average 28%</span></div><div class="flex h-full items-end gap-[3px]"><div class="group relative flex h-full flex-1 flex-col items-center justify-end" title="Insurance O: 95%"><div class="w-full rounded-t-sm bg-boost-purple/25 group-hover:bg-boost-purple/40 transition-colors" style="height: 95%; transition: height 0.9s ease-out;"></div></div><div class="group relative flex h-full flex-1 flex-col items-center justify-end" title="Insurance C: 82%"><div class="w-full rounded-t-sm bg-boost-purple/25 group-hover:bg-boost-purple/40 transition-colors" style="height: 82%; transition: height 0.9s ease-out 35ms;"></div></div><div class="group relative flex h-full flex-1 flex-col items-center justify-end" title="Your instance: 66%"><span class="mb-1 whitespace-nowrap text-[10px] font-bold tabular-nums text-boost-green">66%</span><div class="w-full rounded-t-sm bg-boost-green-light tr
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/components/sections/ThoughtLeadershipSection.tsx
+ M src/data/thought-leadership.ts
+?? scratch_match.mjs
+1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
+```
+
+## Compaction checkpoint — 2026-06-18T15:10:04+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+-    (a) Finish reading/extracting all ~24 stories from `customer-success-stories.html` (and confirm the anon variant's naming), then create a typed catalogue (e.g. `src/data/success-stories.ts` with a `SuccessStory[]` carrying name, industry, geo, challenge/solution/outcome → condensed to WAS/NOW + key metrics) plus a `searchSuccessStories(query)`/filter-by-industry helper.
+-    (b) Build the CS builder picker (a new/updated input panel under `src/components/builder/sections/cs/`, wired via `workspace-config.ts`) that lets the CSM filter by industry and select relevant stories into the engagement's chapter `caseStudies`, and ensure `ChapterCaseStudy` rendering (already supports `before`/`after` + metrics) is the standard format.
+-    Before building the catalogue, I should also quickly verify the just-added ImpactChart renders correctly on `/guide` (preview server still running, serverId `337a296c-5bdb-4b5c-b419-8494974547fd`) since code was edited while the preview is up (the Stop hook requires verification of edits). Quote anchoring the task: "make this the format for the 'Success Stories' part, and lets have a clean and intuitive way for me to fetch relevant ones from the /cs page where i create my engagement".
+- If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/mikalmonslaup/.claude/projects/-Users-mikalmonslaup-Desktop-Claude-projects-interactive-guide-financial-service-offering/349957cc-54e7-4b4a-9667-e52ad5d81121.jsonl
+- Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/components/sections/ThoughtLeadershipSection.tsx
+ M src/data/thought-leadership.ts
+?? scratch_match.mjs
+1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
+```
+
+---
+
+## 2026-06-18 — ThoughtLeadership story-spine visual pass
+
+**What.** Brought the whole story spine to the agentic chapter's visual
+standard, addressing 5 user interjections:
+- Unified every chapter benchmark on the slide-7 `DistributionChart` (removed
+  `SimpleBar`/`ChannelCompareBar` + the `bars`/`channels` benchmark branches;
+  `cohortLabel` now threads through to the legend).
+- Added a slide-15 "why this matters" ranking variant to `ImpactChart`
+  (`ImpactRanking` — horizontal bars, best=green / worst=gold, `source` line).
+  Guarded `ImpactChart` against the metrics-undefined crash on ranking-only impact.
+- New `ProofCard` (scroll-reveal, growing green accent rule, card-lift, index).
+- New `TransitionJourney` (today → arrow connector → going-forward, staggered reveal).
+- Data: personalised-cx WAS/NOW case studies + 16-bar distribution + slide-15
+  ranking impact; sales + channels benchmarks converted to distributions.
+
+**Why.** User feedback across the personalised-cx chapter: "identical layout
+across the board", "why this matters … slide 15", "same feedback on visual
+elements", "this piece is not very engaging".
+
+**Verify.** `npx tsc --noEmit` clean, `npm run build` clean, rendered all 4
+chapters on `/guide?audience=customer-success` — screenshots confirm proof cards,
+WAS/NOW stories, distribution benchmark, transition journey, slide-15 ranking.
+
+**Next.** Build the success-stories catalogue (`src/data/success-stories.ts`, 25
+stories from `customer-success-stories.html`) + /cs picker wired via
+`workspace-config.ts`. Uncommitted — awaiting explicit commit/push.
+
+## Compaction checkpoint — 2026-06-18T15:27:07+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+-    I was mid-way through a coherent design pass to bring the entire ThoughtLeadershipSection story spine to the agentic chapter's standard (addressing all 5 user interjections). I had completed ALL data-layer edits in `src/data/thought-leadership.ts` (benchmark type unification + cohortLabel, ChapterImpact ranking variant, agentic cohortLabel, personalised-cx WAS/NOW + distribution + slide-15 ranking impact, sales distribution, channels distribution). I had just begun the component edits in `ThoughtLeadershipSection.tsx`, completing exactly ONE edit: updating the `DistributionChart` function signature to accept `cohortLabel = "Anonymised peer instances"`. The very next edits needed in the same file: (1) use `cohortLabel` in DistributionChart's legend (replace the hardcoded "Anonymised insurer instances" label), (2) delete now-unused `SimpleBar` and `ChannelCompareBar`, (3) simplify `ChapterBenchmarkViz` to always render `DistributionChart` (passing `cohortLabel={benchmark.cohortLabel}`), (4) fix/extend `ImpactChart` to branch between `ranking` and `metrics` (it currently crashes on ranking-only impact because line 395 does `impact.metrics.flatMap`), (5) upgrade proof cards, (6) upgrade the transition block.
+- 9. Optional Next Step:
+-    Continue the in-progress component edits in `ThoughtLeadershipSection.tsx`, in this order: (a) update the DistributionChart legend to use `cohortLabel`; (b) simplify `ChapterBenchmarkViz` to distribution-only (removing SimpleBar/ChannelCompareBar branches and the now-dead functions) — this completes the "benchmarkings should also use identical layout across the board" ask; (c) add the slide-15 `ImpactRanking` render and guard ImpactChart against the metrics-undefined crash — this completes "why this matters ... use slide 15 in the deck"; (d) upgrade proof cards ("same feedback on the visual elements, interactive and engagement"); (e) upgrade the transition block ("this piece is not very engaging"). Then run `npx tsc --noEmit` +
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+ M src/components/sections/ThoughtLeadershipSection.tsx
+ M src/data/thought-leadership.ts
+ M src/lib/types.ts
+?? scratch_match.mjs
+?? src/data/success-stories.ts
+1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
+```
+
+## Compaction checkpoint — 2026-06-18T15:41:45+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+-    - "make these interactive using the content we have from the previous roadmap sections so that each element is clickable with a popup to read about those specific roadmap items."
+-    - "too much text too little slick and sexy minimalistic visuals" + "logos is most likely the best approach"
+-    After implementing, verify with `npx tsc --noEmit` + `npm run build` + preview screenshots (remembering to reload the dev server/page after the build since it wipes .next). All changes remain uncommitted pending explicit user instruction.
+- If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/mikalmonslaup/.claude/projects/-Users-mikalmonslaup-Desktop-Claude-projects-interactive-guide-financial-service-offering/349957cc-54e7-4b4a-9667-e52ad5d81121.jsonl
+- Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+ M src/components/sections/ThoughtLeadershipSection.tsx
+ M src/data/thought-leadership.ts
+ M src/lib/types.ts
+?? scratch_match.mjs
+?? src/data/success-stories.ts
+1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
+```
+
+## Compaction checkpoint — 2026-06-18T16:04:42+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- are we missing the "reminder" section still? where we inform about events, or upcoming collaborations etc in the end of this as a final section?
+- SECTION 10
+- Where to focus next
+- Each initiative plotted by the value it drives against the effort to deliver. Tap any to see how to proceed, what to weigh up, and where to find resources.
+- (which should come before the success plan by the way) needs the option for me to pick how many initiatives i want showing from the cs/admin view and for me to remove initiatives i dislike from that same overview based on cs engine recomendations from aws data
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/app/guide/GuideClient.tsx
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+ M src/components/builder/workspace-config.ts
+ M src/components/sections/ThoughtLeadershipSection.tsx
+ M src/data/audience-sections.ts
+ M src/data/thought-leadership.ts
+ M src/lib/types.ts
+?? scratch_match.mjs
+?? src/data/success-stories.ts
+1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
+```
+
+## Compaction checkpoint — 2026-06-23T11:08:10+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/mikalmonslaup/.claude/projects/-Users-mikalmonslaup-Desktop-Claude-projects-interactive-guide-financial-service-offering/349957cc-54e7-4b4a-9667-e52ad5d81121.jsonl
+- Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.
+- @"/Users/mikalmonslaup/Downloads/customer-success-stories (1).html" @"/Users/mikalmonslaup/Downloads/customer-success-stories-anon (1).html"
+- lets wire up this as a new section.
+- let me know if something of this dosnt make sense for you.
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/app/guide/GuideClient.tsx
+ M src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+ M src/components/builder/workspace-config.ts
+ M src/components/sections/ThoughtLeadershipSection.tsx
+ M src/components/sections/TopRecommendationsSection.tsx
+ M src/data/audience-sections.ts
+ M src/data/thought-leadership.ts
+ M src/lib/types.ts
+?? scratch_match.mjs
+?? src/data/success-stories.ts
+1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
+```
+
+## Compaction checkpoint — 2026-06-23T11:12:42+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+-    I was transcribing all 57 success stories from the real deck HTML (`customer-success-stories (1).html`) into the data structure, in preparation for restructuring `src/data/success-stories.ts`. I had set up a 7-item todo list (item 1 "Read all 57 stories from the deck HTML" = in_progress). I read stories s3-s53 across three large Read calls (offset 536/limit 615, offset 1143/limit 620, offset 1762/limit 620). I have read through s53 (Jack Henry/Banner Bank, Banking USA, Aug 2025: Banner Bank first live, 120+ FI pipeline via Jack Henry). I still need to read the final stories s54-s58 and the closing slides (the file's story region runs to ~line 2543+, total 58 slides). The decision locked in: transcribe REAL content verbatim, derive anon via render-time name→anonName substitution, single source of truth.
+- 9. Optional Next Step:
+-    Finish reading the remaining stories s54-s58 from `/Users/mikalmonslaup/Downloads/customer-success-stories (1).html` (read from ~line 2382 onward, the file region after s53). This directly continues the in-progress todo "Read all 57 stories from the deck HTML" required by the user's explicit answer "Transcribe all 57 first." Then restructure the `SuccessStory` type and write all 57 entries into `src/data/success-stories.ts`, then proceed through the golden-path wiring (Customer fields, SuccessStoriesSection + modal, SuccessStoriesInputPanel, slide-sections/GuideClient/workspace-config/CS_DEFAULTS), and finally verify with `npx tsc --noEmit` + `npm run build` + preview. Verbatim user instruction driving this: "lets wire up this as a new section" with the locked spec answers ("CSM hand-picks", "Per-engagement toggle", "Transcribe all 57 first", "Card + detail modal").
+- If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/mikalmonslaup/.claude/projects/-Users-mikalmonslaup-Desktop-Claude-projects-interactive-guide-financial-servic
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/app/guide/GuideClient.tsx
+ M src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+ M src/components/builder/workspace-config.ts
+ M src/components/sections/ThoughtLeadershipSection.tsx
+ M src/components/sections/TopRecommendationsSection.tsx
+ M src/data/audience-sections.ts
+ M src/data/thought-leadership.ts
+ M src/lib/types.ts
+?? scratch_match.mjs
+?? src/data/success-stories.ts
+1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
+```
+
+## Compaction checkpoint — 2026-06-23T11:24:04+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+-    - keyMetrics (4 plain-text items per story) and 2–3 metric value/label pairs per new story were drafted (full draft list in my planning, e.g. s59 storebrand-cmd metrics `[{50%, GenAI traffic},{+43%, CSAT}]`, keyMetrics from the deck: "50% of chatbot traffic via GenAI", "+43% CSAT improvement", "Escalations: 31% → 24%", "Presented at Storebrand Capital Markets Day 2025").
+- 9. Optional Next Step:
+-    First re-verify Write/Edit are loaded (`ToolSearch select:Write,Edit`), then write the restructured `src/data/success-stories.ts` — extend the `SuccessStory` interface with `date?`, `title`, `challenge`, `solution`, `outcome`, `keyMetrics: string[]`, backfill those fields onto the existing 25 stories from the deck, append the 31 new stories (excluding Sector Alarm), and keep all helper functions. This is verbatim in line with the just-set in_progress todo: "Restructure SuccessStory type + transcribe all 57 into success-stories.ts" and my last stated action: "Marking the read step done and writing the restructured data file." After writing the data file, proceed to add the Customer fields in `src/lib/types.ts` (step 3), and flag the Sector Alarm exclusion to the user.
+- If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/mikalmonslaup/.claude/projects/-Users-mikalmonslaup-Desktop-Claude-projects-interactive-guide-financial-service-offering/349957cc-54e7-4b4a-9667-e52ad5d81121.jsonl
+- Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/app/guide/GuideClient.tsx
+ M src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+ M src/components/builder/workspace-config.ts
+ M src/components/sections/ThoughtLeadershipSection.tsx
+ M src/components/sections/TopRecommendationsSection.tsx
+ M src/data/audience-sections.ts
+ M src/data/thought-leadership.ts
+ M src/lib/types.ts
+?? scratch_match.mjs
+?? src/data/success-stories.ts
+1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
+```
+
+## Compaction checkpoint — 2026-06-23T11:51:48+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- [Verification Required] Code was edited while a preview server is running. Follow <verification_workflow> to verify the changes.
+- and what about the builder of the analytics etc?
+- Continue from where you left off.
+- https://docs.google.com/spreadsheets/d/1GDJI-n8Z6HiweX5aYs2g0MS-Zx7G8C3IjvjGJK_EIuk/edit?gid=1738423026#gid=1738423026
+- this is also something i want built in a section
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/cs/build/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SuccessStoriesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/success-stories/SuccessStoryDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/slide-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/app/cs/build/page.tsx
+ M src/app/guide/GuideClient.tsx
+ M src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+ M src/components/builder/workspace-config.ts
+ M src/components/sections/ThoughtLeadershipSection.tsx
+ M src/components/sections/TopRecommendationsSection.tsx
+ M src/data/audience-sections.ts
+ M src/data/thought-leadership.ts
+ M src/lib/slide-sections.ts
+ M src/lib/types.ts
+?? scratch_match.mjs
+?? src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+?? src/components/sections/SuccessStoriesSection.tsx
+?? src/components/sections/success-stories/
+?? src/data/success-stories.ts
+1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
+```
+
+## 2026-06-23 — Intent Traffic section (conversation analytics)
+
+**What:** New `intent-traffic` CS section that ingests a boost.ai
+intent-traffic export and renders dynamic conversation analytics.
+Architecture = option A (per-engagement, CSV → compact summary): the
+builder parses the raw CSV client-side and persists ONLY a rollup
+(`intent_traffic` on Customer) — the raw export is ~2.6k rows, far past
+the URL-fragment ceiling.
+
+**Files (new):**
+- `src/data/intent-traffic.ts` — `parseIntentTrafficCsv(text,opts)` →
+  `IntentTrafficSummary`. Header-mapped (exact name, so "% of Traffic"
+  never shadows "Traffic"), quoted-field aware, drops junk roots
+  (#N/A, Z-testing) + zero-traffic rows, rolls up per root with top-N
+  child intents (default 6). Plus `pct()` / `reviewSplit()` helpers.
+- `src/components/sections/IntentTrafficSection.tsx` — KPI header
+  (traffic / automated / escalated / unsolved / handover / +feedback,
+  all derived from raw counts so % never drifts), per-root stacked
+  split bars (green/gold/orange = automated/escalated/unsolved of
+  reviewed) sorted by traffic, click-to-drill into top child intents,
+  opportunity flags (high-traffic+low-auto = automation opportunity;
+  high unsolved or ≥85% no-prediction = training gap; thresholds are
+  relative to the whole bot so they self-tune per customer).
+- `src/components/builder/sections/cs/IntentTrafficInputPanel.tsx` —
+  upload-or-paste CSV, parse in browser, shows parsed summary + clear.
+
+**Wiring (golden path, 5):** `lib/types.ts` (IntentTraffic* types +
+`Customer.intent_traffic`), `lib/slide-sections.ts`, `GuideClient.tsx`
+(import + nav item + render block, between benchmarking & personalisation),
+`workspace-config.ts` (CS section def #13 + sectionOrder),
+`audience-sections.ts` (CS_DEFAULTS), `cs/build/page.tsx` (PANELS+PREVIEWS).
+
+**Verify:** `npx tsc --noEmit` clean; `npm run build` clean (13 routes).
+Live-tested on /cs/build: paste → parse → summary (5,112 conv, 27% auto)
+→ live preview KPIs + root bars + drilldown + flags all correct; slash
+in root name ("Min side / Mine sider") handled. Numbers cross-checked
+against awk aggregates of the full Haugaland export.
+
+**Source data:** Haugaland intent-traffic export (Oct25–Mar26, 26,908
+conv / 2,638 intents / 20 roots). User supplied CSV + zip directly
+(Google Sheet was 401/private; Chrome ext disconnected).
+
+**Next:** UNCOMMITTED — user commits manually. scratch_match.mjs still
+untracked (throwaway, do not commit).
+
+## Compaction checkpoint — 2026-06-23T15:23:19+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+-    Retry verifying the Success Stories builder panel, then read the Google Sheet for the new section request. Concretely: (a) re-establish the preview (use the canonical preview serverId `337a296c-5bdb-4b5c-b419-8494974547fd` / restart if needed), navigate to `/cs/build`, and confirm the Success Stories rail row + library picker (industry filter, search, tick → `featured_story_ids`) + anon toggle render and update the preview — directly answering "and what about the builder of the analytics etc?"; and (b) load a fetch/browser tool via ToolSearch and read the user's Google Sheet (`https://docs.google.com/spreadsheets/d/1GDJI-n8Z6HiweX5aYs2g0MS-Zx7G8C3IjvjGJK_EIuk/edit?gid=1738423026#gid=1738423026`) to understand the content before proposing the new section, per "this is also something i want built in a section." Also flag the Sector Alarm exclusion to the user. Do NOT commit anything.
+- If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/mikalmonslaup/.claude/projects/-Users-mikalmonslaup-Desktop-Claude-projects-interactive-guide-financial-service-offering/349957cc-54e7-4b4a-9667-e52ad5d81121.jsonl
+- Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.
+- @"/Users/mikalmonslaup/Downloads/Haugaland intentraffic oct25mar26  - intent_traffic.csv" @"/Users/mikalmonslaup/Downloads/Haugaland intentraffic oct25mar26 .zip"
+- A, and then dynamic showing
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/cs/build/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/IntentTrafficSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SuccessStoriesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/success-stories/SuccessStoryDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/intent-traffic.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/slide-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/app/cs/build/page.tsx
+ M src/app/guide/GuideClient.tsx
+ M src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+ M src/components/builder/workspace-config.ts
+ M src/components/sections/ThoughtLeadershipSection.tsx
+ M src/components/sections/TopRecommendationsSection.tsx
+ M src/data/audience-sections.ts
+ M src/data/thought-leadership.ts
+ M src/lib/slide-sections.ts
+ M src/lib/types.ts
+?? scratch_match.mjs
+?? src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+?? src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+?? src/components/sections/IntentTrafficSection.tsx
+?? src/components/sections/SuccessStoriesSection.tsx
+?? src/components/sections/success-stories/
+?? src/data/intent-traffic.ts
+1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
+```
+
+## Compaction checkpoint — 2026-06-24T10:18:24+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- [Verification Required] Code was edited while a preview server is running. Follow <verification_workflow> to verify the changes.
+- im having a hard time seeing where we made this amazing spreadsheet become its own thing where I can upload and we dynamically show the data in our existing sections and add new sections for what sheet has that we dont etc?
+- I also need an admin page on dev@boost.ai, mikal@boost.ai, and jakob@boost.ai where you are allowed to add integration details towards planhat or aws and then have field selectors where I map and fetch values from the integration and map them to a selection of values that is this tool, meaning i add integration information, i then start looking in a dropdown selector to pick a value in the integration and i pick a value from a list of values for this tool that I so choose to link it too.
+- Kinda like we do with the cs engine which should also be incorporated into all of this giving dynamic suggestions based on the csv upload + planhat data, and anything we are not able to show due to missing data, we prompt the user to fill in that specific data field one by one, or opt to skip it and all related logic to it if they lack that meta data number entirely and dont wanna use a placeholder.
+- also dont forget the whole logic of the cs engine, the only real important part of cs engine i assume is the csv for it which was made. separate csv than the sheet stuff you already got here
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/STATE.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/cs/build/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/IntentTrafficSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SuccessStoriesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/success-stories/SuccessStoryDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/intent-traffic.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/detection.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/slide-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/app/cs/build/page.tsx
+ M src/app/guide/GuideClient.tsx
+ M src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+ M src/components/builder/workspace-config.ts
+ M src/components/sections/ThoughtLeadershipSection.tsx
+ M src/components/sections/TopRecommendationsSection.tsx
+ M src/data/audience-sections.ts
+ M src/data/thought-leadership.ts
+ M src/lib/slide-sections.ts
+ M src/lib/types.ts
+?? scratch_match.mjs
+?? src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+?? src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+?? src/components/sections/IntentTrafficSection.tsx
+?? src/components/sections/SuccessStoriesSection.tsx
+?? src/components/sections/success-stories/
+?? src/data/cs-engine/
+1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
+```
+
+## Compaction checkpoint — 2026-06-24T10:35:13+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- 9. Optional Next Step:
+-    Continue the engine port (todo #3): create `src/lib/cs-engine/calculator.ts` — an adaptation of the engine's `calculator.ts` priority logic that takes plain arrays (the ported `initiatives` + a `Map<issueId, severity>` from `detectIssues`) plus a `WeightConfig` (default effortMultipliers Low 1.2/Med 1.0/High 0.7, issueImportance defaulting to 1.0) and `HierarchyContext`, returning ranked `PriorityResult[]` (preserving `calculateSinglePriority`, `getBlockingPrerequisites`, `calculateHierarchyMultiplier`, `getTopPriorities`). Then create `src/lib/cs-engine/index.ts` (`runEngine(metrics, opts)` that ties detect→rank) and a CSV/Customer→`CustomerMetrics` mapper. This is directly in line with the user's "Surface upload + CSV->existing+engine" first-step choice and the in-progress engine-port task.
+-    Direct quote anchoring the current task (the user's first-step selection): "What should I build first?"="Surface upload + CSV->existing+engine (Recommended)" — described as "1) Make the intent-traffic upload prominent... 2) Flow CSV metrics into existing sections... 3) Port the engine to generate dynamic recommendations + a Detected-Issues section. No integrations/admin yet."
+- If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/mikalmonslaup/.claude/projects/-Users-mikalmonslaup-Desktop-Claude-projects-interactive-guide-financial-service-offering/349957cc-54e7-4b4a-9667-e52ad5d81121.jsonl
+- Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/STATE.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/cs/build/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/DetectedIssuesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/DetectedIssuesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/IntentTrafficSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SuccessStoriesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/success-stories/SuccessStoryDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/intent-traffic.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/calculator.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/detection.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/metrics.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/slide-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/app/cs/build/page.tsx
+ M src/app/guide/GuideClient.tsx
+ M src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+ M src/components/builder/workspace-config.ts
+ M src/components/sections/ThoughtLeadershipSection.tsx
+ M src/components/sections/TopRecommendationsSection.tsx
+ M src/data/audience-sections.ts
+ M src/data/thought-leadership.ts
+ M src/lib/slide-sections.ts
+ M src/lib/types.ts
+?? scratch_match.mjs
+?? src/components/builder/sections/cs/DetectedIssuesInputPanel.tsx
+?? src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+?? src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+?? src/components/sections/DetectedIssuesSection.tsx
+?? src/components/sections/IntentTrafficSection.tsx
+?? src/components/sections/SuccessStoriesSection.tsx
+1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
+```
+
+---
+
+## 2026-06-24 — CS decision engine first slice (uncommitted)
+
+**What.** Shipped the user's chosen first step ("Surface upload + CSV→existing+engine"):
+1. Ported the CS decision engine as pure client-side logic: `src/lib/cs-engine/`
+   (`calculator.ts` priority formula, `index.ts` `runEngine`, `metrics.ts`
+   `metricsFromCustomer`) + data in `src/data/cs-engine/`. Shaped to lift to a
+   Supabase Edge Function later. Source `issues.ts` catalog + #47 missing-data
+   rule + customIssueEvaluator deliberately NOT ported (id/name divergence).
+2. New engine-powered guide section `DetectedIssuesSection.tsx` + builder panel
+   `DetectedIssuesInputPanel.tsx`, wired through the 5-step golden path
+   (slide-sections, GuideClient, CS_DEFAULTS, workspace-config, cs/build page).
+3. Surfaced the buried intent-traffic upload: reordered `CS_WORKSPACE.sectionOrder`
+   so intent-traffic is the immediate "+ Add next" after company, then detected-issues.
+4. CSV→existing-sections flow: `IntentTrafficInputPanel` now offers an
+   "Apply to Performance" button (shown only when it would fill a still-blank
+   metric) that writes derived automation_rate / unknown_rate from the rollup
+   without overwriting hand-entered numbers.
+
+**Verify.** `npx tsc --noEmit` + `npm run build` (13 routes) clean. Live on
+/cs/build: pasted a 3-row CSV → parsed → "Apply to Performance" showed
+"Fills 76% automation · 15% unknown" → clicked → Performance panel reads
+AUTOMATION 76 / UNKNOWN 15, button then hides (canApply false). Engine section
+renders detected signals + ranked initiatives.
+
+**Why.** First unblocked slice of the 3-part ask (engine + CSV-driven sections);
+Parts 2/3 backend (integration admin, learning loop) stay BLOCKED on Supabase.
+
+**Next.** Await user direction. Nothing committed — `scratch_match.mjs` is still
+a throwaway, do not commit it.
+
+---
+
+## 2026-06-24 — Haugaland Kraft real-data customer (uncommitted)
+
+**What.** Seeded a real placeholder customer from the actual intent-traffic
+sheet so the Intent Traffic visuals + decision engine run on genuine numbers.
+- `src/data/haugaland-intent-traffic.ts` (new) — the Oct'25–Mar'26 boost.ai
+  export parsed via `parseIntentTrafficCsv` then frozen as a static
+  `IntentTrafficSummary` (26,925 conversations, 18 roots, 2,310 intents).
+- `src/data/cs-placeholder-customers.ts` — added "Haugaland Kraft" as the first
+  PLACEHOLDER_CUSTOMER: real `intent_traffic`, performance derived from the
+  rollup (30% automation / 67% unknown / 45% escalation), one benchmark, four
+  data-grounded recommendations (Altibox fault-handling, invoice self-service,
+  recognition-gap, replicate-Strøm), governance + agenda. CSAT left blank on
+  purpose to exercise the missing-data prompt.
+
+**Verify.** tsc + build (13 routes) clean. Live: picked Haugaland in the
+/cs/build Planhat search → rail rained in (Intent Traffic "26,925 conversations
+· 18 categories", Performance 30%, Detected Issues live, 4 recs). Generated the
+guide → Intent Traffic section renders KPI tiles + 18 root split-bars + flags;
+Detected Issues engine reports 6 signals / 41 actionable of 267 / 4 metrics.
+
+**Next.** Integration admin page (Part 2) still unbuilt — email-gated
+Planhat/AWS field-mapping surface. Awaiting go-ahead.
+
+## Compaction checkpoint — 2026-06-24T10:55:59+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.
+- Stop hook feedback:
+- [Verification Required] Code was edited while a preview server is running. Follow <verification_workflow> to verify the changes.
+- im still missing the amazing beautiful visuals generated from the first sheet, not cs engine. 
+- lets continue?
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/STATE.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/parse_haugaland.mts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/cs/build/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/DetectedIssuesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/DetectedIssuesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/IntentTrafficSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SuccessStoriesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/success-stories/SuccessStoryDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/cs-placeholder-customers.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/intent-traffic.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/calculator.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/detection.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/metrics.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/slide-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/app/cs/build/page.tsx
+ M src/app/guide/GuideClient.tsx
+ M src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+ M src/components/builder/workspace-config.ts
+ M src/components/sections/ThoughtLeadershipSection.tsx
+ M src/components/sections/TopRecommendationsSection.tsx
+ M src/data/audience-sections.ts
+ M src/data/cs-placeholder-customers.ts
+ M src/data/thought-leadership.ts
+ M src/lib/slide-sections.ts
+ M src/lib/types.ts
+?? scratch_match.mjs
+?? src/components/builder/sections/cs/DetectedIssuesInputPanel.tsx
+?? src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+?? src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+?? src/components/sections/DetectedIssuesSection.tsx
+?? src/components/sections/IntentTrafficSection.tsx
+1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
+```

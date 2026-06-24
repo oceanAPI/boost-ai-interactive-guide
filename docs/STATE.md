@@ -49,6 +49,39 @@ GOTCHA: the dev `preview_console_logs` buffer shows a stale
 `/guide` and the production build compiles clean; the buffer just never cleared
 from the brief broken interim while the value/effort ternary was being wired.
 
+### Intent Traffic section (this session, uncommitted)
+
+New CS section that ingests a boost.ai **intent-traffic CSV export** and renders
+conversation analytics. **Option A** (per-engagement client-side parse): the
+builder parses the CSV in-browser and persists only a compact
+`IntentTrafficSummary` on `Customer.intent_traffic` — the 2,638 raw rows would
+blow the URL-fragment ceiling, so only the rollup (totals + per-root + top-N
+child intents) round-trips. Rendered dynamically.
+
+Golden path, all 5 touched:
+- `src/lib/types.ts` — `IntentTrafficSummary`/`*Stats`/`*Root`/`*Intent`/`*Totals`
+  (counts only; percentages derived at render). `Customer.intent_traffic?`.
+- `src/data/intent-traffic.ts` (new) — `parseIntentTrafficCsv(text, opts)`
+  (quote-aware line parse, exact-name column map so "% of Traffic" never shadows
+  "Traffic", junk-root + zero-traffic + empty-intent skip, top-N per root,
+  sort by traffic desc) + `pct`/`reviewSplit` render helpers.
+- `src/components/sections/IntentTrafficSection.tsx` (new) — KPI header (6 tiles),
+  Legend, per-root `RootRow` (SplitBar green/gold/orange = auto/escalated/unsolved
+  of reviewed, width ∝ traffic), opportunity/training-gap flags, drilldown to
+  topIntents. data-testids `intent-kpi-*` / `intent-root-<slug>` / `intent-<slug>`.
+- `src/components/builder/sections/cs/IntentTrafficInputPanel.tsx` (new) — file
+  upload + paste textarea → `ingest` → summary card.
+- `src/lib/slide-sections.ts` (intent-traffic, group proof) ·
+  `src/data/audience-sections.ts` (CS_DEFAULTS between benchmarking+personalisation) ·
+  `src/components/builder/workspace-config.ts` (sectionOrder + def) ·
+  `src/app/cs/build/page.tsx` (PANELS+PREVIEWS) ·
+  `src/app/guide/GuideClient.tsx` (import + nav item + render block).
+
+Source data: Haugaland (Norwegian utility/broadband) Oct'25–Mar'26 export —
+26,908 conversations / 2,638 intents / 20 root categories. `npx tsc --noEmit` +
+`npm run build` (13 routes) both clean. Live-verified parse → summary → preview
+→ drilldown → flags on `/cs/build`; numbers cross-checked vs awk aggregates.
+
 ---
 
 ## What this project is
@@ -189,30 +222,30 @@ Last commit: 93bdad5
 
 <!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
 ## Auto-snapshot
-Last updated: 2026-06-18T14:31:16+02:00
+Last updated: 2026-06-24T10:58:05+02:00
 Branch: main
-Last commit: 42f0514 feat(engagements): collaborators + detail view, live-demo default, mobile chat height
+Last commit: 1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
 Working tree:
 ```
- M docs/GOTCHAS.md
-MM docs/JOURNAL.md
-MM docs/STATE.md
-M  src/app/actions/engagements.ts
-A  src/app/admin-x/page.tsx
-M  src/app/admin/page.tsx
-A  src/app/cs/browse/page.tsx
-A  src/app/cs/build/page.tsx
-A  src/app/cs/mine/page.tsx
-A  src/app/cs/page.tsx
-M  src/app/guide/GuideClient.tsx
-A  src/components/builder/CollapsibleSection.tsx
-A  src/components/builder/CsChrome.tsx
-A  src/components/builder/EngagementCard.tsx
-A  src/components/builder/EngagementDetail.tsx
-A  src/components/builder/Rail.tsx
-A  src/components/builder/sections/cs/AgendaInputPanel.tsx
-A  src/components/builder/sections/cs/AgentSwotInputPanel.tsx
-A  src/components/builder/sections/cs/AgenticOutcomeInputPanel.tsx
-A  src/components/builder/sections/cs/BenchmarkInputPanel.tsx
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/app/cs/build/page.tsx
+ M src/app/guide/GuideClient.tsx
+ M src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+ M src/components/builder/workspace-config.ts
+ M src/components/sections/ThoughtLeadershipSection.tsx
+ M src/components/sections/TopRecommendationsSection.tsx
+ M src/data/audience-sections.ts
+ M src/data/cs-placeholder-customers.ts
+ M src/data/thought-leadership.ts
+ M src/lib/slide-sections.ts
+ M src/lib/types.ts
+?? scratch_match.mjs
+?? src/components/builder/sections/cs/DetectedIssuesInputPanel.tsx
+?? src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+?? src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+?? src/components/sections/DetectedIssuesSection.tsx
+?? src/components/sections/IntentTrafficSection.tsx
 ```
 <!-- AUTO-HOOK-END -->
