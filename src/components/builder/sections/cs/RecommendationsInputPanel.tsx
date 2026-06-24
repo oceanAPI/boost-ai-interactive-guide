@@ -12,8 +12,25 @@ export function RecommendationsInputPanel({
   form: Customer;
   update: (patch: Partial<Customer>) => void;
 }) {
+  const total = form.recommendations?.length ?? 0;
   return (
-    <ListEditor<Recommendation>
+    <div className="space-y-3">
+      <div className="rounded-xl border border-boost-border bg-boost-surface/30 p-3.5">
+        <NumberField
+          label={`Show top N in the guide (of ${total})`}
+          value={form.recommendations_display_count}
+          onChange={(v) => update({ recommendations_display_count: v })}
+          min={1}
+          max={total || undefined}
+          step={1}
+          placeholder="All"
+        />
+        <p className="mt-1.5 text-[11px] text-boost-muted/80 leading-relaxed">
+          The guide ranks recommendations by weight and shows the top N. Leave
+          blank to show all. Remove ones you dislike below.
+        </p>
+      </div>
+      <ListEditor<Recommendation>
       items={form.recommendations ?? []}
       onChange={(items) => update({ recommendations: items })}
       makeNew={() => ({ title: "", rationale: "" })}
@@ -52,6 +69,7 @@ export function RecommendationsInputPanel({
           <LinesField label="Tags (one per line)" value={r.tags} onChange={(v) => set({ tags: v })} rows={2} />
         </div>
       )}
-    />
+      />
+    </div>
   );
 }

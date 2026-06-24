@@ -31,11 +31,21 @@ export interface ChapterProofPoint {
   value: string;
   label: string;
   sublabel?: string;
+  /** Before/after pair — when both are set the card draws a tiny
+   *  improvement graph (two bars, before → after) instead of a static
+   *  figure. Direction (rising/falling) is inferred from the values. */
+  from?: number;
+  to?: number;
 }
 
 export interface ChapterCaseStudy {
   name: string;
   subtitle?: string;
+  /** The transformation arc — where they came from and where they got to
+   *  (deck slides 5/6). When present the card leads with this story
+   *  rather than a bare metric grid. */
+  before?: string;
+  after?: string;
   metrics: { value: string; label: string }[];
 }
 
@@ -43,26 +53,26 @@ export interface ChapterRoadmapItem {
   tag: string;
   title: string;
   body: string;
+  /** Links to a full entry in `product-roadmap-2026` — when set, the card
+   *  is clickable and opens a detail popup with the richer description +
+   *  what it unlocks. */
+  roadmapItemId?: string;
 }
 
-/** One row of the chapter benchmark — a single labelled bar. */
-export interface ChapterBenchmarkBar {
+/** One instance in a slide-7 cohort distribution — an (anonymised)
+ *  customer/instance benchmarked against the rest. The `isYou` entry is
+ *  the customer's own instance, highlighted. */
+export interface BenchmarkInstance {
   label: string;
   value: number;
-  tone: "you" | "peer" | "industry";
+  isYou?: boolean;
 }
 
-/** Grouped per-channel comparison row (deck slide 35). */
-export interface ChapterChannelBar {
-  channel: string;
-  you: number;
-  peer: number;
-}
-
-/** Peer / industry benchmark rendered as a LIVE bar comparison inside
- *  the chapter (deck slides 12 / 35). The `dataset` label is the
- *  placeholder for the dataset-filter that will drive these numbers
- *  later — for now the bars carry static, deck-modelled values. */
+/** Peer / industry benchmark rendered as the slide-7 cohort distribution
+ *  inside the chapter — ONE consistent shape across every chapter. The
+ *  `dataset` label is the placeholder for the dataset-filter that will
+ *  drive these numbers later — for now the bars carry static,
+ *  deck-modelled values. */
 export interface ChapterBenchmark {
   /** What's being measured, e.g. "% of agentic replies". */
   title: string;
@@ -70,10 +80,15 @@ export interface ChapterBenchmark {
   dataset?: string;
   /** Unit suffix on the numbers (default "%"). */
   unit?: string;
-  /** Simple horizontal-bar comparison (you vs peers vs leaders). */
-  bars?: ChapterBenchmarkBar[];
-  /** Grouped per-channel comparison (deck slide 35). */
-  channels?: ChapterChannelBar[];
+  /** Slide-7 cohort distribution — every (anonymised) instance as its own
+   *  full bar, sorted, with the customer's instance highlighted. Values
+   *  are static deck-modelled placeholders today; later they'll be
+   *  fetched live per instance and shown anonymised. */
+  distribution: BenchmarkInstance[];
+  /** Cohort average reference line (%), drawn across the distribution. */
+  average?: number;
+  /** Legend label for the cohort bars, e.g. "Anonymised insurer instances". */
+  cohortLabel?: string;
   /** When set, the "you" value reads the live customer figure for this
    *  PerformanceMetrics field (falls back to the static value). */
   youFromPerformance?: keyof PerformanceMetrics;
@@ -108,6 +123,41 @@ export interface ChannelProfile {
   /** When set, total automation reads the live customer figure. */
   totalFromPerformance?: keyof PerformanceMetrics;
   note?: string;
+}
+
+/** One metric in the NLU→LLM impact chart — the before (NLU-based) and
+ *  after (LLM-based) values that show why the shift matters. */
+export interface ImpactMetric {
+  metric: string;
+  /** Value on the old NLU/intent-matched approach. */
+  nlu: number;
+  /** Value on the LLM-based agentic approach. */
+  llm: number;
+}
+
+/** One row of a ranked impact chart (deck slide 15 — CSAT by interaction
+ *  type). Sorted as authored; `tone` highlights the winning / failing row. */
+export interface ImpactRankRow {
+  label: string;
+  value: number;
+  tone?: "best" | "worst" | "neutral";
+}
+
+/** "Why this matters" — either paired NLU/LLM before-after bars (`metrics`)
+ *  OR a ranked horizontal bar chart (`ranking`, deck slide 15). One of the
+ *  two is set per chapter. */
+export interface ChapterImpact {
+  title: string;
+  unit?: string;
+  /** Paired NLU-based → LLM-based uplift bars. */
+  metrics?: ImpactMetric[];
+  /** Ranked horizontal bars on a fixed scale (deck slide 15). */
+  ranking?: ImpactRankRow[];
+  /** Upper bound of the ranking scale (e.g. 10 for a /10 CSAT score). */
+  scaleMax?: number;
+  note?: string;
+  /** Small attribution line under the chart, e.g. "Data from boost.ai customer in FS". */
+  source?: string;
 }
 
 export interface UseCaseTurn {
@@ -147,6 +197,12 @@ export interface StoryChapter {
   headline: string;
   /** Hero figure ("88%", "4–5×"). */
   stat: string;
+  /** Caption under the primary hero ring (deck slide 4). */
+  statLabel?: string;
+  /** Optional second hero ring shown alongside the first — e.g. the
+   *  Orchestration donut (deck slide 12) inside the Agentic chapter. */
+  secondaryStat?: string;
+  secondaryStatLabel?: string;
   /** Data-driven opener sentence. */
   narrative: string;
   /** boost market-data proof points. */
@@ -160,10 +216,15 @@ export interface StoryChapter {
   /** Roadmap items that extend THIS challenge's story (every chapter
    *  carries the items that help solve its own challenge). */
   roadmap?: ChapterRoadmapItem[];
+  /** Toggle label for the roadmap block — named per challenge rather
+   *  than the generic "what's coming next". */
+  roadmapLabel?: string;
   /** Opt-in real-example chat mockup ("see it in action"). */
   useCase?: ChapterUseCase;
   /** The customer-facing transition. */
   transition?: { today: string; future: string };
+  /** "Why this matters" impact chart — NLU-based vs LLM-based uplift. */
+  impact?: ChapterImpact;
   /** Deep-dive section anchor + link label. */
   linkSection?: string;
   linkLabel?: string;
@@ -176,50 +237,74 @@ export const STORY_CHAPTERS: StoryChapter[] = [
     challenge: "Agentic",
     headline: "Agentic Adoption",
     stat: "88%",
+    statLabel: "Agentic",
+    secondaryStat: "31%",
+    secondaryStatLabel: "Orchestration",
     narrative:
       "91% of our customers have LLM features in production today, and 28% of all inquiries are now generative. Orchestration — still labelled beta — is already live for 31% of customers, and 26% of insurers.",
     proofPoints: [
-      { value: "46% → 66%", label: "Automation", sublabel: "in 2 months" },
-      { value: "15% → 7%", label: "Human handovers", sublabel: "halved" },
-      { value: "+20 pts", label: "NPS uplift", sublabel: "42 → 62 in 2 weeks" },
+      { value: "+20 pts", label: "NPS · Global Telco", sublabel: "42 → 62 in two weeks", from: 42, to: 62 },
+      { value: "+12 pp", label: "Automation · Nordic Payments", sublabel: "55% → 67% after go-live", from: 55, to: 67 },
+      { value: "−23.5 pp", label: "Escalations · Global Retail", sublabel: "31% → 7.5% in three weeks", from: 31, to: 7.5 },
     ],
     caseStudies: [
       {
         name: "Storebrand",
         subtitle: "Agentic AI in customer service for insurance",
+        before: "Pre-defined dialogue trees with little back-end integration — the bot answered, but it couldn't act.",
+        after: "LLM-based agentic AI wired into the core policy & claims systems — now it resolves end-to-end, and ranks #1 for AI insurance chat in the market.",
         metrics: [
           { value: "50%", label: "Traffic handled by Agentic AI" },
           { value: "43%", label: "Increase in CSAT" },
           { value: "24%", label: "Escalations (from 31%)" },
-          { value: "#1", label: "AI chat for insurance, ranked" },
         ],
       },
     ],
     benchmark: {
-      title: "% of agentic replies",
+      title: "% of agentic replies — Insurance Nordics",
       dataset: "Insurance · Nordics · agentic actions activated",
-      bars: [
-        { label: "You", value: 28, tone: "you" },
-        { label: "Peer cohort avg", value: 41, tone: "peer" },
-        { label: "Top movers", value: 90, tone: "industry" },
+      cohortLabel: "Anonymised insurer instances",
+      youFromPerformance: "automation_rate",
+      average: 28,
+      distribution: [
+        { label: "Insurance O", value: 95 },
+        { label: "Insurance C", value: 82 },
+        { label: "Insurance A", value: 57 },
+        { label: "Insurance G", value: 51 },
+        { label: "Insurance B", value: 36 },
+        { label: "Insurance H", value: 34 },
+        { label: "Insurance L", value: 20 },
+        { label: "Insurance I", value: 12 },
+        { label: "Insurance K", value: 11 },
+        { label: "Insurance F", value: 5 },
+        { label: "Insurance E", value: 4 },
+        { label: "Insurance D", value: 3 },
+        { label: "Insurance J", value: 3 },
+        { label: "Insurance M", value: 2 },
+        { label: "Insurance N", value: 2 },
+        { label: "You", value: 28, isYou: true },
       ],
-      note: "Top movers already exceed 90% of replies handled agentically — the gap is the opportunity.",
+      note: "Each bar is one anonymised insurer instance that has activated agentic actions. The cohort average sits at 28% — the top movers clear 90%, and that gap is the opportunity.",
     },
+    roadmapLabel: "Platform Enablers for Generative Adoption",
     roadmap: [
       {
         tag: "Q4",
         title: "High-Agency Control Room",
         body: "Monitor, control and correct agent behaviour in real time — built-in oversight and self-healing as you scale.",
+        roadmapItemId: "high-agency-control-room",
       },
       {
         tag: "Beta",
         title: "Agent Orchestration",
         body: "Route conversations generatively to the right specialist agent by context, not fixed rules.",
+        roadmapItemId: "agent-orchestration-beta",
       },
       {
         tag: "Q3",
         title: "External A2A Orchestration",
         body: "Coordinate external AI agents across platforms and vendors via the A2A protocol — one orchestrated ecosystem.",
+        roadmapItemId: "agent-orchestration-a2a",
       },
     ],
     useCase: {
@@ -249,6 +334,16 @@ export const STORY_CHAPTERS: StoryChapter[] = [
       future:
         "Orchestrated specialist agents routed generatively, monitored and self-corrected in real time across chat and voice.",
     },
+    impact: {
+      title: "NLU-based → LLM-based: the uplift",
+      metrics: [
+        { metric: "Automation rate", nlu: 46, llm: 66 },
+        { metric: "Containment", nlu: 78, llm: 94 },
+        { metric: "First-contact resolution", nlu: 55, llm: 82 },
+        { metric: "Agentic replies", nlu: 4, llm: 28 },
+      ],
+      note: "Moving from intent-matched NLU flows to LLM-based agentic answers lifts every metric that matters — this is why the shift is worth making.",
+    },
     linkSection: "agentic-before-after",
     linkLabel: "See the before / after transformation",
   },
@@ -261,14 +356,16 @@ export const STORY_CHAPTERS: StoryChapter[] = [
     narrative:
       "49% of our customers authenticate the end-user to deliver a personalised experience — turning generic answers into account-aware, proactive service.",
     proofPoints: [
-      { value: "9.7 / 10", label: "CSAT", sublabel: "AI Agent + API/RPA vs 1.9 for a failed answer" },
+      { value: "9.7 / 10", label: "CSAT", sublabel: "AI Agent + API/RPA vs 1.9 for a failed answer", from: 1.9, to: 9.7 },
       { value: "+20%", label: "CSAT uplift", sublabel: "from end-to-end journeys" },
-      { value: "97%", label: "Containment", sublabel: "up from 92%" },
+      { value: "97%", label: "Containment", sublabel: "up from 92%", from: 92, to: 97 },
     ],
     caseStudies: [
       {
         name: "Accelerating Synergy",
         subtitle: "Automating CX during a Nordic banking merger",
+        before: "Two merging banks ran parallel, unauthenticated chat — generic answers, duplicated effort and rising manual volume mid-integration.",
+        after: "One authenticated, account-aware AI Agent across the merged base — resolving end-to-end and freeing the equivalent of a small team.",
         metrics: [
           { value: "54%", label: "Reduction in manual chats" },
           { value: "77.8%", label: "CSAT" },
@@ -279,6 +376,8 @@ export const STORY_CHAPTERS: StoryChapter[] = [
       {
         name: "UK Insurer",
         subtitle: "Personalised AI Agent journeys",
+        before: "Anonymous answers sent customers to the portal to check policies and claims themselves — feedback and engagement stalled.",
+        after: "Authenticated journeys answer account questions in chat — positive feedback and portal engagement both climbed.",
         metrics: [
           { value: "24%", label: "CSAT uplift" },
           { value: "43% → 66%", label: "Positive feedback" },
@@ -287,15 +386,31 @@ export const STORY_CHAPTERS: StoryChapter[] = [
       },
     ],
     benchmark: {
-      title: "Conversations authenticated",
-      dataset: "Insurance · Nordics",
-      bars: [
-        { label: "You", value: 49, tone: "you" },
-        { label: "Peer cohort avg", value: 61, tone: "peer" },
-        { label: "Leaders", value: 78, tone: "industry" },
+      title: "% of conversations authenticated — Insurance Nordics",
+      dataset: "Insurance · Nordics · authenticated journeys",
+      cohortLabel: "Anonymised insurer instances",
+      average: 61,
+      distribution: [
+        { label: "Insurance O", value: 88 },
+        { label: "Insurance C", value: 84 },
+        { label: "Insurance A", value: 79 },
+        { label: "Insurance G", value: 74 },
+        { label: "Insurance B", value: 71 },
+        { label: "Insurance H", value: 66 },
+        { label: "Insurance L", value: 63 },
+        { label: "Insurance I", value: 58 },
+        { label: "Insurance K", value: 54 },
+        { label: "You", value: 49, isYou: true },
+        { label: "Insurance F", value: 47 },
+        { label: "Insurance E", value: 41 },
+        { label: "Insurance D", value: 33 },
+        { label: "Insurance J", value: 28 },
+        { label: "Insurance M", value: 22 },
+        { label: "Insurance N", value: 14 },
       ],
-      note: "Authenticating the end-user unlocks account-aware, proactive answers — and consistently tops peer feedback scores.",
+      note: "Each bar is one anonymised insurer instance. Authenticating the end-user unlocks account-aware, proactive answers — the cohort average sits at 61% and you have clear room to climb.",
     },
+    roadmapLabel: "Platform Enablers for Personalised CX",
     roadmap: [
       {
         tag: "Q1",
@@ -335,6 +450,21 @@ export const STORY_CHAPTERS: StoryChapter[] = [
       future:
         "Authenticated, account-aware answers — \"you have one open auto-insurance invoice, due 5.5; tap to move it 4 weeks\" — handled in chat.",
     },
+    impact: {
+      title: "End-to-end journeys lift CSAT by 20%",
+      unit: "",
+      scaleMax: 10,
+      ranking: [
+        { label: "Failed answer, no escalation", value: 1.9, tone: "worst" },
+        { label: "Correct answer, no escalation", value: 7.2 },
+        { label: "Failed answer, escalation offered", value: 7.5 },
+        { label: "Correct answer, escalation offered", value: 7.8 },
+        { label: "Asked directly for human escalation", value: 8.0 },
+        { label: "AI Agent + API/RPA", value: 9.7, tone: "best" },
+      ],
+      note: "An agent that can act end-to-end — calling APIs and RPA on the customer's own account — scores 9.7/10, far above any answer-only path. The worst experience isn't a wrong answer; it's a failed answer with nowhere to go (1.9).",
+      source: "Data from a boost.ai customer in financial services",
+    },
     linkSection: "personalisation",
     linkLabel: "See the top-intent integration opportunities",
   },
@@ -362,15 +492,30 @@ export const STORY_CHAPTERS: StoryChapter[] = [
       },
     ],
     benchmark: {
-      title: "Lead conversion via AI Agent vs static forms",
+      title: "Lead conversion via AI Agent — Financial services",
       dataset: "FS · revenue-generating agents",
-      bars: [
-        { label: "Static web forms", value: 6, tone: "you" },
-        { label: "Tryg · AI Agent", value: 42, tone: "peer" },
-        { label: "Nordic Insurance", value: 60, tone: "industry" },
+      cohortLabel: "Anonymised FS instances",
+      average: 31,
+      distribution: [
+        { label: "FS instance H", value: 64 },
+        { label: "FS instance C", value: 60 },
+        { label: "FS instance A", value: 55 },
+        { label: "FS instance G", value: 49 },
+        { label: "FS instance B", value: 44 },
+        { label: "FS instance L", value: 42 },
+        { label: "FS instance I", value: 38 },
+        { label: "FS instance K", value: 33 },
+        { label: "FS instance F", value: 29 },
+        { label: "FS instance E", value: 24 },
+        { label: "FS instance D", value: 19 },
+        { label: "FS instance J", value: 15 },
+        { label: "FS instance M", value: 11 },
+        { label: "FS instance N", value: 8 },
+        { label: "You · static web forms", value: 6, isYou: true },
       ],
-      note: "Static web forms convert in low single digits — proactive, in-conversation capture is the gap.",
+      note: "Each bar is one anonymised FS instance running a revenue-generating agent. Static web forms convert in low single digits — proactive, in-conversation capture is the gap, with the cohort averaging 31%.",
     },
+    roadmapLabel: "Platform Enablers for Revenue Generation",
     roadmap: [
       {
         tag: "Q2",
@@ -409,6 +554,19 @@ export const STORY_CHAPTERS: StoryChapter[] = [
       future:
         "The agent recognises buying intent, recommends the right product, and completes the sale — proactively, in the conversation.",
     },
+    impact: {
+      title: "Proactive, in-conversation capture multiplies conversion",
+      unit: "%",
+      scaleMax: 70,
+      ranking: [
+        { label: "Static web form (you today)", value: 6, tone: "worst" },
+        { label: "Cohort average — revenue-generating agent", value: 31 },
+        { label: "Tryg — higher lead conversion", value: 42 },
+        { label: "Nordic Insurance — win rate on agent-sourced leads", value: 60, tone: "best" },
+      ],
+      note: "Capturing intent inside the conversation — at the moment it happens — converts several times better than a static form. Tryg lifted lead conversion 42%, Nordic Insurance wins 60% of agent-sourced leads, and a Finnish telco booked 150 upsales in week one. One proactive mortgage callback alone started €10M in sales.",
+      source: "Data from boost.ai customers in financial services (deck p.31)",
+    },
     linkSection: "revenue",
     linkLabel: "See the lead-gen + sell-via-agent journeys",
   },
@@ -417,9 +575,10 @@ export const STORY_CHAPTERS: StoryChapter[] = [
     icon: "channels",
     challenge: "Channels",
     headline: "Channels",
-    stat: "4–5×",
+    stat: "62%",
+    statLabel: "of our customers run Voice",
     narrative:
-      "Over the last year our customers are automating 4–5× more interactions over Voice as the technology matures — one AI Agent across chat, voice and messaging.",
+      "Over the last year, our customer are automating 4-5 times more customer interactions over Voice, as tech matures significantly.",
     proofPoints: [
       { value: "470k €", label: "Saved annually", sublabel: "moving 10% of written messages to chat" },
       { value: "800k €", label: "Saved annually", sublabel: "moving 10% of phone to automation" },
@@ -437,17 +596,30 @@ export const STORY_CHAPTERS: StoryChapter[] = [
       },
     ],
     benchmark: {
-      title: "Total automation across all channels vs FS",
+      title: "Total automation across all channels — Financial services",
       dataset: "Financial services · all channels",
       unit: "%",
+      cohortLabel: "Anonymised FS instances",
       youFromPerformance: "automation_rate",
-      channels: [
-        { channel: "Phone", you: 4, peer: 22 },
-        { channel: "Messages", you: 18, peer: 40 },
-        { channel: "Chat", you: 25, peer: 55 },
-        { channel: "Total", you: 13, peer: 35 },
+      average: 35,
+      distribution: [
+        { label: "FS instance H", value: 72 },
+        { label: "FS instance C", value: 66 },
+        { label: "FS instance A", value: 61 },
+        { label: "FS instance G", value: 55 },
+        { label: "FS instance B", value: 50 },
+        { label: "FS instance L", value: 45 },
+        { label: "FS instance I", value: 40 },
+        { label: "FS instance K", value: 35 },
+        { label: "FS instance F", value: 30 },
+        { label: "FS instance E", value: 26 },
+        { label: "FS instance D", value: 21 },
+        { label: "FS instance J", value: 17 },
+        { label: "You", value: 13, isYou: true },
+        { label: "FS instance M", value: 12 },
+        { label: "FS instance N", value: 8 },
       ],
-      note: "Total automation sits at ~13% today vs peers at 20–50% — the headroom across phone, messages and chat is the prize.",
+      note: "Each bar is one anonymised FS instance's total automation across phone, messages and chat. The cohort averages 35% — the per-channel breakdown below shows where your headroom sits.",
     },
     channelProfile: {
       title: "Your inquiry mix today",
@@ -462,6 +634,7 @@ export const STORY_CHAPTERS: StoryChapter[] = [
       totalFromPerformance: "automation_rate",
       note: "Phone carries the most volume yet the least automation — the biggest, most visible prize as one AI Agent moves onto the voice line.",
     },
+    roadmapLabel: "Platform Enablers across Channels",
     roadmap: [
       {
         tag: "Now",
@@ -504,6 +677,18 @@ export const STORY_CHAPTERS: StoryChapter[] = [
       today: "Phone (41%), written messages (34%) and chat (25%) handled in silos, 13% total automation.",
       future:
         "One AI Agent across every channel — claims settlements offered instantly, invoices and payments self-served by voice and chat.",
+    },
+    impact: {
+      title: "Where the savings are — every 10% shifted",
+      unit: "k €",
+      scaleMax: 850,
+      ranking: [
+        { label: "+10% chat automation", value: 220 },
+        { label: "Move 10% of written messages to chat", value: 470 },
+        { label: "Move 10% of phone to automation", value: 800, tone: "best" },
+      ],
+      note: "Phone carries the most volume yet the least automation, so it holds the biggest prize: every 10% of calls shifted to automation is worth ~€800k a year — far more than the same shift on any other channel. That is why bringing one AI Agent onto the voice line matters most.",
+      source: "Modelled on your channel mix and per-channel cost-to-serve",
     },
     linkSection: "platform-vision",
     linkLabel: "See the channel + roadmap vision",

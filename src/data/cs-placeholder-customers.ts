@@ -1,4 +1,5 @@
 import type { Customer } from "@/lib/types";
+import { HAUGALAND_INTENT_TRAFFIC } from "./haugaland-intent-traffic";
 
 /* ──────────────────────────────────────────────────────────────
  *  Placeholder Planhat customers (mockup)
@@ -72,6 +73,172 @@ function base(): Pick<
 }
 
 export const PLACEHOLDER_CUSTOMERS: PlaceholderCustomer[] = [
+  /* ─── Haugaland Kraft — REAL intent-traffic data ────────────────
+   *  Norwegian power utility + Altibox fibre-broadband provider. The
+   *  intent_traffic rollup is the genuine Oct'25–Mar'26 export
+   *  (26,925 conversations, 18 root categories), so the Intent Traffic
+   *  section + the decision engine run on real numbers. Performance /
+   *  benchmarks are derived from that rollup; CSAT is left blank on
+   *  purpose to exercise the missing-data prompt. */
+  {
+    ...base(),
+    handle: "haugaland",
+    company_name: "Haugaland Kraft",
+    company_url: "haugaland-kraft.no",
+    currency: "NOK",
+    channels: "chat",
+    deployment_markets: 1,
+    areas_of_interest: [],
+    selected_instance_ids: ["haugaland-prod-no"],
+    instances: [
+      { key: "haugaland-prod-no", label: "Haugaland Kraft — Production", region: "eu-north-1" },
+      { key: "haugaland-altibox-no", label: "Haugaland Kraft — Altibox broadband", region: "eu-north-1" },
+    ],
+    intent_traffic: HAUGALAND_INTENT_TRAFFIC,
+    performance: {
+      // Derived from the real rollup: automated/reviewed, noPrediction/traffic,
+      // escalated/reviewed. monthly = 26,925 over the 6-month window.
+      automation_rate: 30,
+      previous_automation_rate: 22,
+      unknown_rate: 67,
+      escalation_rate: 45,
+      previous_escalation_rate: 51,
+      monthly_conversations: 4488,
+      markets_live: 1,
+      active_agents: 4,
+      measured_from: "2025-10-01",
+      measured_to: "2026-03-31",
+    },
+    performance_details: {
+      automation_rate: {
+        narrative:
+          "Across 26,925 conversations the agent automated 30% of reviewed chats. The ceiling is recognition: 67% of all traffic gets no confident intent prediction — closing that gap is the single biggest lever.",
+      },
+    },
+    benchmarks: {
+      automation_rate: {
+        peer_avg: 38,
+        industry_avg: 35,
+        label: "Automation",
+        peer_cohort_description: "Nordic utility + broadband self-service bots",
+        interpretation:
+          "Below the utility/broadband automation average — the high no-prediction rate, concentrated in Altibox broadband, is the gap to close.",
+        percentile: 34,
+      },
+    },
+    recommendations: [
+      {
+        title: "Train + automate Altibox broadband fault-handling",
+        rationale:
+          "Altibox is the largest category by far (8,475 conversations) yet 70% get no prediction and a third go unsolved — the biggest single automation + training opportunity in the data.",
+        urgency: "this-quarter",
+        confidence: "high",
+        weight: 0.95,
+        effort: "medium",
+        value_label: "Recover the #1 volume driver",
+        expected_outcomes: ["Lift Altibox automation toward the Strøm benchmark", "Cut unsolved broadband chats"],
+        how_to_proceed: [
+          "Cluster the no-prediction Altibox utterances (internet faults, TV content, error messages) into trainable intents.",
+          "Wire the broadband status/diagnostics API into the top fault flows.",
+          "Pilot on 'Feil på internett' (1,287 conversations) and measure the no-prediction drop.",
+        ],
+        considerations: [
+          "Fault diagnostics may need a read-only call into the Altibox provisioning system.",
+          "Norwegian-language training data must cover regional phrasing.",
+        ],
+        resources: [{ label: "Intent-training playbook" }, { label: "Broadband API connector guide" }],
+        tags: ["automation", "training"],
+      },
+      {
+        title: "Add invoice self-service (status · copy · postpone)",
+        rationale:
+          "Faktura runs 2,310 conversations at 73% no-prediction — billing questions are repetitive and API-backable, so they automate cleanly.",
+        urgency: "this-quarter",
+        confidence: "high",
+        weight: 0.85,
+        effort: "low",
+        value_label: "Deflect a top repetitive driver",
+        expected_outcomes: ["Automate invoice status + copy requests"],
+        how_to_proceed: [
+          "Connect the billing API for authenticated invoice lookups.",
+          "Add status, copy-of-invoice and due-date-postpone flows.",
+          "Train the top Faktura intents off the no-prediction backlog.",
+        ],
+        considerations: ["Authenticate before exposing any invoice detail."],
+        resources: [{ label: "Billing API connector guide" }],
+        tags: ["automation", "personalisation"],
+      },
+      {
+        title: "Close the recognition gap (67% no-prediction)",
+        rationale:
+          "Two-thirds of all traffic gets no confident prediction. Even a modest recognition lift compounds across every category's automation rate.",
+        urgency: "this-quarter",
+        confidence: "medium",
+        weight: 0.8,
+        effort: "medium",
+        value_label: "Compounds automation everywhere",
+        how_to_proceed: [
+          "Mine the highest-volume no-prediction utterances per root.",
+          "Add or merge intents to cover the recurring phrasings.",
+          "Re-measure no-prediction monthly as a tracked KPI.",
+        ],
+        considerations: ["Avoid over-fitting — keep intents broad enough to generalise."],
+        resources: [{ label: "Recognition-tuning checklist" }],
+        tags: ["training"],
+      },
+      {
+        title: "Replicate the Strøm playbook across weaker categories",
+        rationale:
+          "Strøm (power) already automates 56% of reviewed chats — the highest of any large category. Whatever works there should be templated for Altibox, Kundeforhold and Faktura.",
+        urgency: "this-year",
+        confidence: "medium",
+        weight: 0.6,
+        effort: "low",
+        value_label: "Scale a proven win",
+        how_to_proceed: [
+          "Document the Strøm intent + integration setup.",
+          "Apply the same pattern to the next-weakest high-volume root.",
+        ],
+        considerations: ["Category data models differ — adapt, don't copy verbatim."],
+        resources: [{ label: "Internal best-practice template" }],
+        tags: ["automation"],
+      },
+    ],
+    governance: {
+      business_review_frequency: "quarterly",
+      executive_sponsor: "Head of Customer Service, Haugaland Kraft",
+      last_business_review: "2026-03-20",
+      next_business_review: "2026-06-20",
+      next_business_review_focus: ["Altibox automation", "Recognition-gap reduction"],
+    },
+    br_context: {
+      meeting_title: "Q2 Business Review — Haugaland Kraft",
+      meeting_date: "2026-06-20",
+      agenda_style: "numbered",
+      agenda_items: [
+        { topic: "What 26,925 conversations asked for", subtitle: "Intent traffic" },
+        { topic: "Detected issues + next moves", subtitle: "Decision engine" },
+        { topic: "Success plan", subtitle: "Altibox + invoice automation" },
+      ],
+    },
+    personalisation_opportunities: [
+      {
+        intent: "Feil på internett (broadband fault)",
+        solution: "Broadband diagnostics API to run a line check and guide the fix in-chat",
+        impact_180d: "1.3k conversations",
+        requests: 1287,
+        journey_steps: ["authentication", "intent recognition", "line diagnostics API", "guided troubleshooting"],
+      },
+      {
+        intent: "Faktura (invoice question)",
+        solution: "Billing API to fetch invoice status and postpone the due date",
+        impact_180d: "2.3k conversations",
+        requests: 2310,
+        journey_steps: ["authentication", "intent recognition", "billing API", "confirm action"],
+      },
+    ],
+  },
+
   {
     ...base(),
     handle: "nordpol",

@@ -51,9 +51,11 @@ export default function TopRecommendationsSection({
 }: TopRecommendationsSectionProps) {
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const cap = customer?.recommendations_display_count;
   const recs = (customer?.recommendations ?? [])
     .slice()
-    .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
+    .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0))
+    .slice(0, cap != null && cap > 0 ? cap : undefined);
   const openRec = openIndex !== null ? recs[openIndex] : null;
   /** When initiatives carry an effort rating, prioritise them on a
    *  value-vs-effort matrix instead of the ranked card grid. */

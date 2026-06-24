@@ -782,6 +782,60 @@ export interface PersonalisationOpportunity {
   journey_steps?: string[];
 }
 
+/* ─── Intent-traffic analytics ──────────────────────────────────
+ *  The compact shape a boost.ai intent-traffic export collapses to.
+ *  Raw counts only (percentages are derived at render so the payload
+ *  stays small and rounding never drifts). */
+
+/** Per-intent (and per-root) conversation counts. */
+export interface IntentTrafficStats {
+  /** Total conversations matched to this intent. */
+  traffic: number;
+  /** Conversations a human reviewed/labelled (the denominator for the
+   *  automated / escalated / unsolved split). */
+  reviewed: number;
+  automated: number;
+  escalated: number;
+  unsolved: number;
+  /** Conversations handed over to a human agent. */
+  handover: number;
+  /** Conversations where the bot made no confident intent prediction. */
+  noPrediction: number;
+}
+
+export interface IntentTrafficIntent extends IntentTrafficStats {
+  intent: string;
+}
+
+export interface IntentTrafficRoot extends IntentTrafficStats {
+  /** Root-intent category, e.g. "Altibox" / "Faktura". */
+  root: string;
+  /** The category's highest-traffic child intents (capped in the
+   *  builder so the persisted summary stays under the URL ceiling). */
+  topIntents: IntentTrafficIntent[];
+}
+
+export interface IntentTrafficTotals extends IntentTrafficStats {
+  positiveFeedback: number;
+  negativeFeedback: number;
+  immediateUnknown: number;
+}
+
+/** The persisted rollup — totals + per-root breakdown. */
+export interface IntentTrafficSummary {
+  /** Reporting window label from the export header, e.g.
+   *  "01.10.2025–31.03.2026". */
+  period?: string;
+  /** Original export filename, for provenance in the builder. */
+  source?: string;
+  /** Distinct intents parsed from the export (pre-rollup), for
+   *  "top N of M" framing in the UI. */
+  intentCount: number;
+  totals: IntentTrafficTotals;
+  /** Roots sorted by traffic, descending. */
+  roots: IntentTrafficRoot[];
+}
+
 /** A single thought-leadership story stat — the deck's big-number
  *  opener (e.g. headline "Agentic", figure "88%", narrative "91% of
  *  our customers have LLM features in production today…"). */
@@ -875,6 +929,11 @@ export interface Customer extends GuideFormData {
    *  shape. Drives TopRecommendationsSection. */
   recommendations?: Recommendation[];
 
+  /** Cap on how many of the (weight-ranked) recommendations the guide
+   *  shows. Undefined = show all. The CSM sets this in the builder to
+   *  trim a long engine-generated list down to the few that matter. */
+  recommendations_display_count?: number;
+
   /** Business Review / meeting context. Drives AgendaSection +
    *  meeting-opener chrome. */
   br_context?: BrContext;
@@ -896,6 +955,17 @@ export interface Customer extends GuideFormData {
    *  journeys. Drives RevenueSection. */
   revenue_story?: RevenueStory;
 
+  /** Story ids the CSM hand-picks from the success-story library to
+   *  feature in this engagement. Order = display order. Empty/undefined
+   *  → SuccessStoriesSection falls back to the whole library. Drives
+   *  SuccessStoriesSection. */
+  featured_story_ids?: string[];
+
+  /** When true, SuccessStoriesSection renders anonymised names
+   *  (`anonName`) instead of real customer names — a per-engagement
+   *  toggle for prospects under NDA / reference-shy audiences. */
+  success_stories_anon?: boolean;
+
   /** AWS instance ids this engagement pulls data from. An "instance"
    *  is a customer's boost.ai/AWS deployment where their data lives;
    *  each selected instance is (future) fetched via the AWS API to
@@ -910,6 +980,22 @@ export interface Customer extends GuideFormData {
    *  unset, and the CSM can customise/override. Drives
    *  ThoughtLeadershipSection. */
   thought_leadership?: ThoughtLeadershipStat[];
+
+  /** Compact rollup of a boost.ai intent-traffic export. The raw export
+   *  (the analytics "intent_traffic" tab) is thousands of rows — far past
+   *  the URL-fragment ceiling — so the builder parses the CSV client-side
+   *  and persists only this summary: period + aggregate totals + per-root
+   *  rollups, each carrying its top child intents. Drives
+   *  IntentTrafficSection. */
+  intent_traffic?: IntentTrafficSummary;
+
+  /** Success-story selections per story-spine chapter — maps a chapter
+   *  id (e.g. "agentic-adoption") to an ordered list of catalogue story
+   *  ids (see src/data/success-stories.ts). When a chapter has a
+   *  selection the section renders those stories in place of the chapter
+   *  defaults; unset chapters keep the boost.ai defaults. Authored from
+   *  the /cs builder's success-story picker. */
+  story_selections?: Record<string, string[]>;
 
   /* ─── Scope-of-Work fields ───────────────────────────────────
    * All optional, additive-only. Cross-audience by design: most of

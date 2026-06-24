@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import type { Customer, GuideData } from "@/lib/types";
 import { getTopicSections, getTopicsForGuide } from "@/data/topics";
 import { getAgentsForGuide } from "@/data/agents";
@@ -28,6 +28,9 @@ import VoicePreviewSection from "@/components/sections/VoicePreviewSection";
 import ImpactSection from "@/components/sections/ImpactSection";
 import TrustValidationSection from "@/components/sections/TrustValidationSection";
 import CaseStudiesSection from "@/components/sections/CaseStudiesSection";
+import SuccessStoriesSection from "@/components/sections/SuccessStoriesSection";
+import IntentTrafficSection from "@/components/sections/IntentTrafficSection";
+import DetectedIssuesSection from "@/components/sections/DetectedIssuesSection";
 import CommunitySection from "@/components/sections/CommunitySection";
 import BoostCampSection from "@/components/sections/BoostCampSection";
 import ResourcesSection from "@/components/sections/ResourcesSection";
@@ -50,6 +53,7 @@ const topicSections = getTopicSections();
 const SECTIONS = [
   { id: "hero", label: "Overview", icon: "◆" },
   { id: "agenda", label: "Agenda", icon: "◷" },
+  { id: "thought-leadership", label: "State of Conversational AI", icon: "✸" },
   { id: "orchestrator", label: "Agent Orchestrator", icon: "⬡" },
   { id: "topics", label: "Deep Dive", icon: "◈" },
   ...topicSections.map((t, i) => ({
@@ -62,12 +66,17 @@ const SECTIONS = [
   { id: "demo", label: "Chat Preview", icon: "▶" },
   { id: "performance", label: "Performance Snapshot", icon: "⟳" },
   { id: "benchmarking", label: "Benchmarking", icon: "▤" },
+  { id: "intent-traffic", label: "Intent Traffic", icon: "❖" },
+  { id: "detected-issues", label: "Detected Issues & Next Moves", icon: "◬" },
+  { id: "personalisation", label: "Personalised CX", icon: "◍" },
+  { id: "revenue", label: "Sales & Revenue", icon: "↗" },
   { id: "agentic-before-after", label: "Agentic Transformation", icon: "⇄" },
   { id: "agent-swot", label: "Agent SWOT", icon: "◇" },
   { id: "uat-status", label: "Rollout Status", icon: "●" },
   { id: "impact", label: "Business Impact", icon: "△" },
   { id: "trust-validation", label: "Platform Credibility", icon: "◎" },
   { id: "case-studies", label: "Case Studies", icon: "★" },
+  { id: "success-stories", label: "Success Stories", icon: "✦" },
   { id: "community", label: "Boost.ai Community", icon: "◎" },
   { id: "boost-camp", label: "Boost Camp", icon: "▸" },
   { id: "resources", label: "Resources & Trust", icon: "⊙" },
@@ -101,11 +110,15 @@ export default function GuideClient({
   customer?: Customer;
   sectionIds?: string[];
 }) {
-  /* Filter sections if sectionIds provided */
+  /* Filter sections if sectionIds provided. Preserve the *order* of
+   * sectionIds (the ?sections= URL list) so the guide renders, numbers,
+   * and navigates in the order the builder emitted — letting each
+   * audience (and admin reorder) drive its own section sequence. */
   const activeSections = sectionIds
-    ? SECTIONS.filter((s) => sectionIds.includes(s.id))
+    ? sectionIds
+        .map((id) => SECTIONS.find((s) => s.id === id))
+        .filter((s): s is (typeof SECTIONS)[number] => s != null)
     : SECTIONS;
-  const activeSectionSet = sectionIds ? new Set(sectionIds) : null;
 
   /**
    * Dynamic section numbers — the green "01 / 02 / 03…" label shown in each
@@ -235,6 +248,255 @@ export default function GuideClient({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  /* Each section's JSX keyed by id. Rendered in `activeSections` order
+   * (the ?sections= URL order) below, so the guide sequence is fully
+   * data-driven — recommendations-before-plan for CS, plan-before-recs
+   * for CE, boost-camp last, etc. all come from the URL, not JSX order. */
+  const sectionBlocks: Record<string, React.ReactNode> = {
+    hero: (
+      <div id="hero" ref={(el) => { sectionRefs.current["hero"] = el; }}>
+        <SectionReportPill sectionId="hero" displayName="Overview" />
+        <HeroSection guide={guide} />
+      </div>
+    ),
+    agenda: (
+      <div id="agenda" ref={(el) => { sectionRefs.current["agenda"] = el; }}>
+        <SectionReportPill sectionId="agenda" displayName="Agenda" />
+        <AgendaSection customer={customer} sectionNumber={sn("agenda")} />
+      </div>
+    ),
+    "thought-leadership": (
+      <div id="thought-leadership" ref={(el) => { sectionRefs.current["thought-leadership"] = el; }}>
+        <SectionReportPill sectionId="thought-leadership" displayName="State of Conversational AI" />
+        <ThoughtLeadershipSection customer={customer} sectionNumber={sn("thought-leadership")} />
+      </div>
+    ),
+    orchestrator: (
+      <div id="orchestrator" ref={(el) => { sectionRefs.current["orchestrator"] = el; }}>
+        <SectionReportPill sectionId="orchestrator" displayName="Agent Orchestrator" />
+        <OrchestratorSection guide={guide} onRegisterOpenAgent={handleRegisterOpenAgent} sectionNumber={sn("orchestrator")} />
+      </div>
+    ),
+    topics: (
+      <div id="topics" ref={(el) => { sectionRefs.current["topics"] = el; }}>
+        <SectionReportPill sectionId="topics" displayName="Deep Dive" />
+        <TopicHubSection guide={guide} onNavigate={navigateTo} sectionNumber={sn("topics")} />
+      </div>
+    ),
+    "platform-vision": (
+      <div id="platform-vision" ref={(el) => { sectionRefs.current["platform-vision"] = el; }}>
+        <SectionReportPill sectionId="platform-vision" displayName="Platform & Vision" />
+        <PlatformVisionSection guide={guide} sectionNumber={sn("platform-vision")} />
+      </div>
+    ),
+    voice: (
+      <div id="voice" ref={(el) => { sectionRefs.current["voice"] = el; }}>
+        <SectionReportPill sectionId="voice" displayName="Voice" />
+        <VoicePreviewSection guide={guide} customer={customer} sectionNumber={sn("voice")} />
+      </div>
+    ),
+    demo: (
+      <div id="demo" ref={(el) => { sectionRefs.current["demo"] = el; }}>
+        <SectionReportPill sectionId="demo" displayName="Demo Preview" />
+        <DemoPreviewSection guide={guide} customer={customer} sectionNumber={sn("demo")} />
+      </div>
+    ),
+    performance: (
+      <div id="performance" ref={(el) => { sectionRefs.current["performance"] = el; }}>
+        <SectionReportPill sectionId="performance" displayName="Performance Snapshot" />
+        <PerformanceSection customer={customer} sectionNumber={sn("performance")} />
+      </div>
+    ),
+    benchmarking: (
+      <div id="benchmarking" ref={(el) => { sectionRefs.current["benchmarking"] = el; }}>
+        <SectionReportPill sectionId="benchmarking" displayName="Benchmarking" />
+        <BenchmarkingSection customer={customer} sectionNumber={sn("benchmarking")} />
+      </div>
+    ),
+    "agentic-before-after": (
+      <div id="agentic-before-after" ref={(el) => { sectionRefs.current["agentic-before-after"] = el; }}>
+        <SectionReportPill sectionId="agentic-before-after" displayName="Agentic Transformation" />
+        <AgenticBeforeAfterSection customer={customer} sectionNumber={sn("agentic-before-after")} />
+      </div>
+    ),
+    "intent-traffic": (
+      <div id="intent-traffic" ref={(el) => { sectionRefs.current["intent-traffic"] = el; }}>
+        <SectionReportPill sectionId="intent-traffic" displayName="Intent Traffic" />
+        <IntentTrafficSection customer={customer} sectionNumber={sn("intent-traffic")} />
+      </div>
+    ),
+    "detected-issues": (
+      <div id="detected-issues" ref={(el) => { sectionRefs.current["detected-issues"] = el; }}>
+        <SectionReportPill sectionId="detected-issues" displayName="Detected Issues & Next Moves" />
+        <DetectedIssuesSection customer={customer} sectionNumber={sn("detected-issues")} />
+      </div>
+    ),
+    personalisation: (
+      <div id="personalisation" ref={(el) => { sectionRefs.current["personalisation"] = el; }}>
+        <SectionReportPill sectionId="personalisation" displayName="Personalised CX" />
+        <PersonalisationSection customer={customer} sectionNumber={sn("personalisation")} />
+      </div>
+    ),
+    revenue: (
+      <div id="revenue" ref={(el) => { sectionRefs.current["revenue"] = el; }}>
+        <SectionReportPill sectionId="revenue" displayName="Sales & Revenue" />
+        <RevenueSection customer={customer} sectionNumber={sn("revenue")} />
+      </div>
+    ),
+    "agent-swot": (
+      <div id="agent-swot" ref={(el) => { sectionRefs.current["agent-swot"] = el; }}>
+        <SectionReportPill sectionId="agent-swot" displayName="Agent SWOT" />
+        <AgentSwotSection customer={customer} sectionNumber={sn("agent-swot")} />
+      </div>
+    ),
+    "uat-status": (
+      <div id="uat-status" ref={(el) => { sectionRefs.current["uat-status"] = el; }}>
+        <SectionReportPill sectionId="uat-status" displayName="Rollout Status" />
+        <UatStatusSection customer={customer} sectionNumber={sn("uat-status")} />
+      </div>
+    ),
+    impact: (
+      <div id="impact" ref={(el) => { sectionRefs.current["impact"] = el; }}>
+        <SectionReportPill sectionId="impact" displayName="Impact" />
+        <ImpactSection guide={guide} sectionNumber={sn("impact")} />
+      </div>
+    ),
+    "trust-validation": (
+      <div id="trust-validation" ref={(el) => { sectionRefs.current["trust-validation"] = el; }}>
+        <SectionReportPill sectionId="trust-validation" displayName="Trust & Validation" />
+        <TrustValidationSection guide={guide} sectionNumber={sn("trust-validation")} />
+      </div>
+    ),
+    "case-studies": (
+      <div id="case-studies" ref={(el) => { sectionRefs.current["case-studies"] = el; }}>
+        <SectionReportPill sectionId="case-studies" displayName="Case Studies" />
+        <CaseStudiesSection guide={guide} sectionNumber={sn("case-studies")} />
+      </div>
+    ),
+    "success-stories": (
+      <div id="success-stories" ref={(el) => { sectionRefs.current["success-stories"] = el; }}>
+        <SectionReportPill sectionId="success-stories" displayName="Success Stories" />
+        <SuccessStoriesSection customer={customer} sectionNumber={sn("success-stories")} />
+      </div>
+    ),
+    community: (
+      <div id="community" ref={(el) => { sectionRefs.current["community"] = el; }}>
+        <SectionReportPill sectionId="community" displayName="Community" />
+        <CommunitySection sectionNumber={sn("community")} />
+      </div>
+    ),
+    "boost-camp": (
+      <div id="boost-camp" ref={(el) => { sectionRefs.current["boost-camp"] = el; }}>
+        <SectionReportPill sectionId="boost-camp" displayName="Boost Camp" />
+        <BoostCampSection sectionNumber={sn("boost-camp")} />
+      </div>
+    ),
+    resources: (
+      <div id="resources" ref={(el) => { sectionRefs.current["resources"] = el; }}>
+        <SectionReportPill sectionId="resources" displayName="Resources & Trust" />
+        <ResourcesSection />
+      </div>
+    ),
+    "project-framing": (
+      <div id="project-framing" ref={(el) => { sectionRefs.current["project-framing"] = el; }}>
+        <SectionReportPill sectionId="project-framing" displayName="Project Framing" />
+        <ProjectFramingSection customer={customer} sectionNumber={sn("project-framing")} />
+      </div>
+    ),
+    "build-scope": (
+      <div id="build-scope" ref={(el) => { sectionRefs.current["build-scope"] = el; }}>
+        <SectionReportPill sectionId="build-scope" displayName="Build Scope" />
+        <BuildScopeSection customer={customer} sectionNumber={sn("build-scope")} />
+      </div>
+    ),
+    "roles-and-responsibilities": (
+      <div id="roles-and-responsibilities" ref={(el) => { sectionRefs.current["roles-and-responsibilities"] = el; }}>
+        <SectionReportPill sectionId="roles-and-responsibilities" displayName="Roles & Responsibilities" />
+        <RolesAndResponsibilitiesSection customer={customer} sectionNumber={sn("roles-and-responsibilities")} />
+      </div>
+    ),
+    "solution-architecture": (
+      <div id="solution-architecture" ref={(el) => { sectionRefs.current["solution-architecture"] = el; }}>
+        <SectionReportPill sectionId="solution-architecture" displayName="Solution Architecture" />
+        <SolutionArchitectureSection customer={customer} sectionNumber={sn("solution-architecture")} />
+      </div>
+    ),
+    "out-of-scope": (
+      <div id="out-of-scope" ref={(el) => { sectionRefs.current["out-of-scope"] = el; }}>
+        <SectionReportPill sectionId="out-of-scope" displayName="Out of Scope" />
+        <OutOfScopeSection customer={customer} sectionNumber={sn("out-of-scope")} />
+      </div>
+    ),
+    "commercial-offer": (
+      <div id="commercial-offer" ref={(el) => { sectionRefs.current["commercial-offer"] = el; }}>
+        <SectionReportPill sectionId="commercial-offer" displayName="Commercial Offer" />
+        <CommercialOfferSection guide={guide} sectionNumber={sn("commercial-offer")} />
+      </div>
+    ),
+    roi: (
+      <div id="roi" ref={(el) => { sectionRefs.current["roi"] = el; }}>
+        <SectionReportPill sectionId="roi" displayName="ROI" />
+        <ROISection guide={guide} sectionNumber={sn("roi")} />
+      </div>
+    ),
+    "scope-of-work": (
+      <div id="scope-of-work" ref={(el) => { sectionRefs.current["scope-of-work"] = el; }}>
+        <SectionReportPill sectionId="scope-of-work" displayName="Scope of Work" />
+        <ScopeOfWorkSection guide={guide} sectionNumber={sn("scope-of-work")} />
+      </div>
+    ),
+    "success-plan": (
+      <div id="success-plan" ref={(el) => { sectionRefs.current["success-plan"] = el; }}>
+        <SectionReportPill sectionId="success-plan" displayName="Success Plan" />
+        <SuccessPlanSection customer={customer} sectionNumber={sn("success-plan")} />
+      </div>
+    ),
+    "top-recommendations": (
+      <div id="top-recommendations" ref={(el) => { sectionRefs.current["top-recommendations"] = el; }}>
+        <SectionReportPill sectionId="top-recommendations" displayName="Top Recommendations" />
+        <TopRecommendationsSection customer={customer} sectionNumber={sn("top-recommendations")} />
+      </div>
+    ),
+    governance: (
+      <div id="governance" ref={(el) => { sectionRefs.current["governance"] = el; }}>
+        <SectionReportPill sectionId="governance" displayName="Governance" />
+        <GovernanceSection customer={customer} sectionNumber={sn("governance")} />
+      </div>
+    ),
+    "next-steps": (
+      <div id="next-steps" ref={(el) => { sectionRefs.current["next-steps"] = el; }}>
+        <SectionReportPill sectionId="next-steps" displayName="Next Steps" />
+        <NextStepsSection guide={guide} sectionNumber={sn("next-steps")} />
+      </div>
+    ),
+    custom: guide.custom_section?.title ? (
+      <div id="custom" ref={(el) => { sectionRefs.current["custom"] = el; }}>
+        <SectionReportPill sectionId="custom" displayName="Custom Section" />
+        <CustomSection guide={guide} sectionNumber={sn("custom")} />
+      </div>
+    ) : null,
+  };
+
+  /* Topic deep-dive sections (04-07) — dynamic, keyed by sectionId. */
+  topicSections.forEach((topic) => {
+    const SpecializedComponent = TOPIC_COMPONENTS[topic.key];
+    sectionBlocks[topic.sectionId] = (
+      <div id={topic.sectionId} ref={(el) => { sectionRefs.current[topic.sectionId] = el; }}>
+        <SectionReportPill sectionId={topic.sectionId} displayName={topic.name} />
+        {SpecializedComponent ? (
+          <SpecializedComponent
+            guide={guide}
+            sectionNumber={sn(topic.sectionId)}
+            headerBlocks={topic.headerContent}
+            contentBlocks={topic.content}
+          />
+        ) : (
+          <TopicSection topic={topic} sectionNumber={sn(topic.sectionId)} />
+        )}
+      </div>
+    );
+  });
+
   return (
     <div className="min-h-screen bg-boost-bg">
       <a href="#main-content" className="skip-nav">Skip to main content</a>
@@ -251,278 +513,10 @@ export default function GuideClient({
 
       <main id="main-content">
         <div className="max-w-5xl mx-auto px-4 sm:px-8 py-6 space-y-12 sm:space-y-16">
-          {(!activeSectionSet || activeSectionSet.has("hero")) && (
-            <div id="hero" ref={(el) => { sectionRefs.current["hero"] = el; }}>
-              <SectionReportPill sectionId="hero" displayName="Overview" />
-              <HeroSection guide={guide} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("agenda")) && (
-            <div id="agenda" ref={(el) => { sectionRefs.current["agenda"] = el; }}>
-              <SectionReportPill sectionId="agenda" displayName="Agenda" />
-              <AgendaSection
-                customer={customer}
-                sectionNumber={sn("agenda")}
-              />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("thought-leadership")) && (
-            <div id="thought-leadership" ref={(el) => { sectionRefs.current["thought-leadership"] = el; }}>
-              <SectionReportPill sectionId="thought-leadership" displayName="State of Conversational AI" />
-              <ThoughtLeadershipSection customer={customer} sectionNumber={sn("thought-leadership")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("orchestrator")) && (
-            <div id="orchestrator" ref={(el) => { sectionRefs.current["orchestrator"] = el; }}>
-              <SectionReportPill sectionId="orchestrator" displayName="Agent Orchestrator" />
-              <OrchestratorSection
-                guide={guide}
-                onRegisterOpenAgent={handleRegisterOpenAgent}
-                sectionNumber={sn("orchestrator")}
-              />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("topics")) && (
-            <div id="topics" ref={(el) => { sectionRefs.current["topics"] = el; }}>
-              <SectionReportPill sectionId="topics" displayName="Deep Dive" />
-              <TopicHubSection guide={guide} onNavigate={navigateTo} sectionNumber={sn("topics")} />
-            </div>
-          )}
-
-          {/* Topic sections (04-07) — rendered from registry or generic fallback */}
-          {topicSections.map((topic, i) => {
-            if (activeSectionSet && !activeSectionSet.has(topic.sectionId)) return null;
-            const SpecializedComponent = TOPIC_COMPONENTS[topic.key];
-            return (
-              <div
-                key={topic.key}
-                id={topic.sectionId}
-                ref={(el) => { sectionRefs.current[topic.sectionId] = el; }}
-              >
-                <SectionReportPill sectionId={topic.sectionId} displayName={topic.name} />
-                {SpecializedComponent ? (
-                  <SpecializedComponent
-                    guide={guide}
-                    sectionNumber={sn(topic.sectionId)}
-                    headerBlocks={topic.headerContent}
-                    contentBlocks={topic.content}
-                  />
-                ) : (
-                  <TopicSection
-                    topic={topic}
-                    sectionNumber={sn(topic.sectionId)}
-                  />
-                )}
-              </div>
-            );
+          {activeSections.map((s) => {
+            const block = sectionBlocks[s.id];
+            return block ? <Fragment key={s.id}>{block}</Fragment> : null;
           })}
-
-          {(!activeSectionSet || activeSectionSet.has("platform-vision")) && (
-            <div id="platform-vision" ref={(el) => { sectionRefs.current["platform-vision"] = el; }}>
-              <SectionReportPill sectionId="platform-vision" displayName="Platform & Vision" />
-              <PlatformVisionSection guide={guide} sectionNumber={sn("platform-vision")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("voice")) && (
-            <div id="voice" ref={(el) => { sectionRefs.current["voice"] = el; }}>
-              <SectionReportPill sectionId="voice" displayName="Voice" />
-              <VoicePreviewSection guide={guide} customer={customer} sectionNumber={sn("voice")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("demo")) && (
-            <div id="demo" ref={(el) => { sectionRefs.current["demo"] = el; }}>
-              <SectionReportPill sectionId="demo" displayName="Demo Preview" />
-              <DemoPreviewSection guide={guide} customer={customer} sectionNumber={sn("demo")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("performance")) && (
-            <div id="performance" ref={(el) => { sectionRefs.current["performance"] = el; }}>
-              <SectionReportPill sectionId="performance" displayName="Performance Snapshot" />
-              <PerformanceSection customer={customer} sectionNumber={sn("performance")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("benchmarking")) && (
-            <div id="benchmarking" ref={(el) => { sectionRefs.current["benchmarking"] = el; }}>
-              <SectionReportPill sectionId="benchmarking" displayName="Benchmarking" />
-              <BenchmarkingSection customer={customer} sectionNumber={sn("benchmarking")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("agentic-before-after")) && (
-            <div id="agentic-before-after" ref={(el) => { sectionRefs.current["agentic-before-after"] = el; }}>
-              <SectionReportPill sectionId="agentic-before-after" displayName="Agentic Transformation" />
-              <AgenticBeforeAfterSection customer={customer} sectionNumber={sn("agentic-before-after")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("personalisation")) && (
-            <div id="personalisation" ref={(el) => { sectionRefs.current["personalisation"] = el; }}>
-              <SectionReportPill sectionId="personalisation" displayName="Personalised CX" />
-              <PersonalisationSection customer={customer} sectionNumber={sn("personalisation")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("revenue")) && (
-            <div id="revenue" ref={(el) => { sectionRefs.current["revenue"] = el; }}>
-              <SectionReportPill sectionId="revenue" displayName="Sales & Revenue" />
-              <RevenueSection customer={customer} sectionNumber={sn("revenue")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("agent-swot")) && (
-            <div id="agent-swot" ref={(el) => { sectionRefs.current["agent-swot"] = el; }}>
-              <SectionReportPill sectionId="agent-swot" displayName="Agent SWOT" />
-              <AgentSwotSection customer={customer} sectionNumber={sn("agent-swot")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("uat-status")) && (
-            <div id="uat-status" ref={(el) => { sectionRefs.current["uat-status"] = el; }}>
-              <SectionReportPill sectionId="uat-status" displayName="Rollout Status" />
-              <UatStatusSection customer={customer} sectionNumber={sn("uat-status")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("impact")) && (
-            <div id="impact" ref={(el) => { sectionRefs.current["impact"] = el; }}>
-              <SectionReportPill sectionId="impact" displayName="Impact" />
-              <ImpactSection guide={guide} sectionNumber={sn("impact")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("trust-validation")) && (
-            <div id="trust-validation" ref={(el) => { sectionRefs.current["trust-validation"] = el; }}>
-              <SectionReportPill sectionId="trust-validation" displayName="Trust & Validation" />
-              <TrustValidationSection guide={guide} sectionNumber={sn("trust-validation")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("case-studies")) && (
-            <div id="case-studies" ref={(el) => { sectionRefs.current["case-studies"] = el; }}>
-              <SectionReportPill sectionId="case-studies" displayName="Case Studies" />
-              <CaseStudiesSection guide={guide} sectionNumber={sn("case-studies")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("community")) && (
-            <div id="community" ref={(el) => { sectionRefs.current["community"] = el; }}>
-              <SectionReportPill sectionId="community" displayName="Community" />
-              <CommunitySection sectionNumber={sn("community")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("boost-camp")) && (
-            <div id="boost-camp" ref={(el) => { sectionRefs.current["boost-camp"] = el; }}>
-              <SectionReportPill sectionId="boost-camp" displayName="Boost Camp" />
-              <BoostCampSection sectionNumber={sn("boost-camp")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("resources")) && (
-            <div id="resources" ref={(el) => { sectionRefs.current["resources"] = el; }}>
-              <SectionReportPill sectionId="resources" displayName="Resources & Trust" />
-              <ResourcesSection />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("project-framing")) && (
-            <div id="project-framing" ref={(el) => { sectionRefs.current["project-framing"] = el; }}>
-              <SectionReportPill sectionId="project-framing" displayName="Project Framing" />
-              <ProjectFramingSection customer={customer} sectionNumber={sn("project-framing")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("build-scope")) && (
-            <div id="build-scope" ref={(el) => { sectionRefs.current["build-scope"] = el; }}>
-              <SectionReportPill sectionId="build-scope" displayName="Build Scope" />
-              <BuildScopeSection customer={customer} sectionNumber={sn("build-scope")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("roles-and-responsibilities")) && (
-            <div id="roles-and-responsibilities" ref={(el) => { sectionRefs.current["roles-and-responsibilities"] = el; }}>
-              <SectionReportPill sectionId="roles-and-responsibilities" displayName="Roles & Responsibilities" />
-              <RolesAndResponsibilitiesSection customer={customer} sectionNumber={sn("roles-and-responsibilities")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("solution-architecture")) && (
-            <div id="solution-architecture" ref={(el) => { sectionRefs.current["solution-architecture"] = el; }}>
-              <SectionReportPill sectionId="solution-architecture" displayName="Solution Architecture" />
-              <SolutionArchitectureSection customer={customer} sectionNumber={sn("solution-architecture")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("out-of-scope")) && (
-            <div id="out-of-scope" ref={(el) => { sectionRefs.current["out-of-scope"] = el; }}>
-              <SectionReportPill sectionId="out-of-scope" displayName="Out of Scope" />
-              <OutOfScopeSection customer={customer} sectionNumber={sn("out-of-scope")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("commercial-offer")) && (
-            <div id="commercial-offer" ref={(el) => { sectionRefs.current["commercial-offer"] = el; }}>
-              <SectionReportPill sectionId="commercial-offer" displayName="Commercial Offer" />
-              <CommercialOfferSection guide={guide} sectionNumber={sn("commercial-offer")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("roi")) && (
-            <div id="roi" ref={(el) => { sectionRefs.current["roi"] = el; }}>
-              <SectionReportPill sectionId="roi" displayName="ROI" />
-              <ROISection guide={guide} sectionNumber={sn("roi")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("scope-of-work")) && (
-            <div id="scope-of-work" ref={(el) => { sectionRefs.current["scope-of-work"] = el; }}>
-              <SectionReportPill sectionId="scope-of-work" displayName="Scope of Work" />
-              <ScopeOfWorkSection guide={guide} sectionNumber={sn("scope-of-work")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("success-plan")) && (
-            <div id="success-plan" ref={(el) => { sectionRefs.current["success-plan"] = el; }}>
-              <SectionReportPill sectionId="success-plan" displayName="Success Plan" />
-              <SuccessPlanSection customer={customer} sectionNumber={sn("success-plan")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("top-recommendations")) && (
-            <div id="top-recommendations" ref={(el) => { sectionRefs.current["top-recommendations"] = el; }}>
-              <SectionReportPill sectionId="top-recommendations" displayName="Top Recommendations" />
-              <TopRecommendationsSection customer={customer} sectionNumber={sn("top-recommendations")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("governance")) && (
-            <div id="governance" ref={(el) => { sectionRefs.current["governance"] = el; }}>
-              <SectionReportPill sectionId="governance" displayName="Governance" />
-              <GovernanceSection customer={customer} sectionNumber={sn("governance")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("next-steps")) && (
-            <div id="next-steps" ref={(el) => { sectionRefs.current["next-steps"] = el; }}>
-              <SectionReportPill sectionId="next-steps" displayName="Next Steps" />
-              <NextStepsSection guide={guide} sectionNumber={sn("next-steps")} />
-            </div>
-          )}
-
-          {(!activeSectionSet || activeSectionSet.has("custom")) && guide.custom_section?.title && (
-            <div id="custom" ref={(el) => { sectionRefs.current["custom"] = el; }}>
-              <SectionReportPill sectionId="custom" displayName="Custom Section" />
-              <CustomSection guide={guide} sectionNumber={sn("custom")} />
-            </div>
-          )}
 
           <div className="h-8" />
         </div>

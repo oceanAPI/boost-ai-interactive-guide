@@ -132,19 +132,19 @@ export const PS_DEFAULTS: readonly string[] = [
 export const CS_DEFAULTS: readonly string[] = [
   "agenda",
   "thought-leadership",
+  "success-stories",
   "performance",
   "agentic-before-after",
   "benchmarking",
+  "intent-traffic",
+  "detected-issues",
   "personalisation",
   "top-recommendations",
-  "revenue",
   "success-plan",
   "agent-swot",
   "uat-status",
-  "governance",
   "platform-vision",
-  "resources",
-  "next-steps",
+  "boost-camp",
 ];
 
 /** Per-audience default-enabled section IDs. */

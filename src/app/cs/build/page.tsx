@@ -30,6 +30,9 @@ import { GovernanceInputPanel } from "@/components/builder/sections/cs/Governanc
 import { PersonalisationInputPanel } from "@/components/builder/sections/cs/PersonalisationInputPanel";
 import { RevenueInputPanel } from "@/components/builder/sections/cs/RevenueInputPanel";
 import { ThoughtLeadershipInputPanel } from "@/components/builder/sections/cs/ThoughtLeadershipInputPanel";
+import { SuccessStoriesInputPanel } from "@/components/builder/sections/cs/SuccessStoriesInputPanel";
+import { IntentTrafficInputPanel } from "@/components/builder/sections/cs/IntentTrafficInputPanel";
+import { DetectedIssuesInputPanel } from "@/components/builder/sections/cs/DetectedIssuesInputPanel";
 
 import AgendaSection from "@/components/sections/AgendaSection";
 import PerformanceSection from "@/components/sections/PerformanceSection";
@@ -43,6 +46,9 @@ import GovernanceSection from "@/components/sections/GovernanceSection";
 import PersonalisationSection from "@/components/sections/PersonalisationSection";
 import RevenueSection from "@/components/sections/RevenueSection";
 import ThoughtLeadershipSection from "@/components/sections/ThoughtLeadershipSection";
+import SuccessStoriesSection from "@/components/sections/SuccessStoriesSection";
+import IntentTrafficSection from "@/components/sections/IntentTrafficSection";
+import DetectedIssuesSection from "@/components/sections/DetectedIssuesSection";
 
 /* ──────────────────────────────────────────────────────────────
  *  CSM builder — /cs/build
@@ -72,6 +78,9 @@ const PANELS: Record<string, ComponentType<PanelProps>> = {
   personalisation: PersonalisationInputPanel,
   revenue: RevenueInputPanel,
   "thought-leadership": ThoughtLeadershipInputPanel,
+  "success-stories": SuccessStoriesInputPanel,
+  "intent-traffic": IntentTrafficInputPanel,
+  "detected-issues": DetectedIssuesInputPanel,
 };
 
 const PREVIEWS: Record<string, ComponentType<PreviewProps>> = {
@@ -87,6 +96,9 @@ const PREVIEWS: Record<string, ComponentType<PreviewProps>> = {
   personalisation: PersonalisationSection,
   revenue: RevenueSection,
   "thought-leadership": ThoughtLeadershipSection,
+  "success-stories": SuccessStoriesSection,
+  "intent-traffic": IntentTrafficSection,
+  "detected-issues": DetectedIssuesSection,
 };
 
 const CS_SECTIONS = AUDIENCE_DEFAULTS["customer-success"];

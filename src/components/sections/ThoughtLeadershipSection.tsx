@@ -31,8 +31,13 @@ import {
   type ChapterUseCase,
   type UseCaseTranscript,
   type ChapterBenchmark,
+  type BenchmarkInstance,
+  type ChapterImpact,
+  type ImpactRankRow,
   type ChannelProfile,
 } from "@/data/thought-leadership";
+import { getSuccessStory, toCaseStudy } from "@/data/success-stories";
+import { getItem as getRoadmapItem, FOCUS_AREAS, type RoadmapItem } from "@/data/product-roadmap-2026";
 
 interface ThoughtLeadershipSectionProps {
   customer?: Customer;
@@ -78,7 +83,7 @@ function ChallengeGlyph({ icon, className }: { icon: ChapterIcon; className?: st
 }
 
 /* ─── Dynamic customer snapshot ────────────────────────────────── */
-function snapshot(c?: Customer): { eyebrow: string; headline: string; sub?: string } {
+function snapshot(c?: Customer): { eyebrow: string; headline: string; highlight?: string; sub?: string } {
   const name = c?.company_name?.trim() || "Your organisation";
   const auto = c?.performance?.automation_rate;
   const recs = c?.recommendations ?? [];
@@ -96,7 +101,7 @@ function snapshot(c?: Customer): { eyebrow: string; headline: string; sub?: stri
         : inits > 0
           ? `${inits} committed initiative${inits === 1 ? "" : "s"} are set to push that further.`
           : undefined;
-    return { eyebrow: "Where you are today", headline, sub: moves };
+    return { eyebrow: "Where you are today", headline, highlight: `${auto}%`, sub: moves };
   }
 
   return {
@@ -109,22 +114,110 @@ function snapshot(c?: Customer): { eyebrow: string; headline: string; sub?: stri
   };
 }
 
+/* Render a headline, colouring the highlighted token (e.g. "66%") green. */
+function HeadlineWithHighlight({ headline, highlight }: { headline: string; highlight?: string }) {
+  if (!highlight || !headline.includes(highlight)) return <>{headline}</>;
+  const parts = headline.split(highlight);
+  return (
+    <>
+      {parts.map((part, i) => (
+        <span key={i}>
+          {part}
+          {i < parts.length - 1 && <span className="font-bold text-boost-green-light">{highlight}</span>}
+        </span>
+      ))}
+    </>
+  );
+}
+
+/* ─── Hero drill-down tiles ──────────────────────────────────────
+ *  The "where you are today" snapshot, made visual: a glanceable strip
+ *  of the customer's live position read straight off `performance`, with
+ *  trend deltas vs the previous window and mini progress bars where a
+ *  percentage tells a story. Empty when no performance data is set. */
+interface SnapTile {
+  key: string;
+  label: string;
+  value: string;
+  /** 0–100 fill for a mini progress bar (percentage metrics only). */
+  bar?: number;
+  /** Pre-formatted delta vs previous window, e.g. "+6 pp". */
+  delta?: string;
+  /** Whether the delta is a good move (green) or not (gold). */
+  good?: boolean;
+  /** Arrow direction for the delta chip. */
+  up?: boolean;
+}
+
+function fmtCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}k`;
+  return `${n}`;
+}
+
+function snapshotTiles(c?: Customer): SnapTile[] {
+  const p = c?.performance;
+  if (!p) return [];
+  const tiles: SnapTile[] = [];
+  const diff = (cur?: number, prev?: number) =>
+    cur != null && prev != null ? Math.round((cur - prev) * 10) / 10 : undefined;
+  const ppDelta = (d?: number) => (d != null ? `${d > 0 ? "+" : d < 0 ? "−" : ""}${Math.abs(d)} pp` : undefined);
+
+  if (p.automation_rate != null) {
+    const d = diff(p.automation_rate, p.previous_automation_rate);
+    tiles.push({ key: "automation", label: "Automation rate", value: `${p.automation_rate}%`, bar: p.automation_rate, delta: ppDelta(d), good: d == null ? undefined : d >= 0, up: d == null ? undefined : d >= 0 });
+  }
+  if (p.csat_score != null) {
+    const d = diff(p.csat_score, p.previous_csat_score);
+    tiles.push({ key: "csat", label: "CSAT", value: `${p.csat_score}`, delta: d != null ? `${d > 0 ? "+" : d < 0 ? "−" : ""}${Math.abs(d)}` : undefined, good: d == null ? undefined : d >= 0, up: d == null ? undefined : d >= 0 });
+  }
+  if (p.escalation_rate != null) {
+    const d = diff(p.escalation_rate, p.previous_escalation_rate);
+    tiles.push({ key: "escalation", label: "Escalations", value: `${p.escalation_rate}%`, bar: p.escalation_rate, delta: ppDelta(d), good: d == null ? undefined : d <= 0, up: d == null ? undefined : d > 0 });
+  }
+  if (p.monthly_conversations != null) {
+    const d = diff(p.monthly_conversations, p.previous_monthly_conversations);
+    tiles.push({ key: "volume", label: "Conversations / mo", value: fmtCount(p.monthly_conversations), delta: d != null && d !== 0 ? `${d > 0 ? "+" : "−"}${fmtCount(Math.abs(d))}` : undefined, good: d == null ? undefined : d >= 0, up: d == null ? undefined : d >= 0 });
+  }
+  if (p.markets_live != null) {
+    tiles.push({ key: "markets", label: "Markets live", value: `${p.markets_live}` });
+  }
+  if (p.active_agents != null) {
+    tiles.push({ key: "agents", label: "Agents in production", value: `${p.active_agents}` });
+  }
+  return tiles.slice(0, 6);
+}
+
+function DeltaChip({ delta, good, up }: { delta: string; good?: boolean; up?: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold tabular-nums ${good === false ? "text-boost-gold" : "text-boost-green-light"}`}>
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className={up ? "" : "rotate-180"}>
+        <path d="M12 19V5M6 11l6-6 6 6" />
+      </svg>
+      {delta}
+    </span>
+  );
+}
+
 /* ─── Hero ring (deck donut) ───────────────────────────────────── */
-function HeroRing({ stat }: { stat: string }) {
+function HeroRing({ stat, label, size = 116 }: { stat: string; label?: string; size?: number }) {
   const numeric = parseFloat(stat);
   const pct = Number.isFinite(numeric) && stat.includes("%") ? Math.min(100, numeric) : 70;
-  const size = 116, sw = 7, r = (size - sw) / 2, c = 2 * Math.PI * r;
+  const sw = 7, r = (size - sw) / 2, c = 2 * Math.PI * r;
   const { ref, isVisible } = useScrollReveal({ once: true });
   return (
-    <div ref={ref} className="relative flex-shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth={sw} />
-        <circle
-          cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#36b595" strokeWidth={sw} strokeLinecap="round"
-          style={{ strokeDasharray: c, strokeDashoffset: isVisible ? c - (pct / 100) * c : c, transition: "stroke-dashoffset 1.2s ease-out" }}
-        />
-      </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-white tabular-nums">{stat}</span>
+    <div className="flex flex-shrink-0 flex-col items-center gap-1.5">
+      <div ref={ref} className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="-rotate-90">
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth={sw} />
+          <circle
+            cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#36b595" strokeWidth={sw} strokeLinecap="round"
+            style={{ strokeDasharray: c, strokeDashoffset: isVisible ? c - (pct / 100) * c : c, transition: "stroke-dashoffset 1.2s ease-out" }}
+          />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center font-bold text-white tabular-nums" style={{ fontSize: size > 100 ? "1.5rem" : "1.25rem" }}>{stat}</span>
+      </div>
+      {label && <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">{label}</span>}
     </div>
   );
 }
@@ -185,17 +278,14 @@ function UseCaseDemo({ useCase }: { useCase: ChapterUseCase }) {
   );
 }
 
-/* ─── Live benchmark bars (deck slides 12 / 35) ───────────────────
- *  Reuses the BenchmarkingSection visual language — horizontal bars
- *  scaled 0–100%, you (green) vs peers (purple) vs leaders (muted) —
- *  but inline inside a chapter so the comparison lives next to the
- *  story instead of a separate section. The dataset chip is the
- *  placeholder for the future dataset-filter. */
-const TONE_FILL: Record<"you" | "peer" | "industry", string> = {
-  you: "bg-boost-green-light",
-  peer: "bg-boost-purple",
-  industry: "bg-boost-muted/55",
-};
+/* ─── Live benchmark visuals (deck slides 7 / 12 / 35) ────────────
+ *  Three shapes share the "Where you stand" frame:
+ *    • distribution — the slide-7 cohort: every anonymised instance as
+ *      its own full bar, sorted, with the customer highlighted and a
+ *      cohort-average line across.
+ *    • bars — a small set of named full bars (you vs peers vs leaders).
+ *    • channels — per-channel you-vs-peer full bars.
+ *  The dataset chip is the placeholder for the future dataset-filter. */
 
 function FilterChip({ dataset }: { dataset: string }) {
   return (
@@ -206,35 +296,50 @@ function FilterChip({ dataset }: { dataset: string }) {
   );
 }
 
-function SimpleBar({ label, value, tone, unit }: { label: string; value: number; tone: "you" | "peer" | "industry"; unit: string }) {
+/* Slide-7 cohort distribution — every anonymised instance as a full bar,
+ *  sorted high→low, the customer highlighted, a cohort-average line over.
+ *  Instance values are deck-modelled placeholders; they'll be fetched
+ *  live per instance later and stay anonymised. */
+function DistributionChart({
+  distribution, average, unit, youValue, cohortLabel = "Anonymised peer instances",
+}: { distribution: BenchmarkInstance[]; average?: number; unit: string; youValue?: number; cohortLabel?: string }) {
   const { ref, isVisible } = useScrollReveal({ once: true });
-  const pct = Math.max(0, Math.min(100, value));
-  return (
-    <div ref={ref} className="grid grid-cols-[8rem_1fr_2.75rem] items-center gap-3">
-      <span className={`truncate text-xs ${tone === "you" ? "font-semibold text-boost-dark" : "text-boost-muted"}`}>{label}</span>
-      <div className="h-2.5 overflow-hidden rounded-full bg-boost-surface">
-        <div className={`h-full rounded-full ${TONE_FILL[tone]}`} style={{ width: isVisible ? `${pct}%` : 0, transition: "width 1s ease-out" }} />
-      </div>
-      <span className="text-right text-xs font-bold tabular-nums text-boost-dark">{value}{unit}</span>
-    </div>
+  const data = distribution.map((d) =>
+    d.isYou && typeof youValue === "number" ? { ...d, value: youValue } : d,
   );
-}
+  const sorted = [...data].sort((a, b) => b.value - a.value);
+  const max = Math.max(100, ...sorted.map((d) => d.value));
 
-function ChannelGroup({ channel, you, peer, unit }: { channel: string; you: number; peer: number; unit: string }) {
-  const { ref, isVisible } = useScrollReveal({ once: true });
   return (
     <div ref={ref}>
-      <div className="flex items-baseline justify-between">
-        <span className="text-xs font-semibold text-boost-dark">{channel}</span>
-        <span className="text-[11px] tabular-nums text-boost-muted">you {you}{unit} · peers {peer}{unit}</span>
+      <div className="relative h-44 sm:h-52">
+        {/* cohort-average line */}
+        {average != null && (
+          <div className="absolute inset-x-0 z-10 flex items-center" style={{ bottom: `${(average / max) * 100}%` }}>
+            <div className="h-[2px] flex-1 rounded-full bg-boost-green" />
+            <span className="ml-2 whitespace-nowrap rounded-full bg-boost-green px-2 py-0.5 text-[10px] font-bold text-white">Average {average}{unit}</span>
+          </div>
+        )}
+        <div className="flex h-full items-end gap-[3px]">
+          {sorted.map((d, i) => (
+            <div key={d.label} className="group relative flex h-full flex-1 flex-col items-center justify-end" title={`${d.isYou ? "Your instance" : d.label}: ${d.value}${unit}`}>
+              {d.isYou && (
+                <span className="mb-1 whitespace-nowrap text-[10px] font-bold tabular-nums text-boost-green">{d.value}{unit}</span>
+              )}
+              <div
+                className={`w-full rounded-t-sm ${d.isYou ? "bg-boost-green-light" : "bg-boost-purple/25 group-hover:bg-boost-purple/40"} transition-colors`}
+                style={{ height: isVisible ? `${(d.value / max) * 100}%` : 0, transition: `height 0.9s ease-out ${i * 35}ms` }}
+              />
+              {d.isYou && <span className="mt-1 whitespace-nowrap text-[9px] font-bold uppercase tracking-wide text-boost-green">You</span>}
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="mt-1.5 space-y-1">
-        <div className="h-2.5 overflow-hidden rounded-full bg-boost-surface">
-          <div className="h-full rounded-full bg-boost-green-light" style={{ width: isVisible ? `${Math.min(100, you)}%` : 0, transition: "width 1s ease-out" }} />
-        </div>
-        <div className="h-2.5 overflow-hidden rounded-full bg-boost-surface">
-          <div className="h-full rounded-full bg-boost-purple" style={{ width: isVisible ? `${Math.min(100, peer)}%` : 0, transition: "width 1s ease-out 120ms" }} />
-        </div>
+      {/* legend */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-boost-muted">
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-boost-green-light" />Your instance</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-boost-purple/25" />{cohortLabel}</span>
+        {average != null && <span className="inline-flex items-center gap-1.5"><span className="h-[2px] w-4 rounded-full bg-boost-green" />Cohort average</span>}
       </div>
     </div>
   );
@@ -254,40 +359,102 @@ function ChapterBenchmarkViz({ benchmark, customer }: { benchmark: ChapterBenchm
         {benchmark.dataset && <FilterChip dataset={benchmark.dataset} />}
       </div>
 
-      {benchmark.channels ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {benchmark.channels.map((c) => (
-            <ChannelGroup
-              key={c.channel}
-              channel={c.channel}
-              you={c.channel === "Total" && typeof live === "number" ? live : c.you}
-              peer={c.peer}
-              unit={unit}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-2.5">
-          {(benchmark.bars ?? []).map((b) => (
-            <SimpleBar
-              key={b.label}
-              label={b.label}
-              value={b.tone === "you" && typeof live === "number" ? live : b.value}
-              tone={b.tone}
-              unit={unit}
-            />
-          ))}
-        </div>
-      )}
-
-      {benchmark.channels && (
-        <div className="mt-3 flex items-center gap-4 text-[10px] font-semibold uppercase tracking-[0.1em] text-boost-muted">
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-boost-green-light" />You</span>
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-boost-purple" />Peer avg</span>
-        </div>
-      )}
+      <DistributionChart
+        distribution={benchmark.distribution}
+        average={benchmark.average}
+        unit={unit}
+        youValue={typeof live === "number" ? live : undefined}
+        cohortLabel={benchmark.cohortLabel}
+      />
 
       {benchmark.note && <p className="mt-3 text-xs leading-relaxed text-boost-muted">{benchmark.note}</p>}
+    </div>
+  );
+}
+
+/* ─── NLU → LLM impact ("why this matters") ──────────────────────
+ *  Paired before/after bars per metric — the same chart language as
+ *  "Where you stand", showing the uplift from moving NLU-based flows to
+ *  LLM-based agentic answers. */
+/* Slide-15 ranking variant — horizontal bars on a shared scale, the
+ *  best/worst rows tinted to carry the "why this matters" punchline. */
+function ImpactRanking({ impact }: { impact: ChapterImpact }) {
+  const { ref, isVisible } = useScrollReveal({ once: true });
+  const rows = impact.ranking ?? [];
+  const unit = impact.unit ?? "";
+  const max = impact.scaleMax ?? Math.max(...rows.map((r) => r.value), 1);
+  const fill = (tone?: ImpactRankRow["tone"]) =>
+    tone === "best" ? "bg-boost-green-light" : tone === "worst" ? "bg-boost-gold/70" : "bg-boost-purple/30";
+  const text = (tone?: ImpactRankRow["tone"]) =>
+    tone === "best" ? "text-boost-green" : tone === "worst" ? "text-boost-gold" : "text-boost-dark";
+
+  return (
+    <div ref={ref} className="space-y-2.5">
+      {rows.map((r, i) => (
+        <div key={r.label} className="grid grid-cols-[1fr_auto] items-center gap-3">
+          <div>
+            <div className="mb-1 flex items-baseline justify-between gap-2">
+              <span className={`text-xs leading-snug ${r.tone === "best" || r.tone === "worst" ? "font-bold" : "font-medium"} text-boost-dark`}>{r.label}</span>
+            </div>
+            <div className="h-5 overflow-hidden rounded-md bg-boost-surface">
+              <div
+                className={`h-full rounded-md ${fill(r.tone)}`}
+                style={{ width: isVisible ? `${(r.value / max) * 100}%` : 0, transition: `width 0.9s ease-out ${i * 70}ms` }}
+              />
+            </div>
+          </div>
+          <span className={`text-sm font-bold tabular-nums ${text(r.tone)}`}>{r.value}{unit}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ImpactChart({ impact }: { impact: ChapterImpact }) {
+  const { ref, isVisible } = useScrollReveal({ once: true });
+  const unit = impact.unit ?? "%";
+  const metrics = impact.metrics ?? [];
+  const isRanking = !!impact.ranking?.length;
+  const max = metrics.length ? Math.max(100, ...metrics.flatMap((m) => [m.nlu, m.llm])) : 100;
+
+  return (
+    <div className="rounded-2xl border border-boost-purple/15 bg-boost-purple/5 p-4 sm:p-5">
+      <div className="mb-3">
+        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-boost-muted">Why this matters</p>
+        <p className="text-sm font-semibold text-boost-dark mt-0.5">{impact.title}</p>
+      </div>
+
+      {isRanking ? (
+        <ImpactRanking impact={impact} />
+      ) : (
+        <>
+          <div ref={ref} className="flex items-stretch justify-around gap-2 sm:gap-4">
+            {metrics.map((m, gi) => (
+              <div key={m.metric} className="flex flex-1 flex-col items-center">
+                <div className="flex h-40 w-full items-end justify-center gap-1.5 sm:h-48">
+                  <div className="flex h-full w-7 flex-col items-center justify-end">
+                    <span className="mb-1 text-[10px] font-semibold tabular-nums text-boost-muted">{m.nlu}{unit}</span>
+                    <div className="w-full rounded-t-sm bg-boost-purple/25" style={{ height: isVisible ? `${(m.nlu / max) * 100}%` : 0, transition: `height 0.9s ease-out ${gi * 60}ms` }} />
+                  </div>
+                  <div className="flex h-full w-7 flex-col items-center justify-end">
+                    <span className="mb-1 text-[10px] font-bold tabular-nums text-boost-green">{m.llm}{unit}</span>
+                    <div className="w-full rounded-t-sm bg-boost-green-light" style={{ height: isVisible ? `${(m.llm / max) * 100}%` : 0, transition: `height 0.9s ease-out ${gi * 60 + 120}ms` }} />
+                  </div>
+                </div>
+                <span className="mt-2 text-center text-[11px] font-medium leading-snug text-boost-dark">{m.metric}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-boost-muted">
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-boost-purple/25" />NLU-based (before)</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-boost-green-light" />LLM-based (now)</span>
+          </div>
+        </>
+      )}
+
+      {impact.note && <p className="mt-3 text-xs leading-relaxed text-boost-muted">{impact.note}</p>}
+      {impact.source && <p className="mt-2 text-[11px] italic text-boost-muted">{impact.source}</p>}
     </div>
   );
 }
@@ -377,6 +544,176 @@ function ChannelProfileViz({ profile, customer }: { profile: ChannelProfile; cus
   );
 }
 
+/* ─── Proof point card ─────────────────────────────────────────────
+ *  A single headline metric, animated in with a count-up feel via a
+ *  growing accent rule, card-lift on hover, staggered reveal. The big
+ *  number leads; the accent bar gives each card a living edge. */
+/* Three rotating accent palettes — each proof card in a row gets its own
+ *  colour so the row reads as three distinct mini-stories. */
+const PROOF_ACCENTS = [
+  { bar: "bg-boost-green-light", text: "text-boost-green", soft: "bg-boost-green-light/12", ring: "border-boost-green-light/30" },
+  { bar: "bg-boost-purple", text: "text-boost-purple", soft: "bg-boost-purple/10", ring: "border-boost-purple/25" },
+  { bar: "bg-boost-gold", text: "text-boost-gold", soft: "bg-boost-gold/15", ring: "border-boost-gold/30" },
+];
+
+function ProofCard({
+  point, index,
+}: { point: import("@/data/thought-leadership").ChapterProofPoint; index: number }) {
+  const { ref, isVisible } = useScrollReveal({ once: true });
+  const a = PROOF_ACCENTS[index % PROOF_ACCENTS.length];
+  const hasGraph = point.from != null && point.to != null;
+  const max = hasGraph ? Math.max(point.from!, point.to!, 1) : 1;
+  const fromH = hasGraph ? Math.max(10, (point.from! / max) * 100) : 0;
+  const toH = hasGraph ? Math.max(10, (point.to! / max) * 100) : 0;
+  const rising = hasGraph ? point.to! >= point.from! : true;
+
+  return (
+    <div
+      ref={ref}
+      className={`relative overflow-hidden rounded-2xl border ${a.ring} bg-boost-card p-4 card-lift transition-all duration-500 ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+      }`}
+      style={{ transitionDelay: `${index * 90}ms` }}
+    >
+      {/* title above */}
+      <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-boost-muted leading-snug">{point.label}</p>
+
+      {/* mini improvement graph + number beside */}
+      <div className="mt-3 flex items-end justify-between gap-3">
+        {hasGraph ? (
+          <div className="flex h-14 items-end gap-1.5" aria-hidden>
+            <div className="flex h-full w-3.5 flex-col justify-end">
+              <span className="mb-1 text-center text-[9px] font-semibold tabular-nums text-boost-muted/70">{point.from}</span>
+              <div className="w-full rounded-sm bg-boost-surface" style={{ height: isVisible ? `${fromH}%` : 0, transition: `height 0.8s ease-out ${index * 90}ms` }} />
+            </div>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={`mb-1 self-center ${a.text} ${rising ? "" : "rotate-90"}`}>
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+            <div className="flex h-full w-3.5 flex-col justify-end">
+              <span className={`mb-1 text-center text-[9px] font-bold tabular-nums ${a.text}`}>{point.to}</span>
+              <div className={`w-full rounded-sm ${a.bar}`} style={{ height: isVisible ? `${toH}%` : 0, transition: `height 0.8s ease-out ${index * 90 + 160}ms` }} />
+            </div>
+          </div>
+        ) : (
+          <div className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl ${a.soft}`} aria-hidden>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={a.text}>
+              <path d="M4 18V14M9 18V11M14 18V8M4 11l5-5 4 3 6-6M16 3h4v4" />
+            </svg>
+          </div>
+        )}
+        <span className={`text-2xl sm:text-3xl font-bold tabular-nums leading-none ${a.text}`}>{point.value}</span>
+      </div>
+
+      {point.sublabel && <p className="mt-2.5 text-[11px] leading-snug text-boost-muted">{point.sublabel}</p>}
+    </div>
+  );
+}
+
+/* ─── Today → going forward journey ────────────────────────────────
+ *  The before/after as a single connected path rather than two static
+ *  cards: a muted "today" state, an animated arrow connector, and the
+ *  brand-accented "going forward" destination that lights up on reveal. */
+function TransitionJourney({ transition }: { transition: { today: string; future: string } }) {
+  const { ref, isVisible } = useScrollReveal({ once: true });
+  return (
+    <div ref={ref}>
+      <Eyebrow>Today → going forward</Eyebrow>
+      <div className="relative grid items-stretch gap-3 sm:grid-cols-[1fr_auto_1fr]">
+        {/* Today */}
+        <div
+          className={`rounded-2xl border border-boost-border bg-boost-surface p-4 transition-all duration-500 ${
+            isVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-3"
+          }`}
+        >
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-boost-muted">Today</p>
+          <p className="text-sm text-boost-text-secondary mt-1.5 leading-relaxed">{transition.today}</p>
+        </div>
+
+        {/* Connector */}
+        <div className="flex items-center justify-center sm:flex-col">
+          <span
+            className={`flex h-9 w-9 items-center justify-center rounded-full bg-boost-green text-white shadow-sm transition-all duration-500 ${
+              isVisible ? "opacity-100 scale-100" : "opacity-0 scale-75"
+            }`}
+            style={{ transitionDelay: "250ms" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="rotate-90 sm:rotate-0"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          </span>
+        </div>
+
+        {/* Going forward */}
+        <div
+          className={`relative overflow-hidden rounded-2xl border border-boost-green/30 bg-boost-green/5 p-4 transition-all duration-500 ${
+            isVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-3"
+          }`}
+          style={{ transitionDelay: "400ms" }}
+        >
+          <span aria-hidden className="absolute inset-0" style={{ background: "radial-gradient(ellipse 60% 80% at 100% 100%, rgba(54,181,149,0.14) 0%, transparent 60%)" }} />
+          <div className="relative">
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-boost-green">Going forward</p>
+            <p className="text-sm text-boost-dark mt-1.5 leading-relaxed">{transition.future}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Roadmap item detail popup ──────────────────────────────────
+ *  Opens from a chapter roadmap card, pulling the full entry from
+ *  `product-roadmap-2026` (description + what it unlocks). */
+function RoadmapDetailModal({ item, onClose }: { item: RoadmapItem; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-boost-dark/50 backdrop-blur-sm p-0 sm:p-6"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={item.title}
+    >
+      <div
+        className="relative w-full sm:max-w-lg max-h-[88vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-boost-card shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header band */}
+        <div
+          className="relative p-6 text-white"
+          style={{ background: "linear-gradient(135deg, rgba(75,30,82,1) 0%, rgba(40,18,46,1) 55%, rgba(20,60,52,1) 100%)" }}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-boost-green-light/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-boost-green-light">{item.quarter}</span>
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70">{FOCUS_AREAS[item.focus].shortLabel}</span>
+          </div>
+          <h3 className="mt-3 text-xl font-bold tracking-tight">{item.title}</h3>
+          <p className="mt-1.5 text-[13px] text-white/80 leading-relaxed">{item.summary}</p>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 space-y-5">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-boost-muted mb-2">What it is</p>
+            {item.description.split("\n\n").map((para, i) => (
+              <p key={i} className="text-sm leading-relaxed text-boost-text-secondary mt-2 first:mt-0">{para}</p>
+            ))}
+          </div>
+          <div className="rounded-2xl border border-boost-green-light/25 bg-boost-green-light/8 p-4">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-boost-green mb-2">What this unlocks for you</p>
+            <p className="text-sm leading-relaxed text-boost-dark">{item.unlocks}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── One chapter block ────────────────────────────────────────── */
 function ChapterBlock({
   chapter, hero, index, customer,
@@ -384,6 +721,13 @@ function ChapterBlock({
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [showDetail, setShowDetail] = useState(false);
   const [showDemo, setShowDemo] = useState(false);
+  const [activeRoadmap, setActiveRoadmap] = useState<RoadmapItem | null>(null);
+
+  // CSM-picked stories override the chapter defaults when a selection exists.
+  const picked = customer?.story_selections?.[chapter.id];
+  const caseStudies = picked?.length
+    ? picked.map((id) => getSuccessStory(id)).filter(Boolean).map((s) => toCaseStudy(s!))
+    : chapter.caseStudies;
 
   return (
     <div
@@ -414,7 +758,14 @@ function ChapterBlock({
             <h3 className="text-2xl sm:text-3xl font-bold tracking-tight">{hero.headline}</h3>
             <p className="text-[13px] sm:text-sm text-white/80 mt-2 leading-relaxed max-w-2xl">{hero.narrative}</p>
           </div>
-          <HeroRing stat={hero.stat} />
+          {chapter.secondaryStat ? (
+            <div className="flex items-start gap-5">
+              <HeroRing stat={hero.stat} label={chapter.statLabel} size={96} />
+              <HeroRing stat={chapter.secondaryStat} label={chapter.secondaryStatLabel} size={96} />
+            </div>
+          ) : (
+            <HeroRing stat={hero.stat} label={chapter.statLabel} />
+          )}
         </div>
       </div>
 
@@ -426,26 +777,34 @@ function ChapterBlock({
             <Eyebrow>The proof</Eyebrow>
             <div className={`grid gap-3 ${chapter.proofPoints.length >= 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
               {chapter.proofPoints.map((p, i) => (
-                <div key={i} className="rounded-2xl border border-boost-border bg-boost-surface p-4">
-                  <p className="text-xl sm:text-2xl font-bold text-boost-dark tabular-nums leading-none">{p.value}</p>
-                  <p className="text-[13px] font-semibold text-boost-dark mt-2">{p.label}</p>
-                  {p.sublabel && <p className="text-xs text-boost-muted mt-0.5">{p.sublabel}</p>}
-                </div>
+                <ProofCard key={i} point={p} index={i} />
               ))}
             </div>
           </div>
         )}
 
         {/* 2. Success stories */}
-        {chapter.caseStudies && chapter.caseStudies.length > 0 && (
+        {caseStudies && caseStudies.length > 0 && (
           <div>
             <Eyebrow>Success stories</Eyebrow>
-            <div className={`grid gap-3 ${chapter.caseStudies.length > 1 ? "sm:grid-cols-2" : ""}`}>
-              {chapter.caseStudies.map((cs, i) => (
+            <div className={`grid gap-3 ${caseStudies.length > 1 ? "sm:grid-cols-2" : ""}`}>
+              {caseStudies.map((cs, i) => (
                 <div key={i} className="rounded-2xl border border-boost-border p-4">
                   <p className="font-bold text-boost-dark">{cs.name}</p>
                   {cs.subtitle && <p className="text-xs text-boost-muted mt-0.5">{cs.subtitle}</p>}
-                  <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5">
+                  {cs.before && cs.after && (
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-start gap-2">
+                        <span className="mt-0.5 flex-shrink-0 rounded-full bg-boost-muted/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-boost-muted">Was</span>
+                        <p className="text-[12.5px] leading-snug text-boost-text-secondary">{cs.before}</p>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="mt-0.5 flex-shrink-0 rounded-full bg-boost-green/12 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-boost-green">Now</span>
+                        <p className="text-[12.5px] font-medium leading-snug text-boost-dark">{cs.after}</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className={`mt-3 grid gap-x-4 gap-y-2.5 ${caseStudies!.length > 1 ? "grid-cols-2" : "grid-cols-3"}`}>
                     {cs.metrics.map((m, j) => (
                       <div key={j}>
                         <p className="text-lg font-bold text-boost-green tabular-nums leading-none">{m.value}</p>
@@ -474,22 +833,44 @@ function ChapterBlock({
               data-testid={`chapter-${chapter.id}-roadmap-toggle`}
               className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-boost-green hover:text-boost-green-light transition-colors"
             >
-              <span>{showDetail ? "Hide" : "Show"} what's coming next</span>
+              <span>{chapter.roadmapLabel ?? "What's coming next"}</span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={`transition-transform ${showDetail ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
             </button>
             {showDetail && (
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                {chapter.roadmap.map((r, i) => (
-                  <div key={i} className="rounded-2xl border border-boost-border p-4">
-                    <span className="inline-block rounded-full bg-boost-green/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-boost-green">{r.tag}</span>
-                    <p className="font-semibold text-boost-dark text-sm mt-2">{r.title}</p>
-                    <p className="text-xs text-boost-muted mt-1 leading-relaxed">{r.body}</p>
-                  </div>
-                ))}
+                {chapter.roadmap.map((r, i) => {
+                  const full = r.roadmapItemId ? getRoadmapItem(r.roadmapItemId) : undefined;
+                  const Tag = full ? "button" : "div";
+                  return (
+                    <Tag
+                      key={i}
+                      {...(full
+                        ? {
+                            type: "button" as const,
+                            onClick: () => setActiveRoadmap(full),
+                            "data-testid": `chapter-${chapter.id}-roadmap-${r.roadmapItemId}`,
+                          }
+                        : {})}
+                      className={`block w-full rounded-2xl border border-boost-border p-4 text-left ${full ? "card-lift cursor-pointer hover:border-boost-green-light/50" : ""}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-block rounded-full bg-boost-green/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-boost-green">{r.tag}</span>
+                        {full && (
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-boost-muted/50"><path d="M9 18l6-6-6-6" /></svg>
+                        )}
+                      </div>
+                      <p className="font-semibold text-boost-dark text-sm mt-2">{r.title}</p>
+                      <p className="text-xs text-boost-muted mt-1 leading-relaxed">{r.body}</p>
+                      {full && <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-boost-green">Read more</p>}
+                    </Tag>
+                  );
+                })}
               </div>
             )}
           </div>
         )}
+
+        {activeRoadmap && <RoadmapDetailModal item={activeRoadmap} onClose={() => setActiveRoadmap(null)} />}
 
         {/* See it in action — opt-in real-example chat mockup */}
         {chapter.useCase && (
@@ -512,21 +893,10 @@ function ChapterBlock({
         )}
 
         {/* 4. The transition — today vs future */}
-        {chapter.transition && (
-          <div>
-            <Eyebrow>Today → going forward</Eyebrow>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-boost-border bg-boost-surface p-4">
-                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-boost-muted">Today</p>
-                <p className="text-sm text-boost-text-secondary mt-1.5 leading-relaxed">{chapter.transition.today}</p>
-              </div>
-              <div className="relative rounded-2xl border border-boost-green/30 bg-boost-green/5 p-4">
-                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-boost-green">Going forward</p>
-                <p className="text-sm text-boost-dark mt-1.5 leading-relaxed">{chapter.transition.future}</p>
-              </div>
-            </div>
-          </div>
-        )}
+        {chapter.transition && <TransitionJourney transition={chapter.transition} />}
+
+        {/* 5. Why this matters — NLU→LLM impact chart */}
+        {chapter.impact && <ImpactChart impact={chapter.impact} />}
 
         {/* Go deeper */}
         {chapter.linkSection && (
@@ -551,6 +921,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 export default function ThoughtLeadershipSection({ customer, sectionNumber }: ThoughtLeadershipSectionProps) {
   const overrides = customer?.thought_leadership ?? [];
   const snap = snapshot(customer);
+  const tiles = snapshotTiles(customer);
   const { ref: headRef, isVisible: headVisible } = useScrollReveal({ once: true });
 
   return (
@@ -566,9 +937,31 @@ export default function ThoughtLeadershipSection({ customer, sectionNumber }: Th
         <div aria-hidden className="absolute inset-0" style={{ background: "radial-gradient(ellipse 50% 70% at 100% 0%, rgba(54,181,149,0.25) 0%, transparent 60%)" }} />
         <div className="relative">
           {sectionNumber && <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-boost-green-light">SECTION {sectionNumber}</span>}
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60 mt-1">{snap.eyebrow}</p>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mt-2 max-w-3xl leading-[1.15]">{snap.headline}</h2>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white mt-1">{snap.eyebrow}</p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-normal tracking-tight mt-2 max-w-3xl leading-[1.15]">
+            <HeadlineWithHighlight headline={snap.headline} highlight={snap.highlight} />
+          </h2>
           {snap.sub && <p className="text-sm sm:text-base text-white/80 mt-3 max-w-2xl leading-relaxed">{snap.sub}</p>}
+
+          {/* Visual drill-down — live position read off `performance` */}
+          {tiles.length > 0 && (
+            <div className={`mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 ${tiles.length >= 5 ? "lg:grid-cols-6" : tiles.length === 4 ? "lg:grid-cols-4" : ""}`}>
+              {tiles.map((t) => (
+                <div key={t.key} className="rounded-2xl border border-white/10 bg-white/[0.06] p-3.5 backdrop-blur-sm">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/55">{t.label}</p>
+                  <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                    <span className="text-2xl font-bold tabular-nums text-white leading-none">{t.value}</span>
+                    {t.delta && <DeltaChip delta={t.delta} good={t.good} up={t.up} />}
+                  </div>
+                  {t.bar != null && (
+                    <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                      <div className="h-full rounded-full bg-boost-green-light" style={{ width: `${Math.min(100, t.bar)}%` }} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -576,20 +969,25 @@ export default function ThoughtLeadershipSection({ customer, sectionNumber }: Th
       <div>
         <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-boost-dark">The state of conversational AI</h2>
         <p className="text-sm sm:text-base text-boost-muted mt-2 max-w-2xl leading-relaxed">
-          Four core challenges we help our customers navigate — each a chapter in the story below.
+          Four core challenges we help our customers navigate — tap any one to jump straight to its chapter.
         </p>
         <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {STORY_CHAPTERS.map((ch) => (
+          {STORY_CHAPTERS.map((ch, i) => (
             <a
               key={ch.id}
               href={`#chapter-${ch.id}`}
               data-testid={`challenge-${ch.id}`}
-              className="group flex flex-col items-center gap-2.5 rounded-2xl border border-boost-border bg-boost-card p-4 text-center hover:border-boost-green-light/50 card-lift transition-all"
+              className="group relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-boost-border bg-boost-card p-4 hover:border-boost-green-light/60 card-lift transition-all"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-boost-purple/8 text-boost-purple group-hover:bg-boost-green/10 group-hover:text-boost-green transition-colors">
+              <span className="absolute right-3 top-3 text-[11px] font-bold tabular-nums text-boost-muted/50">0{i + 1}</span>
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-boost-purple/8 text-boost-purple group-hover:bg-boost-green/10 group-hover:text-boost-green transition-colors">
                 <ChallengeGlyph icon={ch.icon} className="h-6 w-6" />
               </span>
               <span className="text-sm font-semibold text-boost-dark">{ch.challenge}</span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-[0.1em] text-boost-green opacity-80 group-hover:opacity-100 transition-opacity">
+                Open chapter
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="transition-transform group-hover:translate-x-0.5"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+              </span>
             </a>
           ))}
         </div>

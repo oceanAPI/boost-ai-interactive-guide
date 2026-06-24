@@ -97,17 +97,20 @@ export const CS_WORKSPACE: WorkspaceConfig<Customer> = {
   initialSection: "company",
   sectionOrder: [
     "company",
+    // Data first: upload the intent-traffic export early so the decision
+    // engine + every downstream metric-driven section is informed by it.
+    "intent-traffic",
+    "detected-issues",
     "thought-leadership",
+    "success-stories",
     "performance",
     "agentic-before-after",
     "benchmarking",
     "personalisation",
     "top-recommendations",
-    "revenue",
     "success-plan",
     "agent-swot",
     "uat-status",
-    "governance",
     "agenda",
   ],
   sections: [
@@ -128,6 +131,19 @@ export const CS_WORKSPACE: WorkspaceConfig<Customer> = {
       },
       // Always "has content" — falls back to the boost.ai default story,
       // so the narrative opener is never empty.
+      hasContent: () => true,
+    },
+    {
+      id: "success-stories",
+      number: 8,
+      title: "Success Stories",
+      preview: (f) => {
+        const n = f.featured_story_ids?.length ?? 0;
+        return n
+          ? `${n} featured${f.success_stories_anon ? " · anon" : ""}`
+          : "Whole library (pick to curate)";
+      },
+      // Always renders — empty picks fall back to the whole library.
       hasContent: () => true,
     },
     {
@@ -165,6 +181,33 @@ export const CS_WORKSPACE: WorkspaceConfig<Customer> = {
       hasContent: (f) => Object.keys(f.benchmarks ?? {}).length > 0,
     },
     {
+      id: "intent-traffic",
+      number: 13,
+      title: "Intent Traffic",
+      preview: (f) => {
+        const it = f.intent_traffic;
+        if (!it) return "Upload conversation analytics CSV";
+        return `${it.totals.traffic.toLocaleString("en-US")} conversations · ${it.roots.length} categories`;
+      },
+      hasContent: (f) => !!f.intent_traffic && f.intent_traffic.roots.length > 0,
+    },
+    {
+      id: "detected-issues",
+      number: 14,
+      title: "Detected Issues & Next Moves",
+      preview: (f) => {
+        const hasData =
+          (!!f.performance && Object.values(f.performance).some((v) => v != null)) ||
+          (!!f.intent_traffic && f.intent_traffic.roots.length > 0);
+        return hasData ? "Decision engine — live" : "Auto-runs once metrics exist";
+      },
+      // Derived from performance + intent_traffic; "has content" when either
+      // source is present so the engine has something to read.
+      hasContent: (f) =>
+        (!!f.performance && Object.values(f.performance).some((v) => v != null)) ||
+        (!!f.intent_traffic && f.intent_traffic.roots.length > 0),
+    },
+    {
       id: "personalisation",
       number: 6,
       title: "Personalised CX",
@@ -183,20 +226,6 @@ export const CS_WORKSPACE: WorkspaceConfig<Customer> = {
         return n ? `${n} recommendation${n === 1 ? "" : "s"}` : "Ranked next moves";
       },
       hasContent: (f) => (f.recommendations?.length ?? 0) > 0,
-    },
-    {
-      id: "revenue",
-      number: 8,
-      title: "Sales & Revenue",
-      preview: (f) => {
-        const m = f.revenue_story?.lead_metrics?.length ?? 0;
-        const j = f.revenue_story?.sell_journeys?.length ?? 0;
-        return m || j ? `${m} metric${m === 1 ? "" : "s"} · ${j} journey${j === 1 ? "" : "s"}` : "Lead-gen + sell journeys";
-      },
-      hasContent: (f) =>
-        (f.revenue_story?.lead_metrics?.length ?? 0) > 0 ||
-        (f.revenue_story?.sell_journeys?.length ?? 0) > 0 ||
-        !!f.revenue_story?.proactivity_note,
     },
     {
       id: "success-plan",
