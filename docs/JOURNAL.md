@@ -2593,3 +2593,28 @@ Planhat/AWS field-mapping surface. Awaiting go-ahead.
 ?? src/components/sections/IntentTrafficSection.tsx
 1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
 ```
+
+---
+
+## 2026-06-24 — Deploy CS data-driven work + integration-page shell + Supabase triage
+
+**What.** (1) Committed the whole CS data-driven body (intent traffic, cs-engine
+detected-issues, success stories, real Haugaland customer, round-2 spine, the
+SECTIONS nav-array fix) as `fc9e8af` + docs `dce3c7e`, and PUSHED to `main`.
+Discovered the GitHub Pages workflow is DISABLED — deploy now runs via Vercel on
+push, so the push IS the deploy. (2) Built the email-gated integration admin at
+`/admin/integrations` (UI shell: Planhat/AWS connections + field-mapping table,
+no persistence yet — blocked on Supabase). (3) Triaged Supabase: project ref is
+DELETED (NXDOMAIN), documented the recreate steps.
+
+**Why.** User asked to deploy + plan next steps, then to build next + explain how
+to restore Supabase.
+
+**Verified.** `npx tsc --noEmit` + `npm run build` clean (13 routes incl.
+`/admin/integrations`). Live: page renders for dev@boost.ai (not Restricted),
+switching connection swaps source-field options + field-map heading.
+
+**Next.** Wire the integration shell to Supabase once the new project exists
+(server actions + server-side allow-list enforcement); run the 2 migrations;
+verify save→reopen. Then CS-engine round-2 (one-by-one missing-data prompts) and
+GuideClient honoring `?sections=` order.

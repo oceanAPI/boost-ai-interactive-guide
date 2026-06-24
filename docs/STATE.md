@@ -6,19 +6,45 @@
 
 ## Branch & last-green
 
-`main`. Round-2 CS story-spine work done IN THE WORKING TREE, **uncommitted**
-(plus the earlier uncommitted entry-restructure + the throwaway
-`scratch_match.mjs`). Nothing committed this session — awaiting explicit push.
+`main`. CS data-driven work **committed + pushed** (`dce3c7e`) and deploying via
+**Vercel** (the GitHub Pages workflow is DISABLED — deploy now auto-runs on push
+to `main` through Vercel, not Actions). Integration-page UI shell added AFTER the
+push — **uncommitted** in the working tree. Only `scratch_match.mjs` remains as
+the throwaway (untracked, do not commit).
 
 Last commits (newest first):
 ```
-93bdad5 chore(admin-x): track experimental admin route
-5b4cb06 feat(cs): story-spine builder — Planhat-style entry, guided journey, deck-modeled sections
-e86d287 feat(extensions): telco + airline agent rosters + extension-pointer comments
-0994966 feat(cs): Customer Success Manager workspace at /cs
+dce3c7e docs: handover for CS data-driven sections + Haugaland real-data customer
+fc9e8af feat(cs): data-driven sections — intent traffic, decision engine, success stories, real Haugaland customer
+1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
 ```
 `npm run build` + `npx tsc --noEmit` both clean as of this handover.
-Nothing pushed — the user pushes manually. Do NOT `git push`.
+The user pushes manually. Do NOT `git push` without an explicit ask.
+
+### Integration-page UI shell (this session, uncommitted)
+
+New email-gated admin at **`/admin/integrations`** (under the existing `/admin*`
+proxy gate; narrowed client-side to `ALLOWED_INTEGRATION_EMAILS` =
+dev@/mikal@/jakob@boost.ai). Single file:
+`src/app/admin/integrations/page.tsx`. UI SHELL only — local `useState`, no
+persistence (blocked on Supabase). Two sections: (1) **Connections** — sample
+Planhat + AWS cards + add-connection form (name / provider chips / endpoint /
+**env-key-name only, never secrets**); (2) **Field map** — per-connection rows
+mapping a provider source field → a `Customer` tool field + transform note,
+add/remove rows; Save button disabled until backend is back. Provider source
+catalogs (`SOURCE_FIELDS`) + tool targets (`TARGET_FIELDS`) are placeholder
+constants in the page. Live-verified: renders for dev@boost.ai (not Restricted),
+switching connection swaps source options + heading. NOTE: the client-side
+allow-list is cosmetic — when Supabase returns, enforce it server-side too.
+
+### Supabase status (answered this session)
+
+Old project `woefktcoizqotflzvsvg` is **DELETED** (NXDOMAIN, not paused). To
+restore: create a NEW Supabase project → put new `NEXT_PUBLIC_SUPABASE_URL` +
+`SUPABASE_SERVICE_ROLE_KEY` into `.env.local` (gitignored) AND Vercel env →
+run `supabase/migrations/0001_engagements.sql` + `0002_access_requests.sql` in
+the SQL editor → restart dev + verify save→reopen. No CLI installed/linked.
+The dead service-role key in `.env.local` should be discarded, not reused.
 
 ### Round-2 CS spine iteration (this session, uncommitted)
 
@@ -222,30 +248,14 @@ Last commit: 93bdad5
 
 <!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
 ## Auto-snapshot
-Last updated: 2026-06-24T10:58:05+02:00
+Last updated: 2026-06-24T12:44:19+02:00
 Branch: main
-Last commit: 1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
+Last commit: dce3c7e docs: handover for CS data-driven sections + Haugaland real-data customer
 Working tree:
 ```
  M docs/JOURNAL.md
  M docs/STATE.md
- M src/app/cs/build/page.tsx
- M src/app/guide/GuideClient.tsx
- M src/components/builder/sections/cs/RecommendationsInputPanel.tsx
- M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
- M src/components/builder/workspace-config.ts
- M src/components/sections/ThoughtLeadershipSection.tsx
- M src/components/sections/TopRecommendationsSection.tsx
- M src/data/audience-sections.ts
- M src/data/cs-placeholder-customers.ts
- M src/data/thought-leadership.ts
- M src/lib/slide-sections.ts
- M src/lib/types.ts
 ?? scratch_match.mjs
-?? src/components/builder/sections/cs/DetectedIssuesInputPanel.tsx
-?? src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
-?? src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
-?? src/components/sections/DetectedIssuesSection.tsx
-?? src/components/sections/IntentTrafficSection.tsx
+?? src/app/admin/integrations/
 ```
 <!-- AUTO-HOOK-END -->
