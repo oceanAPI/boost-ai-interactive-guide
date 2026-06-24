@@ -6,45 +6,52 @@
 
 ## Branch & last-green
 
-`main`. CS data-driven work **committed + pushed** (`dce3c7e`) and deploying via
-**Vercel** (the GitHub Pages workflow is DISABLED — deploy now auto-runs on push
-to `main` through Vercel, not Actions). Integration-page UI shell added AFTER the
-push — **uncommitted** in the working tree. Only `scratch_match.mjs` remains as
-the throwaway (untracked, do not commit).
-
-Last commits (newest first):
-```
-dce3c7e docs: handover for CS data-driven sections + Haugaland real-data customer
-fc9e8af feat(cs): data-driven sections — intent traffic, decision engine, success stories, real Haugaland customer
-1da6c20 docs: round-2 CS spine handover (channel profile, value/effort matrix)
-```
-`npm run build` + `npx tsc --noEmit` both clean as of this handover.
+`main`. Integrations persistence + live-Planhat-fetch **committed + pushed**
+this session, deploying via **Vercel** (the GitHub Pages workflow is DISABLED —
+deploy auto-runs on push to `main` through Vercel, not Actions). Only
+`scratch_match.mjs` remains untracked (throwaway, do not commit).
+`npm run build` (14 routes) + `npx tsc --noEmit` both clean.
 The user pushes manually. Do NOT `git push` without an explicit ask.
 
-### Integration-page UI shell (this session, uncommitted)
+### Integration page — NOW FUNCTIONAL (persistence + live Planhat)
 
-New email-gated admin at **`/admin/integrations`** (under the existing `/admin*`
-proxy gate; narrowed client-side to `ALLOWED_INTEGRATION_EMAILS` =
-dev@/mikal@/jakob@boost.ai). Single file:
-`src/app/admin/integrations/page.tsx`. UI SHELL only — local `useState`, no
-persistence (blocked on Supabase). Two sections: (1) **Connections** — sample
-Planhat + AWS cards + add-connection form (name / provider chips / endpoint /
-**env-key-name only, never secrets**); (2) **Field map** — per-connection rows
-mapping a provider source field → a `Customer` tool field + transform note,
-add/remove rows; Save button disabled until backend is back. Provider source
-catalogs (`SOURCE_FIELDS`) + tool targets (`TARGET_FIELDS`) are placeholder
-constants in the page. Live-verified: renders for dev@boost.ai (not Restricted),
-switching connection swaps source options + heading. NOTE: the client-side
-allow-list is cosmetic — when Supabase returns, enforce it server-side too.
+`/admin/integrations` (under `/admin*` proxy gate; narrowed to
+`ALLOWED_INTEGRATION_EMAILS` = dev@/mikal@/jakob@boost.ai). No longer a shell.
 
-### Supabase status (answered this session)
+- **Schema:** `supabase/migrations/0003_integrations.sql` — `integration_connections`
+  (org-level; `owner_email` audit-only) + `integration_field_maps`
+  (connection_id FK, kind/source/target/transform/position). RLS deny-all
+  backstop; server actions use service-role. **Secrets NEVER stored** —
+  `auth_env_key` holds the env-var NAME only.
+- **Server actions:** `src/app/actions/integrations.ts` — `listIntegrations`,
+  `saveConnection`, `deleteConnection`, `saveFieldMap`, `testConnection`,
+  `fetchPreview`. Both an operator allow-list AND an env-key-name allow-list
+  (`ENV_KEY_PATTERN = /^(PLANHAT|AWS)_[A-Z0-9_]+$/`) sandbox the dynamic
+  `process.env[name]` lookup so it can never reach our own secrets.
+- **Page:** `src/app/admin/integrations/page.tsx` — connections load/save/edit/
+  delete; field-map rows (kind = Planhat/Other/Custom value, searchable source
+  combo, ~90-field Customer target combo, transform note); Save enabled;
+  "Test & fetch live data" (Test connection + company query → mapped-value
+  table + raw JSON). Auth input rejects pasted JWTs/secret-looking strings.
+- `SOURCE_FIELDS` (planhat/aws) are GUESSED paths — validate against the raw
+  JSON once a live fetch shows Planhat's true company shape, then correct them.
 
-Old project `woefktcoizqotflzvsvg` is **DELETED** (NXDOMAIN, not paused). To
-restore: create a NEW Supabase project → put new `NEXT_PUBLIC_SUPABASE_URL` +
-`SUPABASE_SERVICE_ROLE_KEY` into `.env.local` (gitignored) AND Vercel env →
-run `supabase/migrations/0001_engagements.sql` + `0002_access_requests.sql` in
-the SQL editor → restart dev + verify save→reopen. No CLI installed/linked.
-The dead service-role key in `.env.local` should be discarded, not reused.
+### Supabase status — RESTORED
+
+Project ref `woefktcoizqotflzvsvg` is **back online** (DNS resolves; display
+name "boostaiguides", ref unchanged → URL `https://woefktcoizqotflzvsvg.supabase.co`).
+Engagement data intact (engagements 7 rows). `.env.local` has valid
+`NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`.
+
+**User actions still required before a live Planhat test:**
+1. Rotate the Planhat token that was screen-shared (treat as compromised).
+2. Run `supabase/migrations/0003_integrations.sql` in the Supabase SQL editor
+   (the integration tables do NOT exist yet — no local DDL path).
+3. Add a fresh `PLANHAT_API_TOKEN` to `.env.local` (restart dev) AND to Vercel
+   env (redeploy). Also confirm `NEXT_PUBLIC_SUPABASE_URL` +
+   `SUPABASE_SERVICE_ROLE_KEY` are in Vercel env so prod persists.
+GOTCHA: a `.select("*",{count:"exact",head:true})` existence check FALSE-POSITIVES
+on a missing table — verify table existence with a real `.select()`.
 
 ### Round-2 CS spine iteration (this session, uncommitted)
 
@@ -215,11 +222,10 @@ because it needs a concrete spec, not speculation:**
 
 ## Blockers
 
-- **Supabase is DOWN** — `woefktcoizqotflzvsvg.supabase.co` resolves NXDOMAIN.
-  All auto-save / save+present / engagement-list DB loops are unverifiable
-  until it's restored. When back: run `0001` + `0002` migrations, then verify
-  the save→reopen loop. Everything else (build/route/UI/prefill→render→Generate)
-  verifies locally without it.
+- **Supabase RESTORED** (ref `woefktcoizqotflzvsvg`). Engagement loops work
+  again. Remaining gap: `0003_integrations.sql` not yet run, so the integration
+  page's save→reopen is unverifiable until the user runs it in the SQL editor.
+  `PLANHAT_API_TOKEN` not yet set, so live fetch is unverifiable too.
 - A buggy local `.git/hooks/post-commit` prints `declare: -A` / `division by 0`
   noise on every commit. Harmless — the commit still lands. Ignore it.
 
@@ -248,14 +254,13 @@ Last commit: 93bdad5
 
 <!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
 ## Auto-snapshot
-Last updated: 2026-06-24T12:44:19+02:00
+Last updated: 2026-06-24T13:30:41+02:00
 Branch: main
-Last commit: dce3c7e docs: handover for CS data-driven sections + Haugaland real-data customer
+Last commit: 8b29067 feat(admin): integration field-mapping admin at /admin/integrations
 Working tree:
 ```
  M docs/JOURNAL.md
  M docs/STATE.md
 ?? scratch_match.mjs
-?? src/app/admin/integrations/
 ```
 <!-- AUTO-HOOK-END -->

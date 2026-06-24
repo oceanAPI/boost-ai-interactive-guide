@@ -2618,3 +2618,195 @@ switching connection swaps source-field options + field-map heading.
 (server actions + server-side allow-list enforcement); run the 2 migrations;
 verify save→reopen. Then CS-engine round-2 (one-by-one missing-data prompts) and
 GuideClient honoring `?sections=` order.
+
+## Compaction checkpoint — 2026-06-24T13:08:27+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- Stop hook feedback:
+- [Verification Required] Code was edited while a preview server is running. Follow <verification_workflow> to verify the changes.
+- i should be able to wire planhat now? no bullshit? where will error messages show up if we get any?
+- looks buggy as hell and dosnt seem to work?
+- nothing happens when i add it, when saving and refreshing its just done
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/STATE.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/parse_haugaland.mts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/admin/integrations/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/cs/build/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/DetectedIssuesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/DetectedIssuesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/IntentTrafficSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SuccessStoriesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/success-stories/SuccessStoryDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/cs-placeholder-customers.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/intent-traffic.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/calculator.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/detection.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/metrics.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/slide-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+?? scratch_match.mjs
+8b29067 feat(admin): integration field-mapping admin at /admin/integrations
+```
+
+## Compaction checkpoint — 2026-06-24T13:12:43+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- i should be able to wire planhat now? no bullshit? where will error messages show up if we get any?
+- looks buggy as hell and dosnt seem to work?
+- nothing happens when i add it, when saving and refreshing its just done
+- also give me step by step to fix this:
+- Preview shell. Connections and field maps are local to this session — persistence is blocked until the Supabase project is recreated. Secrets are never entered here; only the env-var key name is recorded.
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/STATE.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/parse_haugaland.mts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/admin/integrations/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/cs/build/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/DetectedIssuesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/DetectedIssuesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/IntentTrafficSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SuccessStoriesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/success-stories/SuccessStoryDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/cs-placeholder-customers.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/intent-traffic.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/calculator.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/detection.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/metrics.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/slide-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+?? scratch_match.mjs
+8b29067 feat(admin): integration field-mapping admin at /admin/integrations
+```
+
+---
+
+## 2026-06-24 — Integrations: persistence + live Planhat fetch + hardening
+
+**What**: Turned `/admin/integrations` from a UI shell into a working
+feature. (1) Supabase RESTORED — old project ref `woefktcoizqotflzvsvg`
+is back online (DNS resolves; `engagements` intact with 7 rows). New URL
++ service-role key verified in `.env.local`; connection test passes
+against all 6 engagement tables. (2) New migration
+`supabase/migrations/0003_integrations.sql` — `integration_connections`
++ `integration_field_maps` (RLS deny-all backstop, reuses 0001's
+`set_updated_at()` trigger, org-level: owner_email is audit-only).
+(3) New server actions `src/app/actions/integrations.ts` —
+list/save/delete connections, replace-all `saveFieldMap`,
+`testConnection` (real Planhat GET /companies?limit=1, bearer from env),
+`fetchPreview` (GET a company by name/id, runs the field map via
+dot-path resolver, returns raw JSON + mapped key→value + unresolved).
+Operator allow-list AND env-key-name allow-list
+(/^(PLANHAT|AWS)_[A-Z0-9_]+$/) enforced server-side so the dynamic
+process.env[name] lookup can never reach our own secrets.
+(4) Page rewired: loads from DB, connections editable + deletable, Save
+map enabled, Test + Fetch panel with inline errors + raw-JSON viewer.
+(5) Hardening: auth field rejects secret-looking values with a red
+warning + disables save; card lines truncate so long strings stop
+spilling.
+
+**Why**: User asked to "do both and push, we want to test planhat data
+live asap." The shell persisted nothing and invited pasting a real token
+into a visible field (the screen-share leak). This persists + pulls live
+data with the secret kept in server env only.
+
+**Verify**: tsc + build clean (14 routes). Migration 0003 NOT yet run —
+tables confirmed absent (head:true existence check FALSE-positives; real
+select shows "not found in schema cache"). engagements present (7 rows).
+
+**Next**: User runs 0003 in the SQL editor + adds a fresh
+PLANHAT_API_TOKEN to .env.local + Vercel (rotate the screen-shared token
+first). Then verify save→reopen + Test → Fetch against a real Planhat
+company; correct SOURCE_FIELDS paths against the raw JSON once Planhat's
+true shape is visible (catalog source paths are guesses; the resolver
+strips the logical prefix as a fallback).
+
+## Compaction checkpoint — 2026-06-24T13:41:02+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- <button class="text-left rounded-xl border" /></siblings>
+- </element>
+- </launch-selected-element>
+- im struggling to understand whats still missing from my end to make this work, also why do we have this already? why cant i change it? why does text expand outside it when i add a long string? why is the secret key even visible when i save it? what does the most right field in mapping do? seems like its stopping me from saving a mapping in its current state
+- do both and push we want to test planhat data live asap
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/JOURNAL.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/STATE.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/parse_haugaland.mts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/actions/integrations.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/admin/integrations/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/cs/build/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/DetectedIssuesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/DetectedIssuesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/IntentTrafficSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SuccessStoriesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/success-stories/SuccessStoryDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/cs-placeholder-customers.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/intent-traffic.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/calculator.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/detection.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/metrics.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/slide-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/supabase/migrations/0003_integrations.sql
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/app/admin/integrations/page.tsx
+?? scratch_match.mjs
+?? src/app/actions/integrations.ts
+?? supabase/migrations/0003_integrations.sql
+8b29067 feat(admin): integration field-mapping admin at /admin/integrations
+```
