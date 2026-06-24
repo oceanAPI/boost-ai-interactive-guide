@@ -17,6 +17,7 @@ import {
   saveFieldMap,
   testConnection,
   fetchPreview,
+  introspectSchema,
   type ConnectionRow,
   type FieldMapRow,
   type Provider,
@@ -45,23 +46,37 @@ const ALLOWED_INTEGRATION_EMAILS = [
 
 type FieldOption = { value: string; label: string; group: string };
 
-/* Sample source-field catalogs per provider — placeholder until the
- * live schema is fetched from the connection. */
+/* Fallback source-field catalogs per provider. For Planhat these are the
+ * REAL top-level + common custom.* paths (verified against a live sample);
+ * the "Discover fields from live data" button replaces them with the exact
+ * shape of THIS connection, so fields not listed here still get picked up. */
 const SOURCE_FIELDS: Record<Provider, FieldOption[]> = {
   planhat: [
-    { group: "Company", value: "company.name", label: "company.name" },
-    { group: "Company", value: "company.phase", label: "company.phase" },
-    { group: "Company", value: "company.mrr", label: "company.mrr" },
-    { group: "Company", value: "company.owner.email", label: "company.owner.email" },
-    { group: "Company", value: "company.renewalDate", label: "company.renewalDate" },
-    { group: "Metrics", value: "metrics.health", label: "metrics.health" },
-    { group: "Metrics", value: "metrics.nps", label: "metrics.nps" },
-    { group: "Metrics", value: "metrics.csat", label: "metrics.csat" },
-    { group: "Custom", value: "custom.automationRate", label: "custom.automationRate" },
-    { group: "Custom", value: "custom.unknownRate", label: "custom.unknownRate" },
-    { group: "Custom", value: "custom.escalationRate", label: "custom.escalationRate" },
-    { group: "Custom", value: "custom.monthlyConversations", label: "custom.monthlyConversations" },
-    { group: "Custom", value: "custom.activeAgents", label: "custom.activeAgents" },
+    { group: "Company", value: "name", label: "name : string" },
+    { group: "Company", value: "phase", label: "phase : string" },
+    { group: "Company", value: "status", label: "status : string" },
+    { group: "Company", value: "country", label: "country : string" },
+    { group: "Company", value: "description", label: "description : string" },
+    { group: "Company", value: "owner", label: "owner : string" },
+    { group: "Company", value: "customerTo", label: "customerTo : string (renewal)" },
+    { group: "Company", value: "beatDate", label: "beatDate : string" },
+    { group: "Metrics", value: "mrr", label: "mrr : number" },
+    { group: "Metrics", value: "arr", label: "arr : number" },
+    { group: "Metrics", value: "nps", label: "nps : number" },
+    { group: "Metrics", value: "h", label: "h : number (health)" },
+    { group: "Metrics", value: "csmScore", label: "csmScore : number" },
+    { group: "Metrics", value: "nrrTotal", label: "nrrTotal : number" },
+    { group: "Custom", value: "custom.Automation Rate (across instances, %)", label: "custom.Automation Rate (across instances, %)" },
+    { group: "Custom", value: "custom.Unknown %", label: "custom.Unknown %" },
+    { group: "Custom", value: "custom.Conversations (30d)", label: "custom.Conversations (30d)" },
+    { group: "Custom", value: "custom.Automated conversations (30d)", label: "custom.Automated conversations (30d)" },
+    { group: "Custom", value: "custom.Cost per conversation (engine, USD)", label: "custom.Cost per conversation (engine, USD)" },
+    { group: "Custom", value: "custom.Number of servers", label: "custom.Number of servers" },
+    { group: "Custom", value: "custom.Has Voice", label: "custom.Has Voice" },
+    { group: "Custom", value: "custom.Industry", label: "custom.Industry" },
+    { group: "Custom", value: "custom.Segment", label: "custom.Segment" },
+    { group: "Custom", value: "custom.Region", label: "custom.Region" },
+    { group: "Custom", value: "custom.ROI (% of ARR)", label: "custom.ROI (% of ARR)" },
   ],
   aws: [
     { group: "Connect", value: "connect.contactsHandled", label: "connect.contactsHandled" },
@@ -242,11 +257,13 @@ function FieldCombo({
   options,
   placeholder,
   onChange,
+  allowCustom = false,
 }: {
   value: string;
   options: FieldOption[];
   placeholder: string;
   onChange: (v: string) => void;
+  allowCustom?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -282,6 +299,11 @@ function FieldCombo({
   }
 
   const selected = options.find((o) => o.value === value);
+  const trimmed = query.trim();
+  const canAddCustom =
+    allowCustom &&
+    trimmed.length > 0 &&
+    !options.some((o) => o.value === trimmed);
 
   return (
     <div ref={wrapRef} className="relative w-full min-w-0">
@@ -308,8 +330,23 @@ function FieldCombo({
             />
           </div>
           <div className="max-h-64 overflow-y-auto py-1">
+            {canAddCustom ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(trimmed);
+                  setOpen(false);
+                  setQuery("");
+                }}
+                className="w-full text-left px-3 py-1.5 text-[12px] font-mono text-boost-purple hover:bg-boost-surface"
+              >
+                Use “{trimmed}” (custom path)
+              </button>
+            ) : null}
             {grouped.length === 0 ? (
-              <p className="px-3 py-2 text-[11px] text-boost-muted">No matches.</p>
+              canAddCustom ? null : (
+                <p className="px-3 py-2 text-[11px] text-boost-muted">No matches.</p>
+              )
             ) : (
               grouped.map((g) => (
                 <div key={g.group}>
@@ -369,6 +406,11 @@ export default function IntegrationsAdminPage() {
   const [savingMap, setSavingMap] = useState(false);
   const [mapMsg, setMapMsg] = useState<string | null>(null);
 
+  // Live-discovered source fields per connection (overrides the static list)
+  const [discoveredByConn, setDiscoveredByConn] = useState<Record<string, FieldOption[]>>({});
+  const [discovering, setDiscovering] = useState(false);
+  const [discoverMsg, setDiscoverMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
   // Live test / fetch
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -420,8 +462,11 @@ export default function IntegrationsAdminPage() {
   const active = connections.find((c) => c.id === activeId) ?? null;
   const activeMappings = active ? mappingsByConn[active.id] ?? [] : [];
   const sourceOptions = useMemo(
-    () => (active ? SOURCE_FIELDS[active.provider] : []),
-    [active],
+    () =>
+      active
+        ? discoveredByConn[active.id] ?? SOURCE_FIELDS[active.provider]
+        : [],
+    [active, discoveredByConn],
   );
   const authIssue = authFieldIssue(draftAuth);
 
@@ -478,6 +523,23 @@ export default function IntegrationsAdminPage() {
     }
     if (editingId === id) resetForm();
     await reload();
+  }
+
+  async function runIntrospect() {
+    if (!active) return;
+    setDiscovering(true);
+    setDiscoverMsg(null);
+    const res = await introspectSchema(active.id);
+    setDiscovering(false);
+    if (!res.ok) {
+      setDiscoverMsg({ ok: false, text: res.error });
+      return;
+    }
+    setDiscoveredByConn((prev) => ({ ...prev, [active.id]: res.data.fields }));
+    setDiscoverMsg({
+      ok: true,
+      text: `Discovered ${res.data.fields.length} fields from ${res.data.sampled} live companies.`,
+    });
   }
 
   function addMapping() {
@@ -799,16 +861,40 @@ export default function IntegrationsAdminPage() {
                 helper="Tag each row's source (provider field / other / custom value), pick the tool field it fills, and note any transform."
                 action={
                   active ? (
-                    <button
-                      type="button"
-                      onClick={addMapping}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-boost-purple/40 bg-boost-purple/5 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-boost-purple hover:bg-boost-purple/10 transition-colors"
-                    >
-                      <span aria-hidden="true">+</span> Add mapping
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {active.provider === "planhat" ? (
+                        <button
+                          type="button"
+                          onClick={runIntrospect}
+                          disabled={discovering}
+                          title="Sample live companies and load every field actually present (incl. fields not in the default list)."
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-boost-green-light/50 bg-boost-green-light/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-boost-dark hover:bg-boost-green-light/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {discovering ? "Discovering…" : "Discover fields from live data"}
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={addMapping}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-boost-purple/40 bg-boost-purple/5 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-boost-purple hover:bg-boost-purple/10 transition-colors"
+                      >
+                        <span aria-hidden="true">+</span> Add mapping
+                      </button>
+                    </div>
                   ) : null
                 }
               />
+
+              {discoverMsg ? (
+                <p
+                  className={
+                    "mb-2 text-[11px] " +
+                    (discoverMsg.ok ? "text-boost-green-dark" : "text-boost-orange")
+                  }
+                >
+                  {discoverMsg.text}
+                </p>
+              ) : null}
 
               {!active ? (
                 <p className="text-[13px] text-boost-muted">Select a connection above.</p>
@@ -838,6 +924,7 @@ export default function IntegrationsAdminPage() {
                           value={m.source}
                           options={sourceOptions}
                           placeholder="Pick source field…"
+                          allowCustom
                           onChange={(v) => updateMapping(m.id, { source: v })}
                         />
                       ) : (

@@ -428,3 +428,323 @@ export async function fetchPreview(
     return { ok: false, error: `Network error reaching Planhat: ${(e as Error).message}` };
   }
 }
+
+/* ─── Live schema introspection ────────────────────────────────── */
+
+export interface SchemaField {
+  value: string;
+  label: string;
+  group: string;
+}
+
+/** Flatten the keys actually present across sampled companies into a
+ *  pickable field catalog. Top-level scalars/arrays + one level of
+ *  nested objects (custom.*, usage.*, …) so ANY field Planhat returns is
+ *  selectable — no hardcoded guessing, and fields not in our static list
+ *  still surface. */
+function flattenCompanyKeys(companies: Record<string, unknown>[]): SchemaField[] {
+  const seen = new Map<string, string>(); // path → type label
+  const note = (path: string, v: unknown) => {
+    if (seen.has(path)) return;
+    const t = Array.isArray(v) ? "array" : v === null ? "null" : typeof v;
+    seen.set(path, t);
+  };
+  for (const c of companies) {
+    for (const [k, v] of Object.entries(c)) {
+      if (v && typeof v === "object" && !Array.isArray(v)) {
+        // one level deep (custom.*, usage.*, sunits.*, lastTouchByType.*)
+        for (const [ck, cv] of Object.entries(v as Record<string, unknown>)) {
+          note(`${k}.${ck}`, cv);
+        }
+        note(k, v); // also expose the whole object
+      } else {
+        note(k, v);
+      }
+    }
+  }
+  const groupFor = (path: string): string => {
+    const top = path.split(".")[0];
+    if (path.includes(".")) return top === "custom" ? "Custom" : top;
+    return "Company";
+  };
+  return [...seen.entries()]
+    .map(([value, t]) => ({ value, label: `${value} : ${t}`, group: groupFor(value) }))
+    .sort((a, b) =>
+      a.group === b.group ? a.value.localeCompare(b.value) : a.group.localeCompare(b.group),
+    );
+}
+
+/** Fetch a live sample and return every field path present, so the admin
+ *  picker reflects the real Planhat shape (incl. fields not on our list). */
+export async function introspectSchema(
+  connectionId: string,
+): Promise<Result<{ fields: SchemaField[]; sampled: number }>> {
+  const email = await operatorEmail();
+  if (!email) return { ok: false, error: "Not authorized." };
+
+  const conn = await loadConnection(connectionId);
+  if (!conn) return { ok: false, error: "Connection not found." };
+  if (conn.provider !== "planhat") {
+    return { ok: false, error: "Schema introspection currently supports Planhat only." };
+  }
+  const tok = resolveToken(conn);
+  if (!tok.ok) return tok;
+
+  try {
+    const res = await planhatGet(conn.endpoint ?? "", "/companies?limit=20", tok.data);
+    if (!res.ok) {
+      return { ok: false, error: `Planhat HTTP ${res.status} sampling companies for schema.` };
+    }
+    const list = Array.isArray(res.body) ? (res.body as Record<string, unknown>[]) : [];
+    if (list.length === 0) return { ok: false, error: "Planhat returned no companies to sample." };
+    return { ok: true, data: { fields: flattenCompanyKeys(list), sampled: list.length } };
+  } catch (e) {
+    return { ok: false, error: `Network error reaching Planhat: ${(e as Error).message}` };
+  }
+}
+
+/* ─── Company pull (team-facing, used by the CS builder) ────────── */
+
+export interface CompanyHit {
+  id: string;
+  name: string;
+}
+
+export interface PullResult {
+  company: CompanyHit;
+  /** dot-path → resolved value, ready to deep-merge into the Customer record */
+  patch: Record<string, unknown>;
+  appliedCount: number;
+  /** mapped targets Planhat had no value for AND no stored override yet */
+  missing: { target: string; sourceLabel: string }[];
+}
+
+/** Any signed-in operator (broader than the integration admin allow-list)
+ *  may pull company data — this is the product feature for the CS team.
+ *  Secrets still stay server-side; reads only. */
+async function sessionEmail(): Promise<string | null> {
+  const session = await auth();
+  return session?.user?.email?.toLowerCase() ?? null;
+}
+
+function setPath(root: Record<string, unknown>, path: string, value: unknown): void {
+  const parts = path.split(".");
+  let cur = root;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const p = parts[i];
+    const next = cur[p];
+    if (next == null || typeof next !== "object" || Array.isArray(next)) {
+      cur[p] = {};
+    }
+    cur = cur[p] as Record<string, unknown>;
+  }
+  cur[parts[parts.length - 1]] = value;
+}
+
+/** Coerce a stored/entered override string into number/boolean where it
+ *  clearly is one; otherwise keep the raw value. */
+function coerceValue(v: unknown): unknown {
+  if (typeof v !== "string") return v;
+  const s = v.trim();
+  if (s === "") return s;
+  if (s === "true") return true;
+  if (s === "false") return false;
+  if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
+  return v;
+}
+
+function companyHit(c: Record<string, unknown>): CompanyHit {
+  return {
+    id: String((c._id as string) ?? (c.id as string) ?? ""),
+    name: String((c.name as string) ?? "(unnamed)"),
+  };
+}
+
+/** First Planhat connection (the CS builder auto-uses it). */
+export async function getDefaultPlanhatConnection(): Promise<Result<CompanyHit | null>> {
+  const email = await sessionEmail();
+  if (!email) return { ok: false, error: "Not signed in." };
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("integration_connections")
+    .select("id,name,provider")
+    .eq("provider", "planhat")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: true, data: null };
+  return { ok: true, data: { id: data.id as string, name: data.name as string } };
+}
+
+/** Live name-search against Planhat companies (client-side substring over
+ *  a sampled page — Planhat has no general name-query param). */
+export async function searchPlanhatCompanies(
+  connectionId: string,
+  query: string,
+): Promise<Result<CompanyHit[]>> {
+  const email = await sessionEmail();
+  if (!email) return { ok: false, error: "Not signed in." };
+
+  const conn = await loadConnection(connectionId);
+  if (!conn) return { ok: false, error: "Connection not found." };
+  const tok = resolveToken(conn);
+  if (!tok.ok) return tok;
+
+  try {
+    const res = await planhatGet(conn.endpoint ?? "", "/companies?limit=2000", tok.data);
+    if (!res.ok) return { ok: false, error: `Planhat HTTP ${res.status} listing companies.` };
+    const list = Array.isArray(res.body) ? (res.body as Record<string, unknown>[]) : [];
+    const q = query.trim().toLowerCase();
+    const hits = (q
+      ? list.filter((c) => String((c.name as string) ?? "").toLowerCase().includes(q))
+      : list
+    )
+      .slice(0, 25)
+      .map(companyHit);
+    return { ok: true, data: hits };
+  } catch (e) {
+    return { ok: false, error: `Network error reaching Planhat: ${(e as Error).message}` };
+  }
+}
+
+/** Fetch one company by id, run the saved field map, merge stored
+ *  overrides, and report which mapped targets still have no value. */
+export async function pullCustomer(
+  connectionId: string,
+  companyId: string,
+): Promise<Result<PullResult>> {
+  const email = await sessionEmail();
+  if (!email) return { ok: false, error: "Not signed in." };
+
+  const conn = await loadConnection(connectionId);
+  if (!conn) return { ok: false, error: "Connection not found." };
+  const tok = resolveToken(conn);
+  if (!tok.ok) return tok;
+
+  const db = getServiceClient();
+  const { data: mapRows } = await db
+    .from("integration_field_maps")
+    .select("*")
+    .eq("connection_id", connectionId)
+    .order("position", { ascending: true });
+  const maps = (mapRows ?? []) as FieldMapRow[];
+
+  try {
+    const id = companyId.trim();
+    const res = await planhatGet(conn.endpoint ?? "", `/companies/${id}`, tok.data);
+    if (!res.ok) return { ok: false, error: `Planhat HTTP ${res.status} fetching company ${id}.` };
+    const company = (res.body as Record<string, unknown>) ?? {};
+    const hit = companyHit(company);
+
+    const patch: Record<string, unknown> = {};
+    if (hit.name) patch.company_name = hit.name;
+
+    const missing: { target: string; sourceLabel: string }[] = [];
+    let appliedCount = 0;
+    for (const m of maps) {
+      if (!m.target) continue;
+      let value: unknown;
+      if (m.kind === "custom") value = m.source;
+      else if (m.kind === "other") value = walk(company, m.source.split("."));
+      else value = getPath(company, m.source);
+      if (value === undefined || value === null || value === "") {
+        missing.push({ target: m.target, sourceLabel: m.source });
+      } else {
+        setPath(patch, m.target, value);
+        appliedCount++;
+      }
+    }
+
+    // Overlay manually-stored overrides (these win, and clear "missing").
+    const { data: ovRows } = await db
+      .from("integration_customer_overrides")
+      .select("field_target,value")
+      .eq("connection_id", connectionId)
+      .eq("planhat_company_id", hit.id);
+    const overrideTargets = new Set<string>();
+    for (const r of (ovRows ?? []) as { field_target: string; value: unknown }[]) {
+      setPath(patch, r.field_target, coerceValue(r.value));
+      overrideTargets.add(r.field_target);
+      appliedCount++;
+    }
+
+    return {
+      ok: true,
+      data: {
+        company: hit,
+        patch,
+        appliedCount,
+        missing: missing.filter((m) => !overrideTargets.has(m.target)),
+      },
+    };
+  } catch (e) {
+    return { ok: false, error: `Network error reaching Planhat: ${(e as Error).message}` };
+  }
+}
+
+/** All manually-stored overrides for a customer (target → value). */
+export async function loadOverrides(
+  connectionId: string,
+  companyId: string,
+): Promise<Result<Record<string, unknown>>> {
+  const email = await sessionEmail();
+  if (!email) return { ok: false, error: "Not signed in." };
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("integration_customer_overrides")
+    .select("field_target,value")
+    .eq("connection_id", connectionId)
+    .eq("planhat_company_id", companyId);
+  if (error) return { ok: false, error: error.message };
+  const out: Record<string, unknown> = {};
+  for (const r of (data ?? []) as { field_target: string; value: unknown }[]) {
+    out[r.field_target] = r.value;
+  }
+  return { ok: true, data: out };
+}
+
+/** Upsert one manually-filled field for a customer (queryable later via
+ *  SQL — this is the persisted store of metadata Planhat doesn't have).
+ *  An empty value deletes the override. */
+export async function saveOverride(input: {
+  connectionId: string;
+  companyId: string;
+  companyName: string;
+  target: string;
+  value: unknown;
+}): Promise<Result<{ target: string }>> {
+  const email = await sessionEmail();
+  if (!email) return { ok: false, error: "Not signed in." };
+  if (!input.target) return { ok: false, error: "Target field is required." };
+
+  const db = getServiceClient();
+  const isEmpty =
+    input.value === "" || input.value === null || input.value === undefined;
+
+  if (isEmpty) {
+    const { error } = await db
+      .from("integration_customer_overrides")
+      .delete()
+      .eq("connection_id", input.connectionId)
+      .eq("planhat_company_id", input.companyId)
+      .eq("field_target", input.target);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, data: { target: input.target } };
+  }
+
+  const { error } = await db.from("integration_customer_overrides").upsert(
+    {
+      connection_id: input.connectionId,
+      planhat_company_id: input.companyId,
+      company_name: input.companyName,
+      field_target: input.target,
+      value: coerceValue(input.value),
+      entered_by: email,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "connection_id,planhat_company_id,field_target" },
+  );
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: { target: input.target } };
+}
