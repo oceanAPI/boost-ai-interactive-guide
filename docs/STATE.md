@@ -288,15 +288,11 @@ Last commit: 93bdad5
 
 <!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
 ## Auto-snapshot
-Last updated: 2026-06-24T14:48:35+02:00
+Last updated: 2026-06-24T15:06:14+02:00
 Branch: main
-Last commit: 318eb0b docs: handover for live Planhat company pull + 0004 override store
+Last commit: f69b7c2 docs: handover for Planhat assets-as-instances (b39a181)
 Working tree:
 ```
- M docs/JOURNAL.md
- M docs/STATE.md
- M src/app/actions/integrations.ts
- M src/components/builder/sections/cs/CompanyInputPanel.tsx
 ?? scratch_match.mjs
 ```
 <!-- AUTO-HOOK-END -->
