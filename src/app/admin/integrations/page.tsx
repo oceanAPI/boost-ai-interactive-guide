@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { assetPath } from "@/lib/asset-path";
 import {
@@ -10,24 +10,31 @@ import {
   AdminChipRow,
   AdminMiniLabel,
 } from "@/components/admin/primitives";
+import {
+  listIntegrations,
+  saveConnection,
+  deleteConnection,
+  saveFieldMap,
+  testConnection,
+  fetchPreview,
+  type ConnectionRow,
+  type FieldMapRow,
+  type Provider,
+  type SourceKind,
+} from "@/app/actions/integrations";
 
 /* ──────────────────────────────────────────────────────────────
- *  Integrations admin (/admin/integrations) — UI SHELL.
+ *  Integrations admin (/admin/integrations).
  *
  *  Narrowly gated above the general boost.ai /admin* proxy gate to a
- *  hand-picked operator allow-list. Lets an operator register a
- *  Planhat / AWS connection and map its fields onto the tool's
- *  Customer record.
+ *  hand-picked operator allow-list (the server actions enforce the same
+ *  list — the client gate is cosmetic). Register a Planhat / AWS
+ *  connection, map its fields onto the tool's Customer record, then test
+ *  + fetch live data.
  *
- *  STATUS: front-end shell only. Nothing here persists yet — saving
- *  connections + field maps is blocked on the Supabase project being
- *  recreated (the old project ref is gone / NXDOMAIN). When the DB is
- *  back, the local state below swaps for server actions, and the
- *  client-side allow-list gate becomes a server-side backstop (a
- *  client gate alone is cosmetic — never the security boundary).
- *
- *  Secrets are NOT entered here. API keys / service-role secrets live
- *  in env vars (Vercel + .env.local), never typed into the browser.
+ *  Persistence: Supabase via src/app/actions/integrations.ts.
+ *  Secrets are NEVER entered here — the auth field holds the NAME of an
+ *  env var (PLANHAT_API_TOKEN); the secret lives only in server env.
  * ────────────────────────────────────────────────────────────── */
 
 const ALLOWED_INTEGRATION_EMAILS = [
@@ -35,17 +42,6 @@ const ALLOWED_INTEGRATION_EMAILS = [
   "mikal@boost.ai",
   "jakob@boost.ai",
 ];
-
-type Provider = "planhat" | "aws";
-
-type Connection = {
-  id: string;
-  name: string;
-  provider: Provider;
-  endpoint: string;
-  authNote: string;
-  status: "draft" | "connected";
-};
 
 type FieldOption = { value: string; label: string; group: string };
 
@@ -201,56 +197,41 @@ const TOOL_FIELDS: FieldOption[] = [
   { group: "Scope", value: "selected_variants", label: "selected_variants" },
 ];
 
-/* How a single row sources its value:
- *   provider — from the connection's source-field catalog
- *   other    — a source field the catalog doesn't list yet (free text)
- *   custom   — a literal value typed by the operator (no source) */
-type SourceKind = "provider" | "other" | "custom";
-
 type Mapping = {
   id: string;
   kind: SourceKind;
-  /** provider field value | free-text source name | literal custom value */
   source: string;
-  /** tool field path (TOOL_FIELDS value) */
   target: string;
   transform: string;
 };
 
-const SAMPLE_CONNECTIONS: Connection[] = [
-  {
-    id: "c-planhat",
-    name: "Planhat — CS metrics",
-    provider: "planhat",
-    endpoint: "https://api.planhat.com",
-    authNote: "PLANHAT_API_TOKEN (env)",
-    status: "draft",
-  },
-  {
-    id: "c-aws",
-    name: "AWS — Connect + Lex",
-    provider: "aws",
-    endpoint: "eu-north-1 · contact-flow + lex-v2",
-    authNote: "AWS_ROLE_ARN (env)",
-    status: "draft",
-  },
-];
-
-const SAMPLE_MAPPINGS: Record<string, Mapping[]> = {
-  "c-planhat": [
-    { id: "m1", kind: "provider", source: "company.name", target: "company_name", transform: "—" },
-    { id: "m2", kind: "provider", source: "custom.automationRate", target: "performance.automation_rate", transform: "round to integer %" },
-    { id: "m3", kind: "provider", source: "metrics.csat", target: "performance.csat_score", transform: "—" },
-    { id: "m4", kind: "custom", source: "NOK", target: "currency", transform: "literal" },
-  ],
-  "c-aws": [
-    { id: "m5", kind: "provider", source: "s3.intentTrafficExport", target: "intent_traffic", transform: "parseIntentTrafficCsv()" },
-    { id: "m6", kind: "provider", source: "cloudwatch.escalationRate", target: "performance.escalation_rate", transform: "×100, round" },
-  ],
+type PreviewResult = {
+  company: { id?: string; name?: string };
+  raw: unknown;
+  mapped: { target: string; value: unknown; sourceLabel: string }[];
+  unresolved: string[];
 };
 
 function providerLabel(p: Provider) {
   return p === "planhat" ? "Planhat" : "AWS";
+}
+
+/** Flag a value typed into the auth field. The field is for the env var
+ *  NAME only (UPPER_SNAKE_CASE) — never the secret. Returns a problem
+ *  string, or null when the value is empty/valid. */
+function authFieldIssue(raw: string): string | null {
+  const s = raw.trim();
+  if (!s) return null;
+  if (/^eyJ[A-Za-z0-9_-]+\./.test(s)) {
+    return "That looks like a JWT secret. Enter only the env var NAME (e.g. PLANHAT_API_TOKEN) — the secret stays in server env, never here.";
+  }
+  if (s.length > 48 || /\s/.test(s) || (/[a-z]/.test(s) && /[0-9]/.test(s) && s.length > 24)) {
+    return "That looks like a secret. Enter only the env var NAME (e.g. PLANHAT_API_TOKEN).";
+  }
+  if (!/^[A-Z][A-Z0-9_]*$/.test(s)) {
+    return "Use an UPPER_SNAKE_CASE env var name, e.g. PLANHAT_API_TOKEN or AWS_ROLE_ARN.";
+  }
+  return null;
 }
 
 /* ─── Searchable field picker ───────────────────────────────────
@@ -290,7 +271,6 @@ function FieldCombo({
       )
     : options;
 
-  // Group the filtered list by `group`, preserving first-seen order.
   const grouped: { group: string; items: FieldOption[] }[] = [];
   for (const o of filtered) {
     let g = grouped.find((x) => x.group === o.group);
@@ -304,7 +284,7 @@ function FieldCombo({
   const selected = options.find((o) => o.value === value);
 
   return (
-    <div ref={wrapRef} className="relative w-full">
+    <div ref={wrapRef} className="relative w-full min-w-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -370,16 +350,72 @@ export default function IntegrationsAdminPage() {
   const email = session?.user?.email?.toLowerCase() ?? "";
   const allowed = ALLOWED_INTEGRATION_EMAILS.includes(email);
 
-  const [connections, setConnections] = useState<Connection[]>(SAMPLE_CONNECTIONS);
-  const [mappingsByConn, setMappingsByConn] =
-    useState<Record<string, Mapping[]>>(SAMPLE_MAPPINGS);
-  const [activeId, setActiveId] = useState<string>(SAMPLE_CONNECTIONS[0].id);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [connections, setConnections] = useState<ConnectionRow[]>([]);
+  const [mappingsByConn, setMappingsByConn] = useState<Record<string, Mapping[]>>({});
+  const [activeId, setActiveId] = useState<string | null>(null);
 
-  // New-connection form state
+  // Connection form (add / edit)
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
   const [draftProvider, setDraftProvider] = useState<Provider>("planhat");
   const [draftEndpoint, setDraftEndpoint] = useState("");
   const [draftAuth, setDraftAuth] = useState("");
+  const [savingConn, setSavingConn] = useState(false);
+  const [connError, setConnError] = useState<string | null>(null);
+
+  // Field-map save
+  const [savingMap, setSavingMap] = useState(false);
+  const [mapMsg, setMapMsg] = useState<string | null>(null);
+
+  // Live test / fetch
+  const [testing, setTesting] = useState(false);
+  const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [previewQuery, setPreviewQuery] = useState("");
+  const [fetching, setFetching] = useState(false);
+  const [preview, setPreview] = useState<PreviewResult | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [showRaw, setShowRaw] = useState(false);
+
+  const formRef = useRef<HTMLDivElement>(null);
+
+  const reload = useCallback(async () => {
+    const res = await listIntegrations();
+    if (!res.ok) {
+      setLoadError(res.error);
+      setLoading(false);
+      return;
+    }
+    setLoadError(null);
+    setConnections(res.data.connections);
+    const byConn: Record<string, Mapping[]> = {};
+    for (const [cid, rows] of Object.entries(res.data.mapsByConnection)) {
+      byConn[cid] = (rows as FieldMapRow[]).map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        source: r.source,
+        target: r.target,
+        transform: r.transform,
+      }));
+    }
+    setMappingsByConn(byConn);
+    setActiveId((cur) =>
+      cur && res.data.connections.some((c) => c.id === cur)
+        ? cur
+        : res.data.connections[0]?.id ?? null,
+    );
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (status === "loading") return;
+    if (!allowed) {
+      setLoading(false);
+      return;
+    }
+    void reload();
+  }, [status, allowed, reload]);
 
   const active = connections.find((c) => c.id === activeId) ?? null;
   const activeMappings = active ? mappingsByConn[active.id] ?? [] : [];
@@ -387,25 +423,61 @@ export default function IntegrationsAdminPage() {
     () => (active ? SOURCE_FIELDS[active.provider] : []),
     [active],
   );
+  const authIssue = authFieldIssue(draftAuth);
 
-  function addConnection() {
-    const name = draftName.trim();
-    if (!name) return;
-    const id = `c-${Date.now()}`;
-    const conn: Connection = {
-      id,
-      name,
-      provider: draftProvider,
-      endpoint: draftEndpoint.trim() || "—",
-      authNote: draftAuth.trim() || "(set in env)",
-      status: "draft",
-    };
-    setConnections((prev) => [...prev, conn]);
-    setMappingsByConn((prev) => ({ ...prev, [id]: [] }));
-    setActiveId(id);
+  function resetForm() {
+    setEditingId(null);
     setDraftName("");
+    setDraftProvider("planhat");
     setDraftEndpoint("");
     setDraftAuth("");
+    setConnError(null);
+  }
+
+  function startEdit(c: ConnectionRow) {
+    setEditingId(c.id);
+    setDraftName(c.name);
+    setDraftProvider(c.provider);
+    setDraftEndpoint(c.endpoint ?? "");
+    setDraftAuth(c.auth_env_key ?? "");
+    setConnError(null);
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  async function submitConnection() {
+    const name = draftName.trim();
+    if (!name || authIssue) return;
+    setSavingConn(true);
+    setConnError(null);
+    const res = await saveConnection({
+      id: editingId ?? undefined,
+      name,
+      provider: draftProvider,
+      endpoint: draftEndpoint,
+      authEnvKey: draftAuth,
+    });
+    setSavingConn(false);
+    if (!res.ok) {
+      setConnError(res.error);
+      return;
+    }
+    const newId = res.data.id;
+    resetForm();
+    await reload();
+    setActiveId(newId);
+  }
+
+  async function removeConnection(id: string) {
+    const conn = connections.find((c) => c.id === id);
+    if (!conn) return;
+    if (!window.confirm(`Delete connection "${conn.name}" and its field map?`)) return;
+    const res = await deleteConnection(id);
+    if (!res.ok) {
+      setConnError(res.error);
+      return;
+    }
+    if (editingId === id) resetForm();
+    await reload();
   }
 
   function addMapping() {
@@ -415,12 +487,13 @@ export default function IntegrationsAdminPage() {
       kind: "provider",
       source: sourceOptions[0]?.value ?? "",
       target: TOOL_FIELDS[0].value,
-      transform: "—",
+      transform: "",
     };
     setMappingsByConn((prev) => ({
       ...prev,
       [active.id]: [...(prev[active.id] ?? []), row],
     }));
+    setMapMsg(null);
   }
 
   function updateMapping(rowId: string, patch: Partial<Mapping>) {
@@ -431,13 +504,12 @@ export default function IntegrationsAdminPage() {
         m.id === rowId ? { ...m, ...patch } : m,
       ),
     }));
+    setMapMsg(null);
   }
 
   function setKind(rowId: string, kind: SourceKind) {
     if (!active) return;
-    // Reset source to a sensible default for the new kind.
-    const nextSource =
-      kind === "provider" ? sourceOptions[0]?.value ?? "" : "";
+    const nextSource = kind === "provider" ? sourceOptions[0]?.value ?? "" : "";
     updateMapping(rowId, { kind, source: nextSource });
   }
 
@@ -447,6 +519,45 @@ export default function IntegrationsAdminPage() {
       ...prev,
       [active.id]: (prev[active.id] ?? []).filter((m) => m.id !== rowId),
     }));
+    setMapMsg(null);
+  }
+
+  async function saveMap() {
+    if (!active) return;
+    setSavingMap(true);
+    setMapMsg(null);
+    const res = await saveFieldMap(
+      active.id,
+      activeMappings.map((m) => ({
+        kind: m.kind,
+        source: m.source,
+        target: m.target,
+        transform: m.transform,
+      })),
+    );
+    setSavingMap(false);
+    setMapMsg(res.ok ? `Saved ${res.data.count} mapping(s).` : res.error);
+    if (res.ok) void reload();
+  }
+
+  async function runTest() {
+    if (!active) return;
+    setTesting(true);
+    setTestMsg(null);
+    const res = await testConnection(active.id);
+    setTesting(false);
+    setTestMsg(res.ok ? { ok: true, text: res.data.message } : { ok: false, text: res.error });
+  }
+
+  async function runFetch() {
+    if (!active) return;
+    setFetching(true);
+    setPreview(null);
+    setPreviewError(null);
+    const res = await fetchPreview(active.id, previewQuery);
+    setFetching(false);
+    if (res.ok) setPreview(res.data);
+    else setPreviewError(res.error);
   }
 
   return (
@@ -500,12 +611,20 @@ export default function IntegrationsAdminPage() {
                 Integrations
               </h1>
               <p className="text-[14px] text-boost-muted mt-2 max-w-2xl">
-                Register a Planhat or AWS connection, then map its fields onto the
-                tool&rsquo;s customer record so the data-driven sections fill
-                themselves.
+                Register a Planhat or AWS connection, map its fields onto the
+                tool&rsquo;s customer record, then test and fetch live data so the
+                data-driven sections fill themselves.
               </p>
-              <ShellBanner />
+              <SecurityNote />
             </div>
+
+            {loadError ? (
+              <div className="rounded-xl border border-boost-orange/40 bg-boost-orange/5 px-4 py-3">
+                <p className="text-[12px] text-boost-dark/80">
+                  Couldn&rsquo;t load integrations: {loadError}
+                </p>
+              </div>
+            ) : null}
 
             {/* Connections */}
             <section className="rounded-2xl border border-boost-border bg-white p-5 sm:p-6">
@@ -513,49 +632,92 @@ export default function IntegrationsAdminPage() {
                 question="Connections"
                 helper="Pick one to edit its field map, or add a new connection below."
               />
-              <div className="grid gap-3 sm:grid-cols-2">
-                {connections.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setActiveId(c.id)}
-                    aria-pressed={c.id === activeId}
-                    className={
-                      "text-left rounded-xl border p-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light " +
-                      (c.id === activeId
-                        ? "border-boost-purple/40 bg-boost-purple/5 shadow-sm"
-                        : "border-boost-border bg-white hover:border-boost-purple/30")
-                    }
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-boost-muted">
-                        {providerLabel(c.provider)}
-                      </span>
-                      <span
-                        className={
-                          "text-[9px] font-bold uppercase tracking-[0.14em] px-1.5 py-0.5 rounded " +
-                          (c.status === "connected"
-                            ? "bg-boost-green-light/15 text-boost-green-light"
-                            : "bg-boost-gold/15 text-boost-gold")
-                        }
-                      >
-                        {c.status}
-                      </span>
-                    </div>
-                    <p className="text-[14px] font-semibold text-boost-dark mt-1.5">{c.name}</p>
-                    <p className="text-[11px] text-boost-muted mt-1 truncate">{c.endpoint}</p>
-                    <p className="text-[10px] text-boost-muted/80 mt-1.5">
-                      auth · <span className="font-mono">{c.authNote}</span>
-                    </p>
-                  </button>
-                ))}
-              </div>
+              {loading ? (
+                <p className="text-[13px] text-boost-muted">Loading connections…</p>
+              ) : connections.length === 0 ? (
+                <p className="text-[13px] text-boost-muted">
+                  No connections yet. Add one below.
+                </p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {connections.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setActiveId(c.id)}
+                      aria-pressed={c.id === activeId}
+                      className={
+                        "text-left rounded-xl border p-4 overflow-hidden min-w-0 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-boost-green-light " +
+                        (c.id === activeId
+                          ? "border-boost-purple/40 bg-boost-purple/5 shadow-sm"
+                          : "border-boost-border bg-white hover:border-boost-purple/30")
+                      }
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-boost-muted">
+                          {providerLabel(c.provider)}
+                        </span>
+                        <span
+                          className={
+                            "text-[9px] font-bold uppercase tracking-[0.14em] px-1.5 py-0.5 rounded " +
+                            (c.status === "connected"
+                              ? "bg-boost-green-light/15 text-boost-green-light"
+                              : "bg-boost-gold/15 text-boost-gold")
+                          }
+                        >
+                          {c.status}
+                        </span>
+                      </div>
+                      <p className="text-[14px] font-semibold text-boost-dark mt-1.5 truncate">{c.name}</p>
+                      <p className="text-[11px] text-boost-muted mt-1 truncate">{c.endpoint || "—"}</p>
+                      <p className="text-[10px] text-boost-muted/80 mt-1.5 truncate">
+                        auth · <span className="font-mono">{c.auth_env_key || "(set in env)"}</span>
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
 
-              {/* Add connection */}
-              <div className="mt-6 pt-5 border-t border-boost-border/60">
+              {/* Active-connection toolbar: edit / delete / live test */}
+              {active ? (
+                <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-boost-border/70 bg-boost-surface/40 px-3 py-2.5">
+                  <span className="text-[11px] text-boost-muted">
+                    Selected: <span className="font-semibold text-boost-dark">{active.name}</span>
+                  </span>
+                  <div className="flex-1" />
+                  <button
+                    type="button"
+                    onClick={() => startEdit(active)}
+                    className="rounded-md border border-boost-border bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-boost-dark hover:border-boost-purple/30 transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeConnection(active.id)}
+                    className="rounded-md border border-boost-orange/30 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-boost-orange hover:bg-boost-orange/5 transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ) : null}
+
+              {/* Add / edit connection */}
+              <div ref={formRef} className="mt-6 pt-5 border-t border-boost-border/60">
                 <AdminPrompt
-                  question="Add a connection"
-                  helper="Secrets stay in env vars — paste the env key name here, never the secret itself."
+                  question={editingId ? "Edit connection" : "Add a connection"}
+                  helper="Secrets stay in env vars — paste the env key NAME here, never the secret itself."
+                  action={
+                    editingId ? (
+                      <button
+                        type="button"
+                        onClick={resetForm}
+                        className="text-[10px] font-semibold uppercase tracking-[0.12em] text-boost-muted hover:text-boost-dark transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    ) : null
+                  }
                 />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
@@ -599,17 +761,33 @@ export default function IntegrationsAdminPage() {
                       value={draftAuth}
                       onChange={(e) => setDraftAuth(e.target.value)}
                       placeholder={draftProvider === "planhat" ? "PLANHAT_API_TOKEN" : "AWS_ROLE_ARN"}
-                      className="w-full rounded-lg border border-boost-border bg-white px-3 py-2 text-[13px] font-mono text-boost-dark placeholder:text-boost-muted/50 focus:outline-none focus:ring-2 focus:ring-boost-green-light/60"
+                      aria-invalid={authIssue ? true : undefined}
+                      className={
+                        "w-full rounded-lg border bg-white px-3 py-2 text-[13px] font-mono text-boost-dark placeholder:text-boost-muted/50 focus:outline-none focus:ring-2 " +
+                        (authIssue
+                          ? "border-boost-orange/60 focus:ring-boost-orange/40"
+                          : "border-boost-border focus:ring-boost-green-light/60")
+                      }
                     />
+                    {authIssue ? (
+                      <p className="mt-1 text-[10px] leading-snug text-boost-orange">{authIssue}</p>
+                    ) : (
+                      <p className="mt-1 text-[10px] text-boost-muted/70">
+                        Name only — the secret lives in <span className="font-mono">.env.local</span> / Vercel env.
+                      </p>
+                    )}
                   </div>
                 </div>
+                {connError ? (
+                  <p className="mt-3 text-[11px] text-boost-orange">{connError}</p>
+                ) : null}
                 <button
                   type="button"
-                  onClick={addConnection}
-                  disabled={!draftName.trim()}
+                  onClick={submitConnection}
+                  disabled={!draftName.trim() || !!authIssue || savingConn}
                   className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-boost-purple px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white hover:bg-boost-purple/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  <span aria-hidden="true">+</span> Add connection
+                  {savingConn ? "Saving…" : editingId ? "Save changes" : "+ Add connection"}
                 </button>
               </div>
             </section>
@@ -645,7 +823,6 @@ export default function IntegrationsAdminPage() {
                       key={m.id}
                       className="grid grid-cols-1 sm:grid-cols-[7rem_1fr_auto_1fr_8rem_auto] items-center gap-2 sm:gap-2.5 rounded-xl border border-boost-border/70 bg-boost-surface/30 p-2.5"
                     >
-                      {/* Source kind tag */}
                       <select
                         value={m.kind}
                         onChange={(e) => setKind(m.id, e.target.value as SourceKind)}
@@ -656,7 +833,6 @@ export default function IntegrationsAdminPage() {
                         <option value="custom">Custom value</option>
                       </select>
 
-                      {/* Source cell — adapts to kind */}
                       {m.kind === "provider" ? (
                         <FieldCombo
                           value={m.source}
@@ -669,13 +845,12 @@ export default function IntegrationsAdminPage() {
                           value={m.source}
                           onChange={(e) => updateMapping(m.id, { source: e.target.value })}
                           placeholder={m.kind === "custom" ? "Literal value…" : "Source field name…"}
-                          className="w-full rounded-md border border-boost-border bg-white px-2.5 py-1.5 text-[12px] font-mono text-boost-dark placeholder:text-boost-muted/50 focus:outline-none focus:ring-2 focus:ring-boost-green-light/60"
+                          className="w-full min-w-0 rounded-md border border-boost-border bg-white px-2.5 py-1.5 text-[12px] font-mono text-boost-dark placeholder:text-boost-muted/50 focus:outline-none focus:ring-2 focus:ring-boost-green-light/60"
                         />
                       )}
 
                       <span aria-hidden="true" className="hidden sm:block text-center text-boost-muted">→</span>
 
-                      {/* Tool field — searchable over the whole guide catalog */}
                       <FieldCombo
                         value={m.target}
                         options={TOOL_FIELDS}
@@ -687,7 +862,8 @@ export default function IntegrationsAdminPage() {
                         value={m.transform}
                         onChange={(e) => updateMapping(m.id, { transform: e.target.value })}
                         placeholder="transform"
-                        className="w-full rounded-md border border-boost-border bg-white px-2.5 py-1.5 text-[12px] text-boost-dark placeholder:text-boost-muted/50 focus:outline-none focus:ring-2 focus:ring-boost-green-light/60"
+                        title="Optional note describing how to convert the value (not executed)."
+                        className="w-full min-w-0 rounded-md border border-boost-border bg-white px-2.5 py-1.5 text-[12px] text-boost-dark placeholder:text-boost-muted/50 focus:outline-none focus:ring-2 focus:ring-boost-green-light/60"
                       />
 
                       <button
@@ -704,21 +880,149 @@ export default function IntegrationsAdminPage() {
               )}
 
               {active ? (
-                <div className="mt-5 pt-4 border-t border-boost-border/60 flex items-center gap-3">
+                <div className="mt-5 pt-4 border-t border-boost-border/60 flex flex-wrap items-center gap-3">
                   <button
                     type="button"
-                    disabled
-                    title="Saving is enabled once Supabase is reconnected."
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-boost-dark/80 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white opacity-40 cursor-not-allowed"
+                    onClick={saveMap}
+                    disabled={savingMap}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-boost-dark/90 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white hover:bg-boost-dark disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
-                    Save map
+                    {savingMap ? "Saving…" : "Save map"}
                   </button>
-                  <span className="text-[11px] text-boost-muted">
-                    Saving is disabled until the backend is reconnected.
-                  </span>
+                  {mapMsg ? <span className="text-[11px] text-boost-muted">{mapMsg}</span> : null}
                 </div>
               ) : null}
             </section>
+
+            {/* Live data */}
+            {active ? (
+              <section className="rounded-2xl border border-boost-border bg-white p-5 sm:p-6">
+                <AdminPrompt
+                  question="Test & fetch live data"
+                  helper={
+                    active.provider === "planhat"
+                      ? "Test authenticates with the env token. Fetch pulls one company and runs your field map against the real response."
+                      : "Live test/fetch currently supports Planhat connections only."
+                  }
+                />
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={runTest}
+                    disabled={testing || active.provider !== "planhat"}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-boost-purple/40 bg-boost-purple/5 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-boost-purple hover:bg-boost-purple/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {testing ? "Testing…" : "Test connection"}
+                  </button>
+                  {testMsg ? (
+                    <span
+                      className={
+                        "text-[11px] " + (testMsg.ok ? "text-boost-green-light" : "text-boost-orange")
+                      }
+                    >
+                      {testMsg.text}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-end gap-3">
+                  <div className="min-w-[220px] flex-1">
+                    <AdminMiniLabel className="mb-1.5">Company (name or 24-char id)</AdminMiniLabel>
+                    <input
+                      value={previewQuery}
+                      onChange={(e) => setPreviewQuery(e.target.value)}
+                      placeholder="e.g. Haugaland — blank = first company"
+                      className="w-full rounded-lg border border-boost-border bg-white px-3 py-2 text-[13px] text-boost-dark placeholder:text-boost-muted/50 focus:outline-none focus:ring-2 focus:ring-boost-green-light/60"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={runFetch}
+                    disabled={fetching || active.provider !== "planhat"}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-boost-purple px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white hover:bg-boost-purple/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {fetching ? "Fetching…" : "Fetch sample"}
+                  </button>
+                </div>
+
+                {previewError ? (
+                  <div className="mt-4 rounded-xl border border-boost-orange/40 bg-boost-orange/5 px-4 py-3">
+                    <p className="text-[12px] text-boost-dark/80 break-words">{previewError}</p>
+                  </div>
+                ) : null}
+
+                {preview ? (
+                  <div className="mt-4 space-y-4">
+                    <p className="text-[12px] text-boost-muted">
+                      Matched company:{" "}
+                      <span className="font-semibold text-boost-dark">
+                        {preview.company.name || "(unnamed)"}
+                      </span>
+                      {preview.company.id ? (
+                        <span className="font-mono text-[11px] text-boost-muted/70"> · {preview.company.id}</span>
+                      ) : null}
+                    </p>
+
+                    <div className="overflow-hidden rounded-xl border border-boost-border">
+                      <table className="w-full text-left text-[12px]">
+                        <thead className="bg-boost-surface/60">
+                          <tr>
+                            <th className="px-3 py-2 font-semibold text-boost-muted">Tool field</th>
+                            <th className="px-3 py-2 font-semibold text-boost-muted">Source</th>
+                            <th className="px-3 py-2 font-semibold text-boost-muted">Value</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {preview.mapped.length === 0 ? (
+                            <tr>
+                              <td colSpan={3} className="px-3 py-3 text-boost-muted">
+                                No mappings to apply — add some above and save.
+                              </td>
+                            </tr>
+                          ) : (
+                            preview.mapped.map((row, i) => {
+                              const missing = row.value === undefined;
+                              return (
+                                <tr key={i} className="border-t border-boost-border/60">
+                                  <td className="px-3 py-2 font-mono text-boost-dark">{row.target}</td>
+                                  <td className="px-3 py-2 font-mono text-boost-muted/80 break-all">{row.sourceLabel}</td>
+                                  <td className={"px-3 py-2 break-all " + (missing ? "text-boost-orange" : "text-boost-dark")}>
+                                    {missing ? "— unresolved" : formatValue(row.value)}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {preview.unresolved.length > 0 ? (
+                      <p className="text-[11px] text-boost-orange">
+                        {preview.unresolved.length} source path(s) didn&rsquo;t resolve against the real
+                        response. Check the raw JSON below and correct the source field.
+                      </p>
+                    ) : null}
+
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShowRaw((v) => !v)}
+                        className="text-[11px] font-semibold uppercase tracking-[0.1em] text-boost-purple hover:underline"
+                      >
+                        {showRaw ? "Hide" : "Show"} raw Planhat response
+                      </button>
+                      {showRaw ? (
+                        <pre className="mt-2 max-h-80 overflow-auto rounded-xl border border-boost-border bg-boost-dark/95 p-3 text-[11px] leading-relaxed text-white/90">
+                          {JSON.stringify(preview.raw, null, 2)}
+                        </pre>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
           </div>
         )}
       </main>
@@ -726,14 +1030,20 @@ export default function IntegrationsAdminPage() {
   );
 }
 
-function ShellBanner() {
+function formatValue(v: unknown): string {
+  if (v === null) return "null";
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+
+function SecurityNote() {
   return (
-    <div className="mt-4 rounded-xl border border-boost-gold/30 bg-boost-gold/5 px-4 py-3">
+    <div className="mt-4 rounded-xl border border-boost-border bg-boost-surface/40 px-4 py-3">
       <p className="text-[12px] text-boost-dark/80 leading-relaxed">
-        <span className="font-semibold text-boost-dark">Preview shell.</span>{" "}
-        Connections and field maps are local to this session — persistence is
-        blocked until the Supabase project is recreated. Secrets are never entered
-        here; only the env-var key name is recorded.
+        <span className="font-semibold text-boost-dark">Secrets never enter this page.</span>{" "}
+        The auth field records the <span className="font-medium">env-var name</span> only (e.g.{" "}
+        <span className="font-mono">PLANHAT_API_TOKEN</span>); the token itself lives in{" "}
+        <span className="font-mono">.env.local</span> / Vercel env and is read server-side at fetch time.
       </p>
     </div>
   );
