@@ -2844,3 +2844,81 @@ console errors. Committed `b50abe5`.
 persistence is unverifiable until then; pull itself works without it). Confirm
 Vercel env has `PLANHAT_API_TOKEN` + Supabase vars. Then live-test a full pull +
 missing-field save→reopen against a real company.
+
+## Compaction checkpoint — 2026-06-24T14:19:37+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- should be saved and updated so we can restart it and push live
+- looks like mapping is working but how do I now then fetch a planhat customer in section 1 company information in cs or admin?
+- wire it and then push so i can pull company names and relevant data mapped in "integrations" and only be prompted to add missing data in planhat from planhat field mappings for me to be able to produce an engagement, any missing field mappings i fill out we store in the database on that customer so i can query with sql and fetch all metadata missing from planhat after
+- Continue from where you left off.
+- also account for missing fields not on that list that might be in planhat
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/.claude/projects/-Users-mikalmonslaup-Desktop-Claude-projects-interactive-guide-financial-service-offering/memory/integrations_planhat.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/JOURNAL.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/STATE.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/parse_haugaland.mts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/scratch_shape.mjs
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/scratch_verify.mjs
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/actions/integrations.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/admin/integrations/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/cs/build/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/CompanyInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/DetectedIssuesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/DetectedIssuesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/IntentTrafficSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SuccessStoriesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/success-stories/SuccessStoryDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/cs-placeholder-customers.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/intent-traffic.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/calculator.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/detection.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/metrics.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/slide-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/supabase/migrations/0003_integrations.sql
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/supabase/migrations/0004_customer_overrides.sql
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+?? scratch_match.mjs
+318eb0b docs: handover for live Planhat company pull + 0004 override store
+```
+
+## 2026-06-24 — Planhat assets as engagement instances (b39a181)
+
+**What:** The CS builder now pulls a company's Planhat assets and renders them
+as selectable instance chips, replacing manual AWS-id typing. Added
+`fetchPlanhatAssets(connId, companyId)` (session-gated, `/assets?companyId=`)
+and `introspectAssetSchema(connId)` (operator-gated) to integrations.ts;
+`CompanyInputPanel` fetches assets on company pull.
+
+**Why:** User: "/assets er instance data (instances selected)" — assets are the
+instances under a company. Confirmed assets are filtered by company and that we
+should determine the instance-id field via introspection.
+
+**Verified:** Live on /cs/build against Telenor Norge AS — companyId filter
+returns 2 assets (both Telenor's); real shape keys include
+externalId/name/sourceId/companyId; chips render "Telenor NO" (TELENORNO) and
+"Telenor NO Voice" (TELENORVOICE); toggling stores externalId into
+selected_instance_ids. tsc + build clean (14 routes). Debug key-dump log added
+then removed after confirming the shape.
+
+**Next:** Confirm whether boost instances key on externalId (current) or
+sourceId. Still pending user-side: PLANHAT_API_TOKEN in Vercel env + redeploy
+(prod testConnection currently errors "not set"); 0004 migration is RUN.

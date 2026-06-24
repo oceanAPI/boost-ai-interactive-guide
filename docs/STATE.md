@@ -6,13 +6,28 @@
 
 ## Branch & last-green
 
-`main`. **Live Planhat company pull in the CS builder + schema introspection
-committed** this session (`b50abe5`), deploying via **Vercel** (GitHub Pages
-workflow DISABLED — deploy auto-runs on push to `main` via Vercel). Only
+`main`. **Planhat assets-as-instances committed** this session (`b39a181`),
+on top of the live company pull (`b50abe5`), deploying via **Vercel** (GitHub
+Pages workflow DISABLED — deploy auto-runs on push to `main` via Vercel). Only
 `scratch_match.mjs` remains untracked (throwaway, do not commit).
-`npm run build` (14 routes) + `npx tsc --noEmit` both clean. Live search
-VERIFIED on `/cs/build` — real Planhat companies returned (Telenor, NAV,
-Norgesgruppen, …). The user pushes manually. Do NOT `git push` without an ask.
+`npm run build` (14 routes) + `npx tsc --noEmit` both clean. VERIFIED live on
+`/cs/build`: company search + pull + missing-field save→reopen, and assets →
+instance chips (Telenor Norge AS → TELENORNO, TELENORVOICE). The user pushes
+manually. Do NOT `git push` without an ask.
+
+### Planhat assets = instances (this session — `b39a181`)
+
+`/companies` = customer brand (main pull); `/assets` = that company's
+instances. `fetchPlanhatAssets(connId, companyId)` GETs
+`/assets?companyId=<id>&limit=2000` (client-side companyId filter as backstop)
+→ `AssetHit { planhatId, name, instanceId }`. `instanceId = externalId ||
+name` (the boost instance id stored in `selected_instance_ids`); `name` is the
+chip label. `introspectAssetSchema(connId)` (operator-gated) samples the live
+asset shape. `CompanyInputPanel` fetches assets on company pull and renders
+them as selectable instance chips (manual add kept as fallback). Real asset
+keys: `_id, name, sourceId, companyId, externalId, companyName, custom, usage,
+path, parentObject`. NB: if boost instances key on `sourceId` not `externalId`,
+change the one line in `fetchPlanhatAssets`.
 
 ### Live Planhat company pull (this session — `b50abe5`)
 
@@ -273,12 +288,15 @@ Last commit: 93bdad5
 
 <!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
 ## Auto-snapshot
-Last updated: 2026-06-24T14:04:38+02:00
+Last updated: 2026-06-24T14:48:35+02:00
 Branch: main
-Last commit: d48ead2 docs: handover for integrations persistence + Supabase restore
+Last commit: 318eb0b docs: handover for live Planhat company pull + 0004 override store
 Working tree:
 ```
+ M docs/JOURNAL.md
  M docs/STATE.md
+ M src/app/actions/integrations.ts
+ M src/components/builder/sections/cs/CompanyInputPanel.tsx
 ?? scratch_match.mjs
 ```
 <!-- AUTO-HOOK-END -->
