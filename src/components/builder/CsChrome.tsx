@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { assetPath } from "@/lib/asset-path";
+import { useLearningsHydration } from "@/components/builder/useLearningsHydration";
 
 /* ─── CSM page chrome ───
  *  Shared banner + header for the Customer Success sub-pages
@@ -13,6 +14,7 @@ import { assetPath } from "@/lib/asset-path";
 export function CsChrome(props: { title: string; subtitle?: string; children: ReactNode }) {
   const { title, subtitle, children } = props;
   const { data: session } = useSession();
+  useLearningsHydration();
   return (
     <div className="min-h-screen bg-boost-surface">
       <div className="bg-boost-purple text-white">

@@ -9,6 +9,7 @@ import {
   SUCCESS_STORIES,
   SUCCESS_STORY_INDUSTRIES,
   type SuccessStory,
+  type StoryChapterTag,
 } from "@/data/success-stories";
 import { suggestStories } from "@/lib/cs-engine/suggestions";
 import { SuggestionBlock, type SuggestionItem } from "./_SuggestionBlock";
@@ -120,11 +121,14 @@ function SuccessStoryPicker({
     update({ story_selections: Object.keys(nextSelections).length ? nextSelections : undefined });
   };
 
-  /* Engine suggestions scoped to the chapter being filled — ranked by
-   * the customer's issues + industry, accepting adds to this chapter. */
-  const chapterSuggestions = suggestStories(form, { limit: 16 })
-    .filter((s) => s.story.chapter === activeChapter)
-    .slice(0, 4);
+  /* Engine suggestions scoped to the chapter being filled — ranked
+   * WITHIN this chapter by the customer's issues + industry + geo, so
+   * every chapter surfaces its best matches (not just the theme that
+   * dominates the customer's detected issues). Accepting adds here. */
+  const chapterSuggestions = suggestStories(form, {
+    chapter: activeChapter as StoryChapterTag,
+    limit: 4,
+  });
   const suggestionItems: SuggestionItem[] = chapterSuggestions.map((s) => ({
     key: s.story.id,
     title: s.story.name,

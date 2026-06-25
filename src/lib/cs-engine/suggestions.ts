@@ -66,6 +66,40 @@ export const W_THEME = 4; // summed severity of issues for the story's chapter
 export const W_GEO = 0.5; // shared geography (Nordic etc.)
 export const BASE = 0.25; // every catalogue story stays eligible
 
+/* ─── Learned suppressions (operator-curated, global) ────────────
+ *  The /cs/analytics operator removes suggestions that make no sense; once
+ *  "trained" (published) those items are filtered out of every customer's
+ *  suggestions. `ACTIVE_LEARNED` is a client-side mirror of the active
+ *  server rows, hydrated once per app load via `setActiveLearned`. Each
+ *  suggest* reads it by default; callers can pass their own set via opts. */
+export interface LearnedSet {
+  stories: Set<string>;
+  recommendations: Set<string>;
+  agentic: Set<string>;
+  chapters: Set<string>;
+}
+
+export function emptyLearned(): LearnedSet {
+  return {
+    stories: new Set(),
+    recommendations: new Set(),
+    agentic: new Set(),
+    chapters: new Set(),
+  };
+}
+
+let ACTIVE_LEARNED: LearnedSet = emptyLearned();
+
+/** Hydrate the global active mute list (called once on the client). */
+export function setActiveLearned(set: LearnedSet): void {
+  ACTIVE_LEARNED = set;
+}
+
+/** The current global active mute list. */
+export function getActiveLearned(): LearnedSet {
+  return ACTIVE_LEARNED;
+}
+
 export interface ScoredStory {
   story: SuccessStory;
   score: number;
@@ -152,17 +186,28 @@ function detectedFor(customer: Customer): DetectedIssue[] {
   }).detectedIssues;
 }
 
-/** Ranked success stories with the reasons each is suggested. */
+/** Ranked success stories with the reasons each is suggested.
+ *  Pass `chapter` to rank *within* a single story-spine beat — the
+ *  catalogue is pre-filtered to that chapter before scoring, so each
+ *  chapter still surfaces its best industry/geo matches even when the
+ *  customer's detected issues all point at a different theme. */
 export function suggestStories(
   customer: Customer,
-  opts: { limit?: number } = {},
+  opts: { limit?: number; chapter?: StoryChapterTag; learned?: LearnedSet } = {},
 ): ScoredStory[] {
   const industries = customerIndustries(customer);
   const geo = customerGeoTokens(customer);
   const detected = detectedFor(customer);
   const themes = themeWeights(detected);
+  const learned = opts.learned ?? ACTIVE_LEARNED;
 
-  const scored: ScoredStory[] = SUCCESS_STORIES.map((story) => {
+  const pool = (
+    opts.chapter
+      ? SUCCESS_STORIES.filter((s) => s.chapter === opts.chapter)
+      : SUCCESS_STORIES
+  ).filter((s) => !learned.stories.has(s.id));
+
+  const scored: ScoredStory[] = pool.map((story) => {
     const reasons: string[] = [];
     let score = BASE;
 
@@ -200,7 +245,11 @@ export function suggestStories(
 
 /** Story-spine chapters ranked by how much the customer's issues argue
  *  for each beat. Drives "which chapters to feature" suggestions. */
-export function suggestChapters(customer: Customer): ScoredChapter[] {
+export function suggestChapters(
+  customer: Customer,
+  opts: { learned?: LearnedSet } = {},
+): ScoredChapter[] {
+  const learned = opts.learned ?? ACTIVE_LEARNED;
   const detected = detectedFor(customer);
   const themes = themeWeights(detected);
   const order: StoryChapterTag[] = [
@@ -210,6 +259,7 @@ export function suggestChapters(customer: Customer): ScoredChapter[] {
     "channels",
   ];
   return order
+    .filter((tag) => !learned.chapters.has(tag))
     .map((tag) => ({
       chapter: tag,
       score: themes[tag] ?? 0,
@@ -224,10 +274,11 @@ export function suggestChapters(customer: Customer): ScoredChapter[] {
  *  so the source story is auditable. */
 export function suggestAgenticOutcomes(
   customer: Customer,
-  opts: { limit?: number } = {},
+  opts: { limit?: number; learned?: LearnedSet } = {},
 ): { outcome: AgenticOutcome; sourceStoryId: string; reasons: string[] }[] {
-  const ranked = suggestStories(customer, { limit: 12 }).filter(
-    (s) => s.story.before && s.story.after,
+  const learned = opts.learned ?? ACTIVE_LEARNED;
+  const ranked = suggestStories(customer, { limit: 12, learned }).filter(
+    (s) => s.story.before && s.story.after && !learned.agentic.has(s.story.id),
   );
   const limit = opts.limit ?? 4;
   return ranked.slice(0, limit).map(({ story, reasons }) => ({
@@ -266,8 +317,9 @@ export interface ScoredRecommendation {
 
 export function suggestRecommendations(
   customer: Customer,
-  opts: { limit?: number } = {},
+  opts: { limit?: number; learned?: LearnedSet } = {},
 ): ScoredRecommendation[] {
+  const learned = opts.learned ?? ACTIVE_LEARNED;
   const mapped = metricsFromCustomer(customer);
   if (Object.keys(mapped.metricsSet).length === 0) return [];
   const { topPriorities } = runEngine(mapped.metrics, {
@@ -275,7 +327,10 @@ export function suggestRecommendations(
     hierarchy: mapped.hierarchy,
   });
   const limit = opts.limit ?? 6;
-  return topPriorities.slice(0, limit).map((p) => {
+  return topPriorities
+    .filter((p) => !learned.recommendations.has(String(p.initiative.id)))
+    .slice(0, limit)
+    .map((p) => {
     const init = p.initiative;
     const effort = EFFORT_LEVEL_MAP[init.effortLevel] ?? "medium";
     const severity = p.calculation.issueSeverity;

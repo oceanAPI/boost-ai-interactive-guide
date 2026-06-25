@@ -16,6 +16,7 @@ import { AUDIENCE_DEFAULTS } from "@/data/audience-sections";
 import { CollapsibleSection } from "@/components/builder/CollapsibleSection";
 import { Rail } from "@/components/builder/Rail";
 import { CS_WORKSPACE, railItemsFor } from "@/components/builder/workspace-config";
+import { useLearningsHydration } from "@/components/builder/useLearningsHydration";
 
 import { CompanyInputPanel } from "@/components/builder/sections/cs/CompanyInputPanel";
 import { AgendaInputPanel } from "@/components/builder/sections/cs/AgendaInputPanel";
@@ -127,6 +128,7 @@ function emptyCustomer(): Customer {
 export default function CsBuilderPage() {
   const router = useRouter();
   const { data: session } = useSession();
+  useLearningsHydration();
 
   const [form, setForm] = useState<Customer>(emptyCustomer);
   const update = (patch: Partial<Customer>) => setForm((prev) => ({ ...prev, ...patch }));
