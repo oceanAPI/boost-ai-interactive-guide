@@ -24,7 +24,7 @@
 import { useState } from "react";
 import type { Customer } from "@/lib/types";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-import { normalizePercentMetrics } from "@/lib/format-metrics";
+import { normalizePercentMetrics, roundPercent } from "@/lib/format-metrics";
 import {
   STORY_CHAPTERS,
   type StoryChapter,
@@ -92,17 +92,18 @@ function snapshot(c?: Customer): { eyebrow: string; headline: string; highlight?
   const topRec = recs[0]?.title;
 
   if (auto != null) {
+    const autoDisplay = roundPercent(auto);
     const headline =
       auto >= 80
-        ? `${name} already resolves ${auto}% of conversations without a human.`
-        : `${name} resolves ${auto}% of conversations without a human today — and there's clear headroom to go further.`;
+        ? `${name} already resolves ${autoDisplay}% of conversations without a human.`
+        : `${name} resolves ${autoDisplay}% of conversations without a human today — and there's clear headroom to go further.`;
     const moves =
       recs.length > 0
         ? `${recs.length} prioritised move${recs.length === 1 ? "" : "s"}${topRec ? ` — starting with "${topRec}"` : ""} could push that further.`
         : inits > 0
           ? `${inits} committed initiative${inits === 1 ? "" : "s"} are set to push that further.`
           : undefined;
-    return { eyebrow: "Where you are today", headline, highlight: `${auto}%`, sub: moves };
+    return { eyebrow: "Where you are today", headline, highlight: `${autoDisplay}%`, sub: moves };
   }
 
   return {
@@ -156,6 +157,12 @@ function fmtCount(n: number): string {
   return `${n}`;
 }
 
+/** Clean a non-percent metric (e.g. CSAT) to ≤1dp, no trailing ".0". */
+function round1(n: number): string {
+  const v = Math.round(n * 10) / 10;
+  return Number.isInteger(v) ? String(v) : v.toFixed(1);
+}
+
 function snapshotTiles(c?: Customer): SnapTile[] {
   const p = c?.performance;
   if (!p) return [];
@@ -166,15 +173,15 @@ function snapshotTiles(c?: Customer): SnapTile[] {
 
   if (p.automation_rate != null) {
     const d = diff(p.automation_rate, p.previous_automation_rate);
-    tiles.push({ key: "automation", label: "Automation rate", value: `${p.automation_rate}%`, bar: p.automation_rate, delta: ppDelta(d), good: d == null ? undefined : d >= 0, up: d == null ? undefined : d >= 0 });
+    tiles.push({ key: "automation", label: "Automation rate", value: `${roundPercent(p.automation_rate)}%`, bar: p.automation_rate, delta: ppDelta(d), good: d == null ? undefined : d >= 0, up: d == null ? undefined : d >= 0 });
   }
   if (p.csat_score != null) {
     const d = diff(p.csat_score, p.previous_csat_score);
-    tiles.push({ key: "csat", label: "CSAT", value: `${p.csat_score}`, delta: d != null ? `${d > 0 ? "+" : d < 0 ? "−" : ""}${Math.abs(d)}` : undefined, good: d == null ? undefined : d >= 0, up: d == null ? undefined : d >= 0 });
+    tiles.push({ key: "csat", label: "CSAT", value: `${round1(p.csat_score)}`, delta: d != null ? `${d > 0 ? "+" : d < 0 ? "−" : ""}${Math.abs(d)}` : undefined, good: d == null ? undefined : d >= 0, up: d == null ? undefined : d >= 0 });
   }
   if (p.escalation_rate != null) {
     const d = diff(p.escalation_rate, p.previous_escalation_rate);
-    tiles.push({ key: "escalation", label: "Escalations", value: `${p.escalation_rate}%`, bar: p.escalation_rate, delta: ppDelta(d), good: d == null ? undefined : d <= 0, up: d == null ? undefined : d > 0 });
+    tiles.push({ key: "escalation", label: "Escalations", value: `${roundPercent(p.escalation_rate)}%`, bar: p.escalation_rate, delta: ppDelta(d), good: d == null ? undefined : d <= 0, up: d == null ? undefined : d > 0 });
   }
   if (p.monthly_conversations != null) {
     const d = diff(p.monthly_conversations, p.previous_monthly_conversations);
@@ -323,9 +330,9 @@ function DistributionChart({
         )}
         <div className="flex h-full items-end gap-[3px]">
           {sorted.map((d, i) => (
-            <div key={d.label} className="group relative flex h-full flex-1 flex-col items-center justify-end" title={`${d.isYou ? "Your instance" : d.label}: ${d.value}${unit}`}>
+            <div key={d.label} className="group relative flex h-full flex-1 flex-col items-center justify-end" title={`${d.isYou ? "Your instance" : d.label}: ${round1(d.value)}${unit}`}>
               {d.isYou && (
-                <span className="mb-1 whitespace-nowrap text-[10px] font-bold tabular-nums text-boost-green">{d.value}{unit}</span>
+                <span className="mb-1 whitespace-nowrap text-[10px] font-bold tabular-nums text-boost-green">{round1(d.value)}{unit}</span>
               )}
               <div
                 className={`w-full rounded-t-sm ${d.isYou ? "bg-boost-green-light" : "bg-boost-purple/25 group-hover:bg-boost-purple/40"} transition-colors`}
@@ -535,7 +542,7 @@ function ChannelProfileViz({ profile, customer }: { profile: ChannelProfile; cus
             className="absolute top-1/2 -translate-y-1/2 text-[10px] font-bold tabular-nums text-boost-dark"
             style={{ left: `calc(${Math.min(100, total)}% + 6px)` }}
           >
-            {total}%
+            {round1(total)}%
           </span>
         </div>
       </div>
