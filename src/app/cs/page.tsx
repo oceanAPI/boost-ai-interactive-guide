@@ -122,7 +122,7 @@ export default function CsHomePage() {
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <ChooserCard
             href="/cs/build"
             eyebrow="Start fresh"
@@ -149,6 +149,15 @@ export default function CsHomePage() {
             body="Search and filter every engagement across the team. View any, request edit access to others&rsquo;."
             icon={
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+            }
+          />
+          <ChooserCard
+            href="/cs/analytics"
+            eyebrow="Under the hood"
+            title="Engine analytics"
+            body="See the decision engine in the open: its scoring logic, the live signals it computes per customer, and recent activity."
+            icon={
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="m7 14 3-3 3 3 4-5" /></svg>
             }
           />
         </div>
