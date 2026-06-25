@@ -408,7 +408,7 @@ export async function fetchPreview(
         unresolved.push(m.source);
         mapped.push({ target: m.target, value: undefined, sourceLabel: m.source });
       } else {
-        mapped.push({ target: m.target, value, sourceLabel: m.source });
+        mapped.push({ target: m.target, value: applyTransform(value, m.transform), sourceLabel: m.source });
       }
     }
 
@@ -553,6 +553,41 @@ function coerceValue(v: unknown): unknown {
   return v;
 }
 
+/** Parse a number from a Planhat value, tolerating comma decimals and
+ *  surrounding whitespace. Returns null when it isn't numeric. */
+function toNumber(v: unknown): number | null {
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "string") {
+    const s = v.trim().replace(/\s/g, "").replace(",", ".");
+    if (s === "" || isNaN(Number(s))) return null;
+    return Number(s);
+  }
+  return null;
+}
+
+/** Apply a field-map transform token to a resolved value. Unknown/legacy
+ *  tokens (the column used to hold free-text notes) are a no-op so old maps
+ *  keep working. Non-numeric values pass through untouched. */
+function applyTransform(value: unknown, transform: string): unknown {
+  const t = (transform ?? "").trim();
+  if (!t) return value;
+  const num = toNumber(value);
+  switch (t) {
+    case "ratio_to_percent":
+      return num === null ? value : Math.round(num * 1000) / 10;
+    case "percent_to_ratio":
+      return num === null ? value : num / 100;
+    case "round":
+      return num === null ? value : Math.round(num);
+    case "round1":
+      return num === null ? value : Math.round(num * 10) / 10;
+    case "to_number":
+      return num === null ? value : num;
+    default:
+      return value;
+  }
+}
+
 function companyHit(c: Record<string, unknown>): CompanyHit {
   return {
     id: String((c._id as string) ?? (c.id as string) ?? ""),
@@ -651,7 +686,7 @@ export async function pullCustomer(
       if (value === undefined || value === null || value === "") {
         missing.push({ target: m.target, sourceLabel: m.source });
       } else {
-        setPath(patch, m.target, value);
+        setPath(patch, m.target, applyTransform(value, m.transform));
         appliedCount++;
       }
     }

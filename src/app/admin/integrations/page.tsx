@@ -220,6 +220,67 @@ type Mapping = {
   transform: string;
 };
 
+/** Executable value transforms applied on pull/preview. Keep in sync with
+ *  `applyTransform` in src/app/actions/integrations.ts. */
+const TRANSFORMS: { value: string; label: string }[] = [
+  { value: "", label: "— none —" },
+  { value: "ratio_to_percent", label: "ratio → % (×100)" },
+  { value: "percent_to_ratio", label: "% → ratio (÷100)" },
+  { value: "round", label: "round to integer" },
+  { value: "round1", label: "round to 1 decimal" },
+  { value: "to_number", label: "to number" },
+];
+
+/** Shows which engagement (Customer) target fields are NOT covered by the
+ *  current connection's field map, grouped exactly like the picker. Gives
+ *  the operator a coverage view: anything listed here arrives empty on pull
+ *  unless a manual override fills it. */
+function UnmappedFields({ mappings }: { mappings: Mapping[] }) {
+  const mapped = new Set(mappings.map((m) => m.target).filter(Boolean));
+  const missing = TOOL_FIELDS.filter((f) => !mapped.has(f.value));
+  const groups: { group: string; fields: FieldOption[] }[] = [];
+  for (const f of missing) {
+    let g = groups.find((x) => x.group === f.group);
+    if (!g) {
+      g = { group: f.group, fields: [] };
+      groups.push(g);
+    }
+    g.fields.push(f);
+  }
+
+  return (
+    <div className="mt-5 pt-4 border-t border-boost-border/60">
+      <AdminMiniLabel className="mb-2">
+        Unmapped engagement fields ({missing.length} of {TOOL_FIELDS.length})
+      </AdminMiniLabel>
+      {missing.length === 0 ? (
+        <p className="text-[12px] text-boost-green-light">Every guide field has a mapping.</p>
+      ) : (
+        <div className="space-y-2.5">
+          {groups.map((g) => (
+            <div key={g.group}>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-boost-muted/70 mb-1">
+                {g.group}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {g.fields.map((f) => (
+                  <span
+                    key={f.value}
+                    title={f.label}
+                    className="rounded-md border border-boost-border/70 bg-boost-surface/40 px-2 py-1 text-[11px] font-mono text-boost-muted"
+                  >
+                    {f.value}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type PreviewResult = {
   company: { id?: string; name?: string };
   raw: unknown;
@@ -945,13 +1006,21 @@ export default function IntegrationsAdminPage() {
                         onChange={(v) => updateMapping(m.id, { target: v })}
                       />
 
-                      <input
+                      <select
                         value={m.transform}
                         onChange={(e) => updateMapping(m.id, { transform: e.target.value })}
-                        placeholder="transform"
-                        title="Optional note describing how to convert the value (not executed)."
-                        className="w-full min-w-0 rounded-md border border-boost-border bg-white px-2.5 py-1.5 text-[12px] text-boost-dark placeholder:text-boost-muted/50 focus:outline-none focus:ring-2 focus:ring-boost-green-light/60"
-                      />
+                        title="Convert the value on pull (e.g. ratio → % multiplies by 100)."
+                        className="w-full min-w-0 rounded-md border border-boost-border bg-white px-2 py-1.5 text-[12px] text-boost-dark focus:outline-none focus:ring-2 focus:ring-boost-green-light/60"
+                      >
+                        {TRANSFORMS.map((t) => (
+                          <option key={t.value} value={t.value}>
+                            {t.label}
+                          </option>
+                        ))}
+                        {m.transform && !TRANSFORMS.some((t) => t.value === m.transform) ? (
+                          <option value={m.transform}>{`note: ${m.transform}`}</option>
+                        ) : null}
+                      </select>
 
                       <button
                         type="button"
@@ -979,6 +1048,8 @@ export default function IntegrationsAdminPage() {
                   {mapMsg ? <span className="text-[11px] text-boost-muted">{mapMsg}</span> : null}
                 </div>
               ) : null}
+
+              {active ? <UnmappedFields mappings={activeMappings} /> : null}
             </section>
 
             {/* Live data */}
