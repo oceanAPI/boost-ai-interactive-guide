@@ -22,6 +22,7 @@ import { useState } from "react";
 import type { BenchmarkEntry, Customer, PerformanceMetrics } from "@/lib/types";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { normalizePercentMetrics, roundPercent } from "@/lib/format-metrics";
 import BenchmarkDetailModal from "./benchmarking/BenchmarkDetailModal";
 
 interface BenchmarkingSectionProps {
@@ -70,7 +71,7 @@ interface Row {
 
 function buildRows(customer: Customer | undefined): Row[] {
   const bench = customer?.benchmarks ?? {};
-  const perf = customer?.performance ?? {};
+  const perf = normalizePercentMetrics(customer?.performance ?? {});
   return Object.entries(bench).map(([key, entry]) => {
     const k = key as keyof PerformanceMetrics;
     const perfVal = perf[k];
@@ -308,6 +309,11 @@ function AbsoluteBar({
 }) {
   const hasValue = typeof value === "number";
   const width = hasValue ? Math.min(100, Math.max(0, (value / rowMax) * 100)) : 0;
+  const display = hasValue
+    ? unit === "%"
+      ? roundPercent(value)
+      : String(value)
+    : "—";
   return (
     <div className="grid grid-cols-[100px_1fr_auto] items-center gap-3">
       <span
@@ -322,7 +328,7 @@ function AbsoluteBar({
           <div
             className={`absolute inset-y-0 left-0 rounded-full ${color} transition-all duration-700`}
             style={{ width: `${width}%` }}
-            title={`${label}: ${value}${unit}`}
+            title={`${label}: ${display}${unit}`}
           />
         )}
       </div>
@@ -331,7 +337,7 @@ function AbsoluteBar({
           emphasised ? "font-semibold text-boost-dark" : "text-boost-muted"
         }`}
       >
-        {hasValue ? `${value}${unit}` : "—"}
+        {hasValue ? `${display}${unit}` : "—"}
       </span>
     </div>
   );

@@ -24,6 +24,7 @@
 import { useState } from "react";
 import type { Customer } from "@/lib/types";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { normalizePercentMetrics } from "@/lib/format-metrics";
 import {
   STORY_CHAPTERS,
   type StoryChapter,
@@ -919,9 +920,16 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 }
 
 export default function ThoughtLeadershipSection({ customer, sectionNumber }: ThoughtLeadershipSectionProps) {
-  const overrides = customer?.thought_leadership ?? [];
-  const snap = snapshot(customer);
-  const tiles = snapshotTiles(customer);
+  // Coerce percent-typed metrics (automation / unknown / escalation)
+  // onto the 0–100 scale so a 0–1 ratio renders as "40.4%", not
+  // "0.404387%". Every downstream read uses the normalised customer.
+  const c =
+    customer?.performance
+      ? { ...customer, performance: normalizePercentMetrics(customer.performance) }
+      : customer;
+  const overrides = c?.thought_leadership ?? [];
+  const snap = snapshot(c);
+  const tiles = snapshotTiles(c);
   const { ref: headRef, isVisible: headVisible } = useScrollReveal({ once: true });
 
   return (
@@ -1002,7 +1010,7 @@ export default function ThoughtLeadershipSection({ customer, sectionNumber }: Th
               key={ch.id}
               chapter={ch}
               index={i}
-              customer={customer}
+              customer={c}
               hero={{
                 headline: o?.headline?.trim() || ch.headline,
                 stat: o?.stat?.trim() || ch.stat,

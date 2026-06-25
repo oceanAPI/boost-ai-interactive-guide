@@ -22,6 +22,7 @@ import { useState } from "react";
 import type { AcceptedInitiative, Customer, PerformanceMetrics } from "@/lib/types";
 import { SectionHeader } from "@/components/ui";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { normalizePercentMetrics, roundPercent } from "@/lib/format-metrics";
 import PerformanceTileDetailModal from "./performance/PerformanceTileDetailModal";
 
 interface PerformanceSectionProps {
@@ -47,6 +48,7 @@ const METRICS: Array<{
     previousKey: "previous_automation_rate",
     label: "Automation",
     unit: "%",
+    format: roundPercent,
   },
   {
     currentKey: "csat_score",
@@ -61,6 +63,7 @@ const METRICS: Array<{
     label: "Unknown rate",
     unit: "%",
     lowerIsBetter: true,
+    format: roundPercent,
   },
   {
     currentKey: "escalation_rate",
@@ -68,6 +71,7 @@ const METRICS: Array<{
     label: "Escalation",
     unit: "%",
     lowerIsBetter: true,
+    format: roundPercent,
   },
   {
     currentKey: "monthly_conversations",
@@ -118,7 +122,9 @@ export default function PerformanceSection({
   const { ref, isVisible } = useScrollReveal({ once: true });
   const [openMetricKey, setOpenMetricKey] = useState<keyof PerformanceMetrics | null>(null);
 
-  const perf = customer?.performance;
+  const perf = customer?.performance
+    ? normalizePercentMetrics(customer.performance)
+    : undefined;
   const details = customer?.performance_details;
   const allInitiatives: AcceptedInitiative[] = customer?.accepted_initiatives ?? [];
 
