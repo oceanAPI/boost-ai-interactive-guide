@@ -2,9 +2,13 @@
 
 import type { Customer, AgenticOutcome } from "@/lib/types";
 import { TextField, TextAreaField, LinesField, ListEditor, FieldGrid } from "./_fields";
+import { suggestAgenticOutcomes } from "@/lib/cs-engine/suggestions";
+import { SuggestionBlock, type SuggestionItem } from "./_SuggestionBlock";
 
 /* Authors `agentic_outcomes` — pre-Boost vs post-Boost before/after
- * pairs. Values are free-text so mixed units round-trip. */
+ * pairs. Values are free-text so mixed units round-trip. Suggestions
+ * are derived from the customer's top-matched success stories, so the
+ * "agentic transformation" can be seeded from proven reference patterns. */
 export function AgenticOutcomeInputPanel({
   form,
   update,
@@ -12,7 +16,24 @@ export function AgenticOutcomeInputPanel({
   form: Customer;
   update: (patch: Partial<Customer>) => void;
 }) {
-  return (
+  const outcomes = form.agentic_outcomes ?? [];
+  const suggestions = suggestAgenticOutcomes(form, { limit: 4 });
+  const has = (topic: string) =>
+    outcomes.some((o) => o.topic.trim().toLowerCase() === topic.trim().toLowerCase());
+  const suggestionItems: SuggestionItem[] = suggestions.map((s) => ({
+    key: s.sourceStoryId,
+    title: s.outcome.topic,
+    subtitle: `${s.outcome.before.value} → ${s.outcome.after.value}`,
+    reasons: s.reasons,
+    accepted: has(s.outcome.topic),
+  }));
+  const accept = (sourceStoryId: string) => {
+    const match = suggestions.find((s) => s.sourceStoryId === sourceStoryId);
+    if (!match || has(match.outcome.topic)) return;
+    update({ agentic_outcomes: [...outcomes, match.outcome] });
+  };
+
+  const editor = (
     <ListEditor<AgenticOutcome>
       items={form.agentic_outcomes ?? []}
       onChange={(items) => update({ agentic_outcomes: items })}
@@ -35,5 +56,18 @@ export function AgenticOutcomeInputPanel({
         </div>
       )}
     />
+  );
+
+  return (
+    <div className="space-y-3">
+      <SuggestionBlock
+        heading="Transformation patterns from success stories"
+        helper="Proven before/after pairs from the customer's most relevant references. Add one to seed it, then edit the values to match their data."
+        items={suggestionItems}
+        emptyHint="Add metrics or an intent-traffic export and we'll suggest transformation patterns from matching stories."
+        onAccept={accept}
+      />
+      {editor}
+    </div>
   );
 }

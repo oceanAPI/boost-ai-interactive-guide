@@ -13,6 +13,8 @@ import {
   AdminChipRow,
   AdminMiniLabel,
 } from "@/components/admin/primitives";
+import { suggestStories } from "@/lib/cs-engine/suggestions";
+import { SuggestionBlock, type SuggestionItem } from "./_SuggestionBlock";
 
 /* Authors `featured_story_ids` — the flat, section-level success-story
  * picks for the dedicated SuccessStoriesSection — plus the per-engagement
@@ -58,11 +60,33 @@ export function SuccessStoriesInputPanel({
     update({ featured_story_ids: next.length ? next : undefined });
   };
 
+  /* Engine-driven shortlist — ranked by the customer's detected issues
+   * + industry. The CSM accepts (adds to featured) or ignores. */
+  const suggestions = suggestStories(form, { limit: 5 });
+  const suggestionItems: SuggestionItem[] = suggestions.map((s) => ({
+    key: s.story.id,
+    title: anon ? s.story.anonName : s.story.name,
+    subtitle: `${s.story.industry} · ${s.story.geo}`,
+    reasons: s.reasons,
+    accepted: featured.includes(s.story.id),
+  }));
+  const accept = (id: string) => {
+    if (!featured.includes(id)) update({ featured_story_ids: [...featured, id] });
+  };
+
   return (
     <div className="space-y-3">
       <AdminPrompt
         question="Featured stories"
         helper={`Pick the customer stories to feature in this engagement's Success Stories section. Order = pick order. Leave empty to show the whole library (${SUCCESS_STORIES.length}).`}
+      />
+
+      <SuggestionBlock
+        heading="Stories for this customer"
+        helper="Ranked by their detected issues and industry. Add the ones that fit — you can still pick any others below."
+        items={suggestionItems}
+        emptyHint="Add performance metrics or an intent-traffic export and we'll suggest the most relevant stories here."
+        onAccept={accept}
       />
 
       {/* Anonymise toggle */}

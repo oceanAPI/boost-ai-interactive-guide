@@ -158,13 +158,23 @@ export function ListEditor<T>(props: {
   renderItem: (item: T, update: (patch: Partial<T>) => void, index: number) => ReactNode;
   itemTitle?: (item: T, index: number) => string;
   emptyHint?: string;
+  /** Show up/down controls so the CSM can reorder rows. Order in the
+   *  array is the rank for panels where ordering is meaningful. */
+  reorderable?: boolean;
 }) {
-  const { items, onChange, makeNew, addLabel, renderItem, itemTitle, emptyHint } = props;
+  const { items, onChange, makeNew, addLabel, renderItem, itemTitle, emptyHint, reorderable } = props;
 
   const update = (index: number, patch: Partial<T>) => {
     onChange(items.map((it, i) => (i === index ? { ...it, ...patch } : it)));
   };
   const remove = (index: number) => onChange(items.filter((_, i) => i !== index));
+  const move = (index: number, dir: -1 | 1) => {
+    const target = index + dir;
+    if (target < 0 || target >= items.length) return;
+    const next = [...items];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange(next);
+  };
 
   return (
     <div className="space-y-3">
@@ -178,13 +188,37 @@ export function ListEditor<T>(props: {
         >
           <div className="flex items-center justify-between gap-2">
             <AdminMiniLabel>{itemTitle ? itemTitle(item, i) : `Item ${i + 1}`}</AdminMiniLabel>
-            <button
-              type="button"
-              onClick={() => remove(i)}
-              className="text-[10px] font-semibold uppercase tracking-[0.12em] text-boost-muted hover:text-boost-gold transition-colors"
-            >
-              Remove
-            </button>
+            <div className="flex items-center gap-2">
+              {reorderable && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => move(i, -1)}
+                    disabled={i === 0}
+                    aria-label="Move up"
+                    className="text-boost-muted hover:text-boost-purple disabled:opacity-30 disabled:hover:text-boost-muted transition-colors"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6" /></svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(i, 1)}
+                    disabled={i === items.length - 1}
+                    aria-label="Move down"
+                    className="text-boost-muted hover:text-boost-purple disabled:opacity-30 disabled:hover:text-boost-muted transition-colors"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => remove(i)}
+                className="text-[10px] font-semibold uppercase tracking-[0.12em] text-boost-muted hover:text-boost-gold transition-colors"
+              >
+                Remove
+              </button>
+            </div>
           </div>
           {renderItem(item, (patch) => update(i, patch), i)}
         </div>

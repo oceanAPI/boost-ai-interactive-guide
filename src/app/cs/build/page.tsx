@@ -365,14 +365,28 @@ export default function CsBuilderPage() {
 
         <main className="flex-1 min-w-0 space-y-4">
           {activeDef && ActivePanel ? (
-            <CollapsibleSection
-              number={activeDef.number}
-              title={activeDef.title}
-              subtitle={activeDef.preview(form)}
-              hasContent={activeDef.hasContent(form)}
-            >
-              <ActivePanel form={form} update={update} />
-            </CollapsibleSection>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-1">
+                <span className="inline-flex items-center gap-1 rounded-md bg-boost-green-light/15 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-boost-green">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                  You edit here
+                </span>
+                <span className="text-[11px] text-boost-muted">
+                  Type into this section — what you enter shows up in the preview below.
+                </span>
+              </div>
+              <CollapsibleSection
+                number={activeDef.number}
+                title={activeDef.title}
+                subtitle={activeDef.preview(form)}
+                hasContent={activeDef.hasContent(form)}
+              >
+                <ActivePanel form={form} update={update} />
+              </CollapsibleSection>
+            </div>
           ) : null}
 
           {/* Guided Next + opt-out */}
@@ -398,14 +412,32 @@ export default function CsBuilderPage() {
           ) : null}
 
           {ActivePreview ? (
-            <div className="rounded-xl border border-boost-border bg-white overflow-hidden">
-              <div className="px-4 py-2 border-b border-boost-border bg-boost-surface/40">
-                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-boost-muted">
-                  Live preview
-                </p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-1">
+                <span className="inline-flex items-center gap-1 rounded-md bg-boost-purple/10 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-boost-purple">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  Preview only
+                </span>
+                <span className="text-[11px] text-boost-muted">
+                  Read-only — how this section looks in the finished guide. You can&apos;t type here.
+                </span>
               </div>
-              <div className="p-2 sm:p-4">
-                <ActivePreview customer={form} sectionNumber={String(activeDef?.number ?? "")} />
+              <div className="rounded-xl border-2 border-dashed border-boost-purple/25 bg-boost-surface/30 overflow-hidden">
+                <div className="px-4 py-2 border-b border-boost-purple/15 bg-boost-purple/[0.04] flex items-center gap-1.5">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-boost-purple/70" aria-hidden="true">
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-boost-purple/70">
+                    Live preview
+                  </p>
+                </div>
+                <div className="p-2 sm:p-4 bg-white">
+                  <ActivePreview customer={form} sectionNumber={String(activeDef?.number ?? "")} />
+                </div>
               </div>
             </div>
           ) : null}

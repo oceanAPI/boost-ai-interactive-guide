@@ -10,6 +10,8 @@ import {
   SUCCESS_STORY_INDUSTRIES,
   type SuccessStory,
 } from "@/data/success-stories";
+import { suggestStories } from "@/lib/cs-engine/suggestions";
+import { SuggestionBlock, type SuggestionItem } from "./_SuggestionBlock";
 
 /* Authors `thought_leadership` — the big-number story openers — plus the
  * per-chapter success-story picker that writes `story_selections`. Story
@@ -118,6 +120,24 @@ function SuccessStoryPicker({
     update({ story_selections: Object.keys(nextSelections).length ? nextSelections : undefined });
   };
 
+  /* Engine suggestions scoped to the chapter being filled — ranked by
+   * the customer's issues + industry, accepting adds to this chapter. */
+  const chapterSuggestions = suggestStories(form, { limit: 16 })
+    .filter((s) => s.story.chapter === activeChapter)
+    .slice(0, 4);
+  const suggestionItems: SuggestionItem[] = chapterSuggestions.map((s) => ({
+    key: s.story.id,
+    title: s.story.name,
+    subtitle: `${s.story.industry} · ${s.story.geo}`,
+    reasons: s.reasons,
+    accepted: selected.includes(s.story.id),
+  }));
+  const accept = (id: string) => {
+    if (selected.includes(id)) return;
+    const nextSelections = { ...selections, [activeChapter]: [...selected, id] };
+    update({ story_selections: nextSelections });
+  };
+
   return (
     <div className="pt-5 mt-5 border-t border-boost-border/60">
       <AdminPrompt
@@ -142,6 +162,16 @@ function SuccessStoryPicker({
           );
         })}
       </AdminChipRow>
+
+      <div className="mb-3">
+        <SuggestionBlock
+          heading={`Stories for this chapter`}
+          helper="Ranked for the chapter you're filling, by the customer's detected issues and industry."
+          items={suggestionItems}
+          emptyHint="Add metrics or an intent-traffic export and chapter-matched stories appear here."
+          onAccept={accept}
+        />
+      </div>
 
       {/* Filters */}
       <div className="mb-2">

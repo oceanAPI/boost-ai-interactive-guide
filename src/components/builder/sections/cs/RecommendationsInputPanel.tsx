@@ -2,9 +2,14 @@
 
 import type { Customer, Recommendation } from "@/lib/types";
 import { TextField, TextAreaField, SelectField, NumberField, LinesField, ListEditor, FieldGrid } from "./_fields";
+import { suggestRecommendations } from "@/lib/cs-engine/suggestions";
+import { SuggestionBlock, type SuggestionItem } from "./_SuggestionBlock";
 
 /* Authors `recommendations` — ranked next moves. Order in the array
- * IS the rank (TopRecommendationsSection renders top-down). */
+ * IS the rank (TopRecommendationsSection renders top-down). The grid
+ * is seeded from the success engine's top-ranked initiatives, then
+ * the CSM adds their own, reorders, or removes — all round-tripping
+ * to the engagement JSONB. */
 export function RecommendationsInputPanel({
   form,
   update,
@@ -12,9 +17,34 @@ export function RecommendationsInputPanel({
   form: Customer;
   update: (patch: Partial<Customer>) => void;
 }) {
-  const total = form.recommendations?.length ?? 0;
+  const recs = form.recommendations ?? [];
+  const total = recs.length;
+
+  const suggestions = suggestRecommendations(form, { limit: 6 });
+  const has = (title: string) =>
+    recs.some((r) => r.title.trim().toLowerCase() === title.trim().toLowerCase());
+  const suggestionItems: SuggestionItem[] = suggestions.map((s) => ({
+    key: String(s.sourceInitiativeId),
+    title: s.recommendation.title,
+    subtitle: s.recommendation.value_label,
+    reasons: s.reasons,
+    accepted: has(s.recommendation.title),
+  }));
+  const accept = (key: string) => {
+    const match = suggestions.find((s) => String(s.sourceInitiativeId) === key);
+    if (!match || has(match.recommendation.title)) return;
+    update({ recommendations: [...recs, match.recommendation] });
+  };
+
   return (
     <div className="space-y-3">
+      <SuggestionBlock
+        heading="Next moves from the success engine"
+        helper="Top-ranked initiatives for this customer — scored by detected-issue severity × effort × business impact. Add one to seed the grid, then edit, reorder, or remove it."
+        items={suggestionItems}
+        emptyHint="Add performance metrics or an intent-traffic export and the engine will rank initiatives here."
+        onAccept={accept}
+      />
       <div className="rounded-xl border border-boost-border bg-boost-surface/30 p-3.5">
         <NumberField
           label={`Show top N in the guide (of ${total})`}
@@ -36,6 +66,7 @@ export function RecommendationsInputPanel({
       makeNew={() => ({ title: "", rationale: "" })}
       addLabel="Add recommendation"
       emptyHint="No recommendations yet. Order = rank."
+      reorderable
       itemTitle={(r, i) => `#${i + 1} · ${r.title || "Untitled"}`}
       renderItem={(r, set) => (
         <div className="space-y-2.5">
