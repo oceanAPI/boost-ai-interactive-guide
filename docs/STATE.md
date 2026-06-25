@@ -7,9 +7,25 @@
 ## Branch & last-green
 
 `main`, deploying via **Vercel** (auto-deploy on push to `main`). Last commit is
-`37a77b2`. **This session's work is UNCOMMITTED** — a "success engine everywhere"
-build. `npm run build` (17 routes) + `npx tsc --noEmit` both clean. The user
+`9e0d61f`. **This session's work is UNCOMMITTED** — a "success engine everywhere"
+build. `npm run build` (16 routes) + `npx tsc --noEmit` both clean. The user
 commits + pushes manually. Do NOT `git push` or commit without an ask.
+
+### Intent-traffic parser: raw-CSV uploads, no prep (this session, UNCOMMITTED) — DONE + verified
+
+User ask: "ideally we can just take the raw csv and upload and not have to do
+any formatting in advance." `src/data/intent-traffic.ts` now tolerates the
+different boost.ai export shapes so a raw export uploads with no manual prep:
+- `Root intent` is now **optional** — a flat export treats each intent as its own root.
+- `Reviewed` is now **optional** — derived as `automated + escalated + unsolved` when absent.
+- Intent label accepts `Intent name` / `Intent` / `intent_name` (new `findCol` helper).
+- Columns mapped by exact header name, so `% of Traffic` never shadows `Traffic`.
+Verified against THREE real exports via a tsx harness (reviewed == auto+esc+uns
+on all three; no Haugaland regression):
+- Storebrand (flat, has Reviewed + % cols) → 972 intents, reviewed 237,992.
+- intent_traffic (23) (flat, NO Reviewed, NO % cols) → 85 intents, reviewed derived.
+- Haugaland (hierarchical, Timeline banner + Root intent) → 18 roots, period parsed.
+tsc + build clean; `/cs/build` serves 200 after rebuild.
 
 ### Percent-display fix (this session, UNCOMMITTED) — DONE + verified
 
@@ -54,11 +70,26 @@ view + a learnings loop + Planhat history. **3 of 5 shipped + verified:**
    (`1.000 × 1.20 (Low) × 1.10 (company-level) = 1.3200`), suggestions with
    reasons, 3 activity rows; `hasErrorOverlay:false`.
 
-**Workstreams #4 + #5 are GATED on two user decisions (see Open questions).**
+4. **Operator learnings loop** (`/cs/analytics`) — DONE (UNCOMMITTED, tsc +
+   build clean). Global, two-stage suppression list. NEW
+   `supabase/migrations/0005_cs_engine_learnings.sql` (USER MUST RUN, after
+   0004), NEW `src/app/actions/cs-learnings.ts` (operator = `mikal@boost.ai`),
+   suggestions.ts `LearnedSet` + module `ACTIVE_LEARNED` + all four `suggest*`
+   filter suppressed keys, NEW `src/components/builder/useLearningsHydration.ts`
+   mounted in CsChrome + /cs/build, and the analytics page rewrite (Planhat
+   search → pull → live signals; computeSignals now takes `Customer` + `learned`;
+   operator-only "✕ Not relevant" on all 4 kinds → `stageLearning` badged
+   "removed · pending"; operator Learnings panel with Undo + "Run training" →
+   `runTraining` → re-hydrate → live recompute drops the items globally).
+   Verified live as NON-operator (dev@boost.ai): renders, 6 issues for
+   Haugaland, search box present, gate correctly hides remove/train controls.
+   **Operator path (remove→train→global recompute) needs a `mikal@boost.ai`
+   session + the 0005 table run — not exercisable from the dev session.**
 
-### Open questions (block #4/#5, surfaced to user)
+**Workstream #5 (Planhat history) remains DEFERRED.**
 
-- **#4 learnings store scope:** global vs per-CSM vs per-industry weight tuning?
+### Open questions
+
 - **#5 Planhat history:** does Planhat return historical metric values (time
   series) or only the current snapshot? Offer to introspect if unsure.
 
@@ -373,29 +404,24 @@ Last commit: 93bdad5
 
 <!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
 ## Auto-snapshot
-Last updated: 2026-06-25T17:09:43+02:00
+Last updated: 2026-06-25T21:54:54+02:00
 Branch: main
-Last commit: 37a77b2 feat(integrations): executable field-map transforms + unmapped-fields view
+Last commit: 9e0d61f docs: handover for suggestion layer, /cs/analytics, landing routes + percent fix
 Working tree:
 ```
  M docs/JOURNAL.md
  M docs/STATE.md
+ M src/app/cs/analytics/page.tsx
  M src/app/cs/build/page.tsx
- M src/app/cs/page.tsx
- M src/components/builder/sections/cs/AgenticOutcomeInputPanel.tsx
- M src/components/builder/sections/cs/RecommendationsInputPanel.tsx
- M src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+ M src/app/page.tsx
+ M src/app/signin/page.tsx
+ M src/components/builder/CsChrome.tsx
  M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
- M src/components/builder/sections/cs/_fields.tsx
- M src/components/sections/BenchmarkingSection.tsx
- M src/components/sections/PerformanceSection.tsx
  M src/components/sections/ThoughtLeadershipSection.tsx
-?? scratch_match.mjs
-?? src/app/cs/analytics/
-?? src/app/home/
-?? src/app/sales/
-?? src/components/builder/sections/cs/_SuggestionBlock.tsx
-?? src/lib/cs-engine/suggestions.ts
-?? src/lib/format-metrics.ts
+ M src/data/intent-traffic.ts
+ M src/lib/cs-engine/suggestions.ts
+?? src/app/actions/cs-learnings.ts
+?? src/components/builder/useLearningsHydration.ts
+?? supabase/migrations/0005_cs_engine_learnings.sql
 ```
 <!-- AUTO-HOOK-END -->
