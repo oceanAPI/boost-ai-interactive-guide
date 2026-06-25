@@ -6,14 +6,99 @@
 
 ## Branch & last-green
 
-`main`. **Planhat assets-as-instances committed** this session (`b39a181`),
-on top of the live company pull (`b50abe5`), deploying via **Vercel** (GitHub
-Pages workflow DISABLED — deploy auto-runs on push to `main` via Vercel). Only
-`scratch_match.mjs` remains untracked (throwaway, do not commit).
-`npm run build` (14 routes) + `npx tsc --noEmit` both clean. VERIFIED live on
-`/cs/build`: company search + pull + missing-field save→reopen, and assets →
-instance chips (Telenor Norge AS → TELENORNO, TELENORVOICE). The user pushes
-manually. Do NOT `git push` without an ask.
+`main`, deploying via **Vercel** (auto-deploy on push to `main`). Last commit is
+`37a77b2`. **This session's work is UNCOMMITTED** — a "success engine everywhere"
+build. `npm run build` (17 routes) + `npx tsc --noEmit` both clean. The user
+commits + pushes manually. Do NOT `git push` or commit without an ask.
+
+### Percent-display fix (this session, UNCOMMITTED) — DONE + verified
+
+A 0–1 ratio (e.g. `automation_rate: 0.404387` from a Planhat custom field)
+was rendered raw next to a "%" unit → "0.404387%". New shared
+`src/lib/format-metrics.ts` (`toPercent`, `roundPercent`,
+`normalizePercentMetrics`): percent-typed keys (automation/unknown/escalation,
+current + previous) in (0,1] are scaled ×100; a genuine % is always ≥1 so the
+heuristic is safe. Applied at the top of `PerformanceSection` (normalize `perf`
++ `format: roundPercent` on the 3 % metrics — fixes tile, delta, modal,
+sparkline), `BenchmarkingSection` (normalize in `buildRows` + round `%` display
+in `AbsoluteBar` — fixes number AND bar width), and `ThoughtLeadershipSection`
+(normalize the customer once → snapshot/tiles/ChapterBenchmarkViz/ChannelProfile).
+Verified live on `/guide`: 0.404387→40.4% (+2.4% delta), 0.12→12%, 0.0721→7.2%,
+benchmark "This customer 40.4%" vs Peer 48% / Industry 42%. tsc + build (17
+routes) clean.
+
+### Success-engine workstreams (this session, UNCOMMITTED)
+
+Five-part ask: surface engine-driven suggestions everywhere + a transparency
+view + a learnings loop + Planhat history. **3 of 5 shipped + verified:**
+
+1. **Suggestion layer** (`src/lib/cs-engine/suggestions.ts`, new) — DONE. Ranks
+   success stories, TL chapters, agentic outcomes, AND recommendations against
+   the engine's detected issues / industry / metrics, each with reason chips.
+   `_SuggestionBlock.tsx` (new) renders the "We suggest" cards (accept/override,
+   never auto-applied) in the SuccessStories / ThoughtLeadership /
+   AgenticOutcome / Recommendations input panels.
+2. **Interactive recommendations grid** — DONE. `suggestRecommendations` maps
+   engine `topPriorities` → `Recommendation` (rank + formula as rationale).
+   `ListEditor` gained `reorderable` (up/down). Wired into
+   `RecommendationsInputPanel`. Add/move/delete round-trips to engagement JSONB
+   via the existing autosave.
+3. **`/cs/analytics`** (`src/app/cs/analytics/page.tsx`, new) — DONE. Engine
+   transparency: (a) live scoring constants (formula, DEFAULT_WEIGHTS,
+   suggestion weights, hierarchy rules, issue→theme routing); (b) per-customer
+   live signals (detected issues + ranked initiatives w/ formula + 4 suggestion
+   lists, customer-picker chips over PLACEHOLDER_CUSTOMERS); (c) activity via
+   `listMyEngagements`. Exported `ISSUE_THEME`/`CHAPTER_LABELS`/`W_*`/`BASE` from
+   suggestions.ts to render source-of-truth values. 4th chooser card added on
+   `/cs`. Verified live: Haugaland → 6 issues, 10 ranked initiatives w/ formula
+   (`1.000 × 1.20 (Low) × 1.10 (company-level) = 1.3200`), suggestions with
+   reasons, 3 activity rows; `hasErrorOverlay:false`.
+
+**Workstreams #4 + #5 are GATED on two user decisions (see Open questions).**
+
+### Open questions (block #4/#5, surfaced to user)
+
+- **#4 learnings store scope:** global vs per-CSM vs per-industry weight tuning?
+- **#5 Planhat history:** does Planhat return historical metric values (time
+  series) or only the current snapshot? Offer to introspect if unsure.
+
+GOTCHA re-confirmed: `preview_console_logs` keeps PINNED stale parse errors that
+don't match the current file. Authoritative parse checks are `npm run build` +
+fetching served HTML for `hasErrorOverlay`. Ignore the console buffer.
+
+### Prior committed work (still current, `37a77b2` and below)
+
+**Planhat assets-as-instances** (`b39a181`) on top of the live company pull
+(`b50abe5`). VERIFIED live on `/cs/build`: company search + pull + missing-field
+save→reopen, and assets → instance chips (Telenor Norge AS → TELENORNO,
+TELENORVOICE). The user pushes manually. Do NOT `git push` without an ask.
+
+### Field-map transforms + unmapped-fields view (this session — `37a77b2`)
+
+Two of three requests from the 2026-06-25 Slack ask shipped + verified live
+on `/admin/integrations`:
+1. **Executable transforms.** The field-map `transform` column is now a
+   `<select>` (was a free-text "not executed" note). `applyTransform(value,
+   token)` in `integrations.ts` runs in BOTH `pullCustomer` (real pull) and
+   `fetchPreview` (admin sample). Tokens: `ratio_to_percent` (×100, 1dp),
+   `percent_to_ratio`, `round`, `round1`, `to_number`. `toNumber` tolerates
+   comma decimals (`"0,72"`→0.72→72) — this is the automation_rate fix, since
+   PerformanceSection renders the raw number + a "%" unit. Unknown/legacy
+   strings → no-op, preserved in the dropdown as a `note: …` option. NB:
+   `applyTransform` must stay non-exported — a "use server" file may only
+   export async fns (build error if exported).
+2. **Unmapped-fields panel.** `UnmappedFields` component under the field map
+   lists `TOOL_FIELDS` targets not covered by the active map, grouped (shows
+   "Unmapped engagement fields (87 of 97)"). `TRANSFORMS` const in page.tsx
+   mirrors the action tokens.
+
+**Request #3 NOT built — awaiting a design decision.** User wants a per-row
+Customer-vs-Instance source-model selector. Blocker: a company has MULTIPLE
+assets/instances, so an Instance-sourced field needs an aggregation rule.
+Options put to user: (1) aggregate across instances [my rec], (2) one picked
+instance, (3) per-instance storage (needs new guide fields). Build once chosen:
+`source_object` col on `integration_field_maps` (migration `0005`) + row
+selector + aggregation in `pullCustomer`.
 
 ### Planhat assets = instances (this session — `b39a181`)
 
@@ -288,11 +373,29 @@ Last commit: 93bdad5
 
 <!-- AUTO-HOOK-BEGIN: do not edit, overwritten on every Stop -->
 ## Auto-snapshot
-Last updated: 2026-06-24T15:06:14+02:00
+Last updated: 2026-06-25T17:09:43+02:00
 Branch: main
-Last commit: f69b7c2 docs: handover for Planhat assets-as-instances (b39a181)
+Last commit: 37a77b2 feat(integrations): executable field-map transforms + unmapped-fields view
 Working tree:
 ```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/app/cs/build/page.tsx
+ M src/app/cs/page.tsx
+ M src/components/builder/sections/cs/AgenticOutcomeInputPanel.tsx
+ M src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+ M src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+ M src/components/builder/sections/cs/_fields.tsx
+ M src/components/sections/BenchmarkingSection.tsx
+ M src/components/sections/PerformanceSection.tsx
+ M src/components/sections/ThoughtLeadershipSection.tsx
 ?? scratch_match.mjs
+?? src/app/cs/analytics/
+?? src/app/home/
+?? src/app/sales/
+?? src/components/builder/sections/cs/_SuggestionBlock.tsx
+?? src/lib/cs-engine/suggestions.ts
+?? src/lib/format-metrics.ts
 ```
 <!-- AUTO-HOOK-END -->

@@ -2922,3 +2922,361 @@ then removed after confirming the shape.
 **Next:** Confirm whether boost instances key on externalId (current) or
 sourceId. Still pending user-side: PLANHAT_API_TOKEN in Vercel env + redeploy
 (prod testConnection currently errors "not set"); 0004 migration is RUN.
+
+## Compaction checkpoint — 2026-06-25T09:35:48+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- den må også konvertere automation rate fra komma-tall til %
+- og hvor kan jeg se de felter i Engagements der ikke har data mapped til dem nå?
+- derudover, når vi skal mappe instance data, ville det være greit om det kan vælges hvilken model i Planhat den skal trække data fra, om det er Customer eller Instance:[image.png](https://boostai.slack.com/files/U4TEZ9KGC/F0BCZ5WV1BP/image.png?origin_team=T13BL3U59)
+- [PNG](https://boostai.slack.com/files/U4TEZ9KGC/F0BCZ5WV1BP/image.png?origin_team=T13BL3U59)
+- [Open file](https://boostai.slack.com/files/U4TEZ9KGC/F0BCZ5WV1BP/image.png?origin_team=T13BL3U59)
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/.claude/projects/-Users-mikalmonslaup-Desktop-Claude-projects-interactive-guide-financial-service-offering/memory/integrations_planhat.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/JOURNAL.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/STATE.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/parse_haugaland.mts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/scratch_shape.mjs
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/scratch_verify.mjs
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/actions/integrations.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/admin/integrations/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/cs/build/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/CompanyInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/DetectedIssuesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/DetectedIssuesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/IntentTrafficSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SuccessStoriesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/success-stories/SuccessStoryDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/cs-placeholder-customers.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/intent-traffic.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/calculator.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/detection.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/metrics.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/slide-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/supabase/migrations/0003_integrations.sql
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/supabase/migrations/0004_customer_overrides.sql
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+?? scratch_match.mjs
+8ebaf79 chore: trigger prod redeploy (Planhat env var added in Vercel)
+```
+
+## 2026-06-25 09:50 — Field-map transforms + unmapped-fields view (`37a77b2`)
+
+**What.** Shipped 2 of 3 Slack requests for `/admin/integrations`.
+(1) Made the field-map `transform` column executable: `<select>` of tokens
+(ratio→% ×100, %→ratio, round, round1, to_number) backed by
+`applyTransform`/`toNumber` in `integrations.ts`, applied in BOTH `pullCustomer`
+and `fetchPreview`. `toNumber` handles comma decimals so Planhat's `0,72`
+automation_rate ratio renders as 72%. Legacy free-text notes preserved as no-op
+`note: …` options. (2) Added `UnmappedFields` panel listing TOOL_FIELDS targets
+not covered by the active map, grouped ("Unmapped engagement fields (87 of 97)").
+
+**Why.** User: "den må også konvertere automation rate fra komma-tall til %"
+and "hvor kan jeg se de felter i Engagements der ikke har data mapped til dem nu?"
+
+**Gotcha.** `applyTransform` must NOT be exported — `integrations.ts` is a
+"use server" file, which may only export async fns (Turbopack build error if
+exported). Verified live: dropdowns on all rows, panel shows 87/97; tsc + build
+(14 routes) clean; no console errors after a clean dev-server restart.
+
+**Next.** Request #3 (Customer-vs-Instance per-row source model) is blocked on a
+design decision (multi-instance aggregation rule) — options put to the user,
+awaiting choice. Build = `source_object` col (migration `0005`) + row selector +
+aggregation in `pullCustomer`.
+
+## Compaction checkpoint — 2026-06-25T14:39:04+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- previous periods i should be able to fetch from planhat too for comparisons, benchmarkings too should be planhat fetched. 
+- Agentic transformation should be suggestions based on success stories
+- i also want to be able to see all logic and activity in /analytics 
+- recommendations etc should also be based on success engine and fil out and i need to be able to interact with the grid for intiatives, add my own ones, move them, delete, etc. and feed all that back into the db and use later as learnings for improvements to suggestions and metadata as we did with success engine
+- yes crunch em all ill be here for any questions you might have
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/.claude/projects/-Users-mikalmonslaup-Desktop-Claude-projects-interactive-guide-financial-service-offering/memory/integrations_planhat.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/JOURNAL.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/STATE.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/parse_haugaland.mts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/scratch_shape.mjs
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/scratch_verify.mjs
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/actions/integrations.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/admin/integrations/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/cs/build/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/home/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/sales/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/AgenticOutcomeInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/CompanyInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/DetectedIssuesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/_SuggestionBlock.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/DetectedIssuesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/IntentTrafficSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SuccessStoriesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/success-stories/SuccessStoryDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/cs-placeholder-customers.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/intent-traffic.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/calculator.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/detection.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/metrics.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/suggestions.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/slide-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/supabase/migrations/0003_integrations.sql
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/supabase/migrations/0004_customer_overrides.sql
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/app/cs/build/page.tsx
+ M src/components/builder/sections/cs/AgenticOutcomeInputPanel.tsx
+ M src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+?? scratch_match.mjs
+?? src/app/home/
+?? src/app/sales/
+?? src/components/builder/sections/cs/_SuggestionBlock.tsx
+?? src/lib/cs-engine/suggestions.ts
+37a77b2 feat(integrations): executable field-map transforms + unmapped-fields view
+```
+
+## Compaction checkpoint — 2026-06-25T14:50:55+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+-    Building workstream #1 (the suggestion layer). I had just created `src/lib/cs-engine/suggestions.ts`, `src/components/builder/sections/cs/_SuggestionBlock.tsx`, and wired all three panels (SuccessStories, ThoughtLeadership, AgenticOutcome). `npx tsc --noEmit` was clean. On reloading the dev server, `preview_console_logs` (level error) reported a Turbopack parse error: `./src/components/builder/sections/cs/AgenticOutcomeInputPanel.tsx:68:1 Unexpected token` caused by `<ListEditor<AgenticOutcome>` in JSX-child position. My immediately-prior action was an Edit to AgenticOutcomeInputPanel.tsx that extracted the ListEditor into `const editor = (<ListEditor<AgenticOutcome> ... />);` and rendered `{editor}` inside the wrapping `<div className="space-y-3">` (with the SuggestionBlock above it). This edit completed successfully but I have NOT yet re-checked the console to confirm the parse error is gone.
+- 9. Optional Next Step:
+-    Re-verify the parse-error fix: re-run `npx tsc --noEmit`, then reload `/cs/build` on dev server `4cc88d14-be55-4b14-80d0-bcbbac9f516a` and check `preview_console_logs` (level error) to confirm `AgenticOutcomeInputPanel.tsx` now compiles clean. Then visually verify the three SuggestionBlocks render (load/pick a placeholder customer that has performance metrics so `suggestStories`/`suggestAgenticOutcomes` return ranked items, navigate to the Success Stories / Story & Thought Leadership / Agentic Before-After sections, confirm "We suggest" cards with reason chips appear and the `+ Add` → `Added` accept flow works). This is the direct continuation of workstream #1, which the user authorized with "yes crunch em all ill be here for any questions you might have." After #1 is verified, proceed to workstream #2 (interactive recommendations grid), keeping the two gating questions open for the user.
+- If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: 
+
+**Files edited this session:**
+- /Users/mikalmonslaup/.claude/projects/-Users-mikalmonslaup-Desktop-Claude-projects-interactive-guide-financial-service-offering/memory/integrations_planhat.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/JOURNAL.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/STATE.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/parse_haugaland.mts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/scratch_shape.mjs
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/scratch_verify.mjs
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/actions/integrations.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/admin/integrations/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/cs/build/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/home/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/sales/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/AgenticOutcomeInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/CompanyInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/DetectedIssuesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/_SuggestionBlock.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/_fields.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/DetectedIssuesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/IntentTrafficSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SuccessStoriesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/success-stories/SuccessStoryDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/cs-placeholder-customers.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/intent-traffic.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/calculator.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/detection.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/metrics.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/suggestions.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/slide-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/supabase/migrations/0003_integrations.sql
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/supabase/migrations/0004_customer_overrides.sql
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/app/cs/build/page.tsx
+ M src/components/builder/sections/cs/AgenticOutcomeInputPanel.tsx
+ M src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+ M src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+ M src/components/builder/sections/cs/_fields.tsx
+?? scratch_match.mjs
+?? src/app/home/
+?? src/app/sales/
+?? src/components/builder/sections/cs/_SuggestionBlock.tsx
+?? src/lib/cs-engine/suggestions.ts
+37a77b2 feat(integrations): executable field-map transforms + unmapped-fields view
+```
+
+---
+
+## 2026-06-25 — /cs/analytics engine-transparency dashboard (workstream #3)
+
+**What**: Built `/cs/analytics` (`src/app/cs/analytics/page.tsx`), a read-only
+transparency dashboard for the CS decision engine. Three reads top-to-bottom:
+(1) **Engine logic** — renders the live scoring constants so the page can never
+drift from production: priority formula, `DEFAULT_WEIGHTS` (effort/type/impact
+multipliers), the suggestion weights (`W_INDUSTRY`/`W_THEME`/`W_GEO`/`BASE`), the
+hierarchy boost rules, and the issue→story-chapter routing grouped by theme.
+(2) **Live signals** — customer-picker chips (all `PLACEHOLDER_CUSTOMERS`) →
+`computeSignals(customer)` runs `metricsFromCustomer` → `runEngine` →
+`suggestStories/Recommendations/AgenticOutcomes/Chapters`. Shows detected issues
+(severity bars + reasons), the top-10 ranked initiatives EACH with its exact
+`calculation.formula`, and the four suggestion lists with their reason chips — the
+"why did we suggest that" audit trail. Empty-metrics customers get a clear hint.
+(3) **Activity** — `listMyEngagements` filtered to customer-success, most-recent.
+To render source-of-truth values, exported `ISSUE_THEME`, `CHAPTER_LABELS`,
+`W_INDUSTRY`, `W_THEME`, `W_GEO`, `BASE` from `cs-engine/suggestions.ts`. Added a
+4th chooser card on `/cs` (grid → `lg:grid-cols-4`) linking to it.
+
+**Why**: User ask — "i also want to be able to see all logic and activity in
+/analytics, recommendations etc should also be based on success engine." This is
+the read-side; the write-side (capturing accepts/overrides as learnings) is the
+next workstream.
+
+**Verified**: `npx tsc --noEmit` clean, `npm run build` clean (17 routes,
+`/cs/analytics` prerendered). Live on dev (`hasErrorOverlay:false`): Haugaland
+Kraft selected by default → 6 detected issues, 10 ranked initiatives with formula
+(`1.000 × 1.20 (Low) × 1.10 (company-level) = 1.3200`), 5 recs / 5 stories / 4
+chapters with reasons, 3 activity rows. Refactored an initial `useSignals`
+fake-hook into a real typed `computeSignals` fn (anti-pattern removed).
+
+**Next**: Workstreams #4 (events + learnings store) and #5 (Planhat history +
+benchmarks) are GATED on two user decisions — see STATE.md "Open questions".
+Do NOT commit until the user asks.
+
+## Compaction checkpoint — 2026-06-25T15:47:59+02:00 (trigger=auto)
+
+**Last 5 user prompts:**
+- If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/mikalmonslaup/.claude/projects/-Users-mikalmonslaup-Desktop-Claude-projects-interactive-guide-financial-service-offering/349957cc-54e7-4b4a-9667-e52ad5d81121.jsonl
+- Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.
+- Stop hook feedback:
+- [Verification Required] Code was edited while a preview server is running. Follow <verification_workflow> to verify the changes.
+- global weight set. lets do planhat later
+
+
+**Files edited this session:**
+- /Users/mikalmonslaup/.claude/projects/-Users-mikalmonslaup-Desktop-Claude-projects-interactive-guide-financial-service-offering/memory/csm_workspace_and_supabase.md
+- /Users/mikalmonslaup/.claude/projects/-Users-mikalmonslaup-Desktop-Claude-projects-interactive-guide-financial-service-offering/memory/integrations_planhat.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/JOURNAL.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/docs/STATE.md
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/parse_haugaland.mts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/scratch_shape.mjs
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/scratch_verify.mjs
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/actions/integrations.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/admin/integrations/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/cs/analytics/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/cs/build/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/cs/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/guide/GuideClient.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/home/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/app/sales/page.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/AgenticOutcomeInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/CompanyInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/DetectedIssuesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/IntentTrafficInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/_SuggestionBlock.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/sections/cs/_fields.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/builder/workspace-config.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/DetectedIssuesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/IntentTrafficSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/SuccessStoriesSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/ThoughtLeadershipSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/TopRecommendationsSection.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/components/sections/success-stories/SuccessStoryDetailModal.tsx
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/audience-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/cs-placeholder-customers.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/intent-traffic.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/success-stories.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/data/thought-leadership.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/calculator.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/detection.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/index.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/metrics.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/cs-engine/suggestions.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/slide-sections.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/src/lib/types.ts
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/supabase/migrations/0003_integrations.sql
+- /Users/mikalmonslaup/Desktop/Claude projects/interactive_guide_financial_service_offering/supabase/migrations/0004_customer_overrides.sql
+
+**Git at compact:**
+```
+ M docs/JOURNAL.md
+ M docs/STATE.md
+ M src/app/cs/build/page.tsx
+ M src/app/cs/page.tsx
+ M src/components/builder/sections/cs/AgenticOutcomeInputPanel.tsx
+ M src/components/builder/sections/cs/RecommendationsInputPanel.tsx
+ M src/components/builder/sections/cs/SuccessStoriesInputPanel.tsx
+ M src/components/builder/sections/cs/ThoughtLeadershipInputPanel.tsx
+ M src/components/builder/sections/cs/_fields.tsx
+?? scratch_match.mjs
+?? src/app/cs/analytics/
+?? src/app/home/
+?? src/app/sales/
+?? src/components/builder/sections/cs/_SuggestionBlock.tsx
+?? src/lib/cs-engine/suggestions.ts
+37a77b2 feat(integrations): executable field-map transforms + unmapped-fields view
+```
+
+## 2026-06-25 — Percent-display fix: 0.404387 → 40.4%
+
+**What:** A 0–1 ratio in `performance.automation_rate` (e.g. 0.404387, from a
+Planhat custom field that wasn't run through the `ratio_to_percent` transform)
+rendered raw next to a "%" unit as "0.404387%". Added shared
+`src/lib/format-metrics.ts` (`toPercent` / `roundPercent` /
+`normalizePercentMetrics`) and applied it at the top of the three KPI sections
+that print percent metrics: PerformanceSection (normalize `perf` + `roundPercent`
+format on automation/unknown/escalation → fixes tile, delta, detail modal,
+sparkline), BenchmarkingSection (normalize in `buildRows` + round `%` display in
+`AbsoluteBar` → number AND bar width coherent), ThoughtLeadershipSection
+(normalize the customer once → snapshot, tiles, ChapterBenchmarkViz,
+ChannelProfileViz).
+
+**Why:** User reported via Slack screenshot: "Number has to be in percentages.
+40.4% instead than 0.404387". Heuristic is safe because a genuine % for these
+three rates is always ≥1, so any value in (0,1] is a ratio → ×100.
+
+**Verified:** tsc + `npm run build` (17 routes) clean. Live `/guide`:
+0.404387→40.4% (+2.4% delta), 0.12→12%, 0.0721→7.2%, benchmark
+"This customer 40.4%" vs Peer 48% / Industry 42% with correctly-scaled bar.
+
+**Next:** Resume success-engine workstream #4 (global-weight learnings store).
+Uncommitted; user commits manually.
