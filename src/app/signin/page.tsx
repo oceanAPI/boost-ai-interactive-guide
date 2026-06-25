@@ -9,7 +9,7 @@ function SignInCard() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { status } = useSession();
-  const callbackUrl = searchParams.get("callbackUrl") || "/admin?audience=sales";
+  const callbackUrl = searchParams.get("callbackUrl") || "/home";
   const error = searchParams.get("error");
   const [pending, setPending] = useState(false);
 
