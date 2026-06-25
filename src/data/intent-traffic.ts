@@ -8,9 +8,17 @@
  *  client-side and stores only the rollup: aggregate totals + the
  *  per-root breakdown with each root's top-N child intents.
  *
- *  Robust to column reordering: columns are mapped by header name
- *  (exact, case-insensitive) rather than position, so the "%" variant
- *  columns never collide with their count columns.
+ *  Robust to column reordering AND to the different export shapes the
+ *  analytics tab emits, so a raw CSV can be uploaded with no manual
+ *  prep:
+ *    - columns are mapped by header name (exact, case-insensitive) not
+ *      position, so "%" variant columns never collide with their counts;
+ *    - the intent label may be "Intent name" (flat export) or "Intent"
+ *      (hierarchical export);
+ *    - "Root intent" is optional — a flat export with no hierarchy treats
+ *      each intent as its own root;
+ *    - "Reviewed" is optional — when absent it is derived as
+ *      automated + escalated + unsolved (its exact definition).
  * ────────────────────────────────────────────────────────────── */
 
 import type {
@@ -83,28 +91,41 @@ interface ColMap {
   negativeFeedback: number;
 }
 
-/** Build a header→index map by exact (case-insensitive) header text,
- *  so "% of Traffic" never shadows "Traffic". */
-function mapColumns(header: string[]): ColMap | null {
-  const idx = (name: string) => header.findIndex((h) => norm(h) === name);
-  const map: ColMap = {
-    root: idx("root intent"),
-    intent: idx("intent"),
-    traffic: idx("traffic"),
-    reviewed: idx("reviewed"),
-    automated: idx("automated"),
-    escalated: idx("escalated"),
-    unsolved: idx("unsolved"),
-    handover: idx("handover"),
-    noPrediction: idx("no prediction"),
-    immediateUnknown: idx("immediate unknown"),
-    positiveFeedback: idx("positive conversation feedback"),
-    negativeFeedback: idx("negative conversation feedback"),
-  };
-  // Minimum viable columns to make sense of the export.
-  if (map.root < 0 || map.intent < 0 || map.traffic < 0 || map.reviewed < 0) {
-    return null;
+/** First header index whose normalised text matches one of `candidates`,
+ *  tried in priority order; -1 if none present. */
+function findCol(header: string[], candidates: string[]): number {
+  for (const cand of candidates) {
+    const i = header.findIndex((h) => norm(h) === cand);
+    if (i >= 0) return i;
   }
+  return -1;
+}
+
+/** Build a header→index map by exact (case-insensitive) header text, so
+ *  "% of Traffic" never shadows "Traffic". Tolerant of the flat exports:
+ *  "Intent name" or "Intent"; "Root intent" and "Reviewed" optional. */
+function mapColumns(header: string[]): ColMap | null {
+  const map: ColMap = {
+    root: findCol(header, ["root intent", "root"]),
+    intent: findCol(header, ["intent name", "intent", "intent_name"]),
+    traffic: findCol(header, ["traffic"]),
+    reviewed: findCol(header, ["reviewed"]),
+    automated: findCol(header, ["automated"]),
+    escalated: findCol(header, ["escalated"]),
+    unsolved: findCol(header, ["unsolved"]),
+    handover: findCol(header, ["handover"]),
+    noPrediction: findCol(header, ["no prediction"]),
+    immediateUnknown: findCol(header, ["immediate unknown"]),
+    positiveFeedback: findCol(header, ["positive conversation feedback"]),
+    negativeFeedback: findCol(header, ["negative conversation feedback"]),
+  };
+  // Need an intent label, its traffic, and enough to know `reviewed` —
+  // either the column itself or the automated/escalated/unsolved triplet
+  // it's the sum of. Root is optional (flat export → intent is its own root).
+  const canReview =
+    map.reviewed >= 0 ||
+    (map.automated >= 0 && map.escalated >= 0 && map.unsolved >= 0);
+  if (map.intent < 0 || map.traffic < 0 || !canReview) return null;
   return map;
 }
 
@@ -168,7 +189,7 @@ export function parseIntentTrafficCsv(
     return {
       summary: null,
       error:
-        "Couldn't find the expected columns (Root intent, Intent, Traffic, Reviewed). Is this a boost.ai intent-traffic export?",
+        "Couldn't find the expected columns (an Intent name/Intent column, Traffic, and either Reviewed or Automated/Escalated/Unsolved). Is this a boost.ai intent-traffic export?",
     };
   }
 
@@ -186,17 +207,26 @@ export function parseIntentTrafficCsv(
 
   for (let i = headerRow + 1; i < lines.length; i++) {
     const c = parseCsvLine(lines[i]);
-    const rootName = (c[cols.root] ?? "").trim();
-    if (JUNK_ROOTS.has(norm(rootName))) continue;
     const intentName = (c[cols.intent] ?? "").trim();
     if (!intentName) continue;
+    // Flat exports have no Root intent column — the intent is its own root.
+    const rootName =
+      cols.root >= 0 ? (c[cols.root] ?? "").trim() : intentName;
+    if (JUNK_ROOTS.has(norm(rootName))) continue;
 
+    const automated = num(c[cols.automated]);
+    const escalated = num(c[cols.escalated]);
+    const unsolved = num(c[cols.unsolved]);
     const stats: IntentTrafficStats = {
       traffic: num(c[cols.traffic]),
-      reviewed: num(c[cols.reviewed]),
-      automated: num(c[cols.automated]),
-      escalated: num(c[cols.escalated]),
-      unsolved: num(c[cols.unsolved]),
+      // Derive Reviewed when the export omits it (= the resolved triplet).
+      reviewed:
+        cols.reviewed >= 0
+          ? num(c[cols.reviewed])
+          : automated + escalated + unsolved,
+      automated,
+      escalated,
+      unsolved,
       handover: num(c[cols.handover]),
       noPrediction: num(c[cols.noPrediction]),
     };
