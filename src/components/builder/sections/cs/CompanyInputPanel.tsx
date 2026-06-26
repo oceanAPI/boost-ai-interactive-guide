@@ -41,6 +41,40 @@ function coerce(v: string): unknown {
   return v;
 }
 
+/** Human format guidance for a missing-data target, so the CSM knows exactly
+ *  what to type. Matched on the leaf key (last dot-segment) so the
+ *  `previous_*` and nested variants are covered by one rule. */
+function formatHint(target: string): { placeholder: string; hint: string } {
+  const leaf = (target.split(".").pop() ?? target).toLowerCase();
+  if (/(automation_rate|unknown_rate|escalation_rate|percentile)$/.test(leaf))
+    return { placeholder: "e.g. 42", hint: "Percentage 0–100 (42 = 42%). A 0–1 ratio like 0.42 also works." };
+  if (leaf === "csat_score")
+    return { placeholder: "e.g. 4.7", hint: "Score on the customer's own scale — e.g. 4.7 (out of 5) or 85 (out of 100)." };
+  if (leaf === "nps")
+    return { placeholder: "e.g. 34", hint: "Whole number from −100 to 100." };
+  if (/(date|measured_from|measured_to|business_review)$/.test(leaf))
+    return { placeholder: "YYYY-MM-DD", hint: "ISO date — e.g. 2026-03-31." };
+  if (/(mrr|conversation_cost|voice_cost_per_minute)$/.test(leaf))
+    return { placeholder: "e.g. 12000", hint: "Amount in the account currency — digits only, no symbol or thousands separators." };
+  if (leaf === "currency")
+    return { placeholder: "e.g. NOK", hint: "3-letter ISO currency code — e.g. NOK, EUR, USD." };
+  if (leaf === "has_cs_package")
+    return { placeholder: "true or false", hint: "Type true or false." };
+  if (leaf === "channels")
+    return { placeholder: "chat / voice / both", hint: "One of: chat, voice, both." };
+  if (/frequency$/.test(leaf))
+    return { placeholder: "e.g. Quarterly", hint: "Cadence — e.g. Monthly, Quarterly, Annually." };
+  if (
+    /(monthly_conversations|markets_live|active_agents|intentcount|traffic|reviewed|automated|escalated|unsolved|handover|noprediction|positivefeedback|negativefeedback|immediateunknown|fte_capacity_per_month|automation_ramp_months|display_count|chat|voice|email|social)$/.test(
+      leaf,
+    )
+  )
+    return { placeholder: "e.g. 12000", hint: "Whole number — digits only, no thousands separators." };
+  if (target.includes("[]"))
+    return { placeholder: "set in its own section", hint: "This is a list — easier to fill in its dedicated section below than here." };
+  return { placeholder: "value…", hint: "Free text." };
+}
+
 /** Deep-merge a pulled/override patch one level into the form so nested
  *  objects (e.g. performance.*) keep their other fields. */
 function mergePatch(form: Customer, patch: Record<string, unknown>): Partial<Customer> {
@@ -326,33 +360,39 @@ export function CompanyInputPanel({
             question="Missing data"
             helper="These fields are mapped from Planhat but came back empty. Fill them in — values are saved on this customer and reused on the next pull."
           />
-          <div className="space-y-2">
-            {missing.map((m) => (
-              <div key={m.target} className="flex items-center gap-2">
-                <span
-                  className="w-1/2 min-w-0 truncate text-[12px] font-mono text-boost-dark"
-                  title={`${m.target} ← ${m.sourceLabel}`}
-                >
-                  {m.target}
-                </span>
-                <input
-                  type="text"
-                  value={drafts[m.target] ?? ""}
-                  onChange={(e) => setDrafts((d) => ({ ...d, [m.target]: e.target.value }))}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void saveMissing(m.target); } }}
-                  placeholder="value…"
-                  className="flex-1 min-w-0 px-2.5 py-1.5 bg-white border border-boost-border rounded-md text-[12px] text-boost-dark placeholder-boost-lavender focus:outline-none focus:ring-2 focus:ring-boost-green-light"
-                />
-                <button
-                  type="button"
-                  onClick={() => void saveMissing(m.target)}
-                  disabled={savingTarget === m.target}
-                  className="shrink-0 rounded-md border border-boost-border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-boost-dark hover:bg-boost-surface disabled:opacity-40 transition-colors"
-                >
-                  {savingTarget === m.target ? "…" : "Save"}
-                </button>
-              </div>
-            ))}
+          <div className="space-y-2.5">
+            {missing.map((m) => {
+              const fmt = formatHint(m.target);
+              return (
+                <div key={m.target} className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-1/2 min-w-0 truncate text-[12px] font-mono text-boost-dark"
+                      title={`${m.target} ← ${m.sourceLabel}`}
+                    >
+                      {m.target}
+                    </span>
+                    <input
+                      type="text"
+                      value={drafts[m.target] ?? ""}
+                      onChange={(e) => setDrafts((d) => ({ ...d, [m.target]: e.target.value }))}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void saveMissing(m.target); } }}
+                      placeholder={fmt.placeholder}
+                      className="flex-1 min-w-0 px-2.5 py-1.5 bg-white border border-boost-border rounded-md text-[12px] text-boost-dark placeholder-boost-lavender focus:outline-none focus:ring-2 focus:ring-boost-green-light"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void saveMissing(m.target)}
+                      disabled={savingTarget === m.target}
+                      className="shrink-0 rounded-md border border-boost-border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-boost-dark hover:bg-boost-surface disabled:opacity-40 transition-colors"
+                    >
+                      {savingTarget === m.target ? "…" : "Save"}
+                    </button>
+                  </div>
+                  <p className="ml-[50%] pl-2 text-[10px] leading-snug text-boost-muted/80">{fmt.hint}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       ) : null}
